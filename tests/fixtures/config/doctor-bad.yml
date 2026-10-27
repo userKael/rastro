@@ -1,0 +1,11 @@
+project:
+  name: shelf
+  languages:
+    human: en
+tracker:
+  key: W
+code_host:
+  kind: none
+verify:
+  unit: "true"
+workspace: .agent/

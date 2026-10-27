@@ -1,0 +1,5 @@
+{
+  "name": "rastro",
+  "owner": { "name": "userKael" },
+  "plugins": [{ "name": "rastro", "source": "." }]
+}

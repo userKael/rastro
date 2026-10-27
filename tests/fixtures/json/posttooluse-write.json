@@ -1,0 +1,1 @@
+{"session_id":"s-1","cwd":"C:\\Users\\me\\My Project","hook_event_name":"PostToolUse","tool_name":"Write","tool_input":{"file_path":"C:\\Users\\me\\My Project\\src\\a.ts","content":"const k = \"file_path\";\n"},"tool_response":{"filePath":"C:\\Users\\me\\My Project\\src\\a.ts","success":true}}

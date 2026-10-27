@@ -1,0 +1,44 @@
+INTAKE → RECONCILIATION → PLAN → EXECUTION
+skills/reconcile/SKILL.md
+skills/deliver/SKILL.md
+templates/plan.md
+adapters/tracker/
+adapters/docs/
+The input is the work item, never the design doc.
+Frozen copy
+scope
+technical decisions
+invariants
+code flow
+A role not found is not "does not apply".
+**Spec:**
+## Global Constraints
+## Expected test scenarios
+[HUMAN]
+2 or more PRs
+6 or more tasks
+2 or more modules
+migration
+VERDICT
+Premise that falls
+Already ruled out
+A subagent never raises this gate.
+superpowers:writing-plans
+superpowers:subagent-driven-development
+inline execution
+tracker: none
+Coverage is not evidence of behavior.
+Preserve rulings before deleting the workspace.
+verify.lint
+verify.integration_when
+architecture.modules
+architecture.rules
+READY FOR deliver
+If the adapter file does not exist, stop and report.
+## Additional checks
+.rastro/profiles/writing.md
+git log --oneline <sha7>..<project.base_branch> -- <scope>
+The range ends at the base branch, not at `HEAD`
+Copy each human-execution block below the decisions table too, with its artifact verbatim.
+Read the six fields from the human-execution block of that `D-n` in the holder's `## Reconciliation`
+When the block is missing, or its artifact is, stop and report

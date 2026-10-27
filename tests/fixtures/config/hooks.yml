@@ -1,0 +1,12 @@
+tracker:
+  kind: local
+  key: W
+architecture:
+  modules: [catalog, orders, inventory]
+conventions:
+  forbidden_paths: [.env*, "*.bak", coverage/]
+workspace: .agent/
+code_host:
+  merge: squash
+verify:
+  unit: "true"

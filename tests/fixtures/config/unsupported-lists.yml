@@ -1,0 +1,13 @@
+lists:
+  multi_line: [
+    a,
+    b
+  ]
+  unterminated: [a, b
+  block:
+    - one
+    - two
+  same_indent:
+  - three
+  - four
+  valid: [x, "y z"]

@@ -1,0 +1,19 @@
+# Merge this job into .gitlab-ci.yml, or include this file from it.
+rastro-checks:
+  stage: test
+  variables:
+    # The title checks count length and lowercase letters byte by byte; pin the locale so CI matches the local hook.
+    LC_ALL: C.UTF-8
+    # check-changed-paths diffs against the merge base, which a shallow clone does not have.
+    GIT_DEPTH: "0"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  script:
+    # toolchain: install bash, git, the runtime and the dependencies your verify.* commands need, before run-verify.
+    # rastro cannot guess your stack; stack-detection.md in the rastro templates lists common setups.
+    - git fetch --quiet origin "+refs/heads/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME:refs/remotes/origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+    - bash .rastro/git-hooks/check-pr-title "$CI_MERGE_REQUEST_TITLE" "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
+    # check-commits does nothing when code_host.merge is squash: the MR title is then the only commit that lands.
+    - bash .rastro/git-hooks/check-commits "origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
+    - bash .rastro/git-hooks/check-changed-paths "origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+    - bash .rastro/git-hooks/run-verify "origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"

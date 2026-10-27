@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+set -eu
+lib=${RASTRO_LIB:-$(dirname "$0")/../lib}
+. "$lib/config.sh"
+. "$lib/commit.sh"
+RASTRO_CONFIG=$(rastro_config_path) || exit 0
+
+if [ $# -lt 1 ] || [ -z "$1" ]; then
+  echo "usage: check-commits <base-ref> [<head-branch>]" >&2
+  exit 2
+fi
+case $1 in
+  -*)
+    echo "check-commits: base ref must not start with a dash: $1" >&2
+    exit 2
+    ;;
+esac
+
+# With squash, the PR title is the only commit that reaches the base branch, and check-pr-title validates it.
+merge=$(rastro_merge_mode)
+[ "$merge" != squash ] || exit 0
+
+subjects=$(mktemp)
+trap 'rm -f "$subjects"' EXIT
+git log --no-merges --reverse --format='%h %s' "$1..HEAD" -- >"$subjects"
+
+while IFS= read -r line || [ -n "$line" ]; do
+  sha=${line%% *}
+  subject=${line#"$sha"}
+  subject=${subject# }
+  rc=0
+  if [ $# -ge 2 ]; then
+    reason=$(rastro_check_header "$subject" "$2" 2>&1) || rc=$?
+  else
+    reason=$(rastro_check_header "$subject" 2>&1) || rc=$?
+  fi
+  case $rc in
+    0) ;;
+    1)
+      printf 'rastro: commit %s rejected: %s\n  subject: %s\n  With merge mode %s every commit of the branch reaches %s; reword it with git rebase.\n' "$sha" "$reason" "$subject" "$merge" "$1" >&2
+      exit 1
+      ;;
+    *)
+      printf '%s\n' "$reason" >&2
+      exit "$rc"
+      ;;
+  esac
+done <"$subjects"

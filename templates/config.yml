@@ -1,0 +1,104 @@
+# rastro config. The setup skill copies this file to .rastro/config.yml.
+# Lists are inline only: [a, "b c"]. An empty key means "not set".
+# Keys marked (required) must be filled before the skills run.
+
+project:
+  # Name used in the AGENTS.md block and in artifacts. (required)
+  name:
+  # Branch that change requests target; reconciliation is stamped against it.
+  base_branch: main
+  languages:
+    # Language of code comments, branch names, commits and PR titles.
+    machine: en
+    # Language of artifacts written for people: design docs, items, PR descriptions. (required)
+    human:
+
+tracker:
+  # Where work items live: local, none, jira, github, or the name of your own adapter. (required)
+  kind:
+  # Item id prefix, as in KEY-123; required unless kind is none. The setup skill proposes W for local.
+  key:
+  # Item levels the breakdown skill creates, parent first.
+  hierarchy: [story, subtask]
+  # Folder holding item files when kind is local.
+  local_dir: work/
+
+docs:
+  # Where design docs are published: repo, notion, or the name of your own adapter.
+  kind: repo
+  # Folder ending in a slash when kind is repo; the parent database or page when kind is notion.
+  location: docs/design/
+  # Location of the public documentation portal; when set, breakdown adds a doc subtask.
+  public_portal:
+
+code_host:
+  # Where change requests are opened: github, gitlab, none, or the name of your own adapter. (required)
+  kind:
+  # How change requests are merged; squash makes the PR title validate as a commit message.
+  merge: squash
+  # Path of the PR description template; empty uses the framework template.
+  template:
+
+domain_state:
+  # How the live database is read: db-mcp, schema-files, or none (everything about the database is NOT VERIFIED).
+  kind: none
+  # Name of the MCP server that answers schema queries when kind is db-mcp.
+  server:
+  # Schema and migration files read when kind is schema-files.
+  schema_files:
+
+verify:
+  # Lint command run before delivery; empty skips it. At least one verify command is required.
+  lint:
+  # Type-check command run before delivery; empty skips it.
+  typecheck:
+  # Unit test command run before delivery; empty skips it.
+  unit:
+  # Integration test command; runs when a changed path matches integration_when.
+  integration:
+  # Path globs that trigger the integration command; empty never triggers it.
+  integration_when: []
+  # Per-file lint command run by the Claude hooks; {file} is replaced by the file path.
+  lint_file:
+  # Path globs of source files; the Stop hook checks changed files that match.
+  source_globs:
+
+architecture:
+  # Module names; they become the allowed commit scopes.
+  modules: []
+  # Component types of your architecture; design doc flows name each step by one of them.
+  layers:
+  # Where the non-negotiable rules live; deliver generates its self-check from them.
+  rules: "AGENTS.md#non-negotiable-rules"
+  # Files showing how to build each kind of component; implement reads the ones it uses.
+  golden_paths:
+  # Files that publish contracts (API specs, event schemas); one design doc per contract boundary.
+  contract_sources: []
+  # Classes of data that rules and deliver treat as sensitive.
+  sensitive_data: []
+
+domain:
+  # Entities with a state machine; a design doc touching one must include a state diagram.
+  stateful_entities: []
+
+conventions:
+  # Branch name format; placeholders {type}, {id}, {slug}.
+  branch: "{type}/{id}-{slug}"
+  # Commit and PR title format; placeholders {type}, {scope}, {id}, {subject}.
+  commit: "{type}({scope}): [{id}] {subject}"
+  # Allowed commit types; the commit-msg hook rejects others.
+  types: [feat, fix, refactor, chore, docs, ci, perf]
+  # Whether commits end with a Co-Authored-By trailer naming the model.
+  co_author_trailer: true
+  # Path globs the pre-commit hook refuses to commit; workspace is always included.
+  # .env* also refuses .env.example. Negation is not supported: to commit .env.example, list exact names instead, as in [.env, .env.local, "*.bak"].
+  forbidden_paths: [.env*, "*.bak"]
+
+# Folder for agent working files; gitignored and never committed.
+workspace: .agent/
+
+review:
+  # How automated review is triggered: none, or the name of your own adapter.
+  kind: none
+  # Markdown file holding the review rules, in the same rule format as architecture.rules.
+  rules: .review-rules.md

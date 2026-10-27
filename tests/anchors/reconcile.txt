@@ -1,0 +1,38 @@
+templates/reconciliation.md
+skills/domain-context/SKILL.md
+## Step 1 — Repository context
+## Step 2 — Strong direction
+## Step 3 — Weak direction
+## Step 4 — Reconciliation file
+## Step 5 — Human gate
+## Delta revalidation
+Zero findings in the weak direction is a suspicious result, not a good one.
+Bug mode
+If no pre-existing contract can be pointed to, it is not a bug.
+executor: human
+The artifact is literal and copyable.
+Environments are named one by one.
+Rollback is declared.
+Verification is declared.
+Never assume it ran.
+State whether it runs before or after the merge.
+Size signal
+profiles/
+git log --oneline <sha>..<project.base_branch> -- <scope>
+Decided (
+Closed decisions do not reopen unless the delta contradicts them.
+architecture.rules
+architecture.contract_sources
+docs.public_portal
+project.base_branch
+Gate — reconciliation of
+If the adapter file does not exist, stop and report.
+## Additional checks
+.rastro/profiles/writing.md
+<directory>/reconciliation.md
+No other output location exists.
+git rev-parse --short <base_branch>
+Never stamp HEAD of a feature branch.
+architecture.layers
+Gate — revalidation of
+The range ends at the base branch, never at `HEAD`.

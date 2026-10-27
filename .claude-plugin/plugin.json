@@ -1,0 +1,7 @@
+{
+  "name": "rastro",
+  "version": "0.1.0",
+  "description": "A generic agent workflow for Claude Code: skills, adapters and bash hooks that keep every change traceable from intent to merge.",
+  "license": "MIT",
+  "repository": "https://github.com/userKael/rastro"
+}

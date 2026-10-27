@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -eu
+lib=${RASTRO_LIB:-$(dirname "$0")/../lib}
+. "$lib/config.sh"
+. "$lib/paths.sh"
+RASTRO_CONFIG=$(rastro_config_path) || exit 0
+
+rastro_forbidden_load
+staged=$(mktemp)
+trap 'rm -f "$staged"' EXIT
+git diff --cached --name-only -z --diff-filter=ACMRT >"$staged"
+rc=0
+rastro_report_forbidden "forbidden path staged" <"$staged" || rc=$?
+if [ "$rc" -ne 0 ]; then
+  echo "rastro: commit refused; see conventions.forbidden_paths and workspace in .rastro/config.yml" >&2
+  exit "$rc"
+fi

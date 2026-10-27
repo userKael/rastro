@@ -1,0 +1,22 @@
+templates/config.yml
+templates/agents-md-block.md
+templates/stack-detection.md
+templates/ci/
+templates/CALIBRATION.md
+hooks/claude/doctor.sh
+## Detection
+Detect before asking.
+One question at a time.
+<!-- rastro:begin -->
+.rastro/git-hooks/
+.rastro/lib/
+core.hooksPath
+idempotent
+tracker.local_dir
+tracker: none
+@AGENTS.md
+.gitignore
+Gate — setup of
+--doctor
+.rastro/profiles/writing.md
+`GH` for the shipped adapter whose item ids are `GH-<n>`

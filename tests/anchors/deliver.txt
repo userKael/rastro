@@ -1,0 +1,35 @@
+adapters/code-host/
+adapters/tracker/
+templates/pr-description.md
+## Step 0 — Traceability context
+## Step 1 — Scope hygiene
+## Step 2 — Branch name
+## Step 3 — Commit audit
+## Step 4 — PR title
+## Step 5 — PR description
+## Step 6 — Self-check against the rules
+## Step 7 — Agent rulings
+## Step 8 — Final verification
+## Step 9 — Handoff
+## Step 10 — Item ↔ PR link
+Not pushed
+Pushed, no PR
+Pushed with a PR open
+code_host.merge
+architecture.rules
+Known debt
+It is FORBIDDEN to report completion
+Never pretend the link exists.
+stacked
+## Additional checks
+## PR description
+Coverage is not evidence of behavior.
+superpowers:finishing-a-development-branch
+project.languages.machine
+conventions.forbidden_paths
+verify.typecheck
+Gate — PR
+The default is to stop.
+If the adapter file does not exist, stop and report.
+.rastro/profiles/writing.md
+bash .rastro/git-hooks/check-commits <target> <branch>

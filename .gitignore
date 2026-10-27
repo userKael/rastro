@@ -1,0 +1,4 @@
+.agent/
+.superpowers/
+*.bak
+.env*

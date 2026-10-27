@@ -1,0 +1,35 @@
+templates/design-doc.md
+skills/domain-context/SKILL.md
+adapters/docs/
+Ground vocabulary, never decisions.
+A design doc derived from the code produces an empty reconciliation, and an empty reconciliation looks like success.
+DT-01
+Why (b) lost
+A DT freezes when the first work item cites it.
+domain.stateful_entities
+stateDiagram-v2
+## Code flows
+architecture.layers
+architecture.contract_sources
+architecture.golden_paths
+If this is wrong, what changes?
+A technical decision found in an optional-reading section is a finding.
+One document per published-contract boundary.
+No estimates
+Publishing is not approving.
+Gate — design doc of
+## Sections
+## Split rule
+If the adapter file does not exist, stop and report.
+## Additional checks
+.rastro/profiles/writing.md
+adapters/code-host/
+code_host.kind
+## Gate anatomy
+A subagent never asks the human.
+and this skill stops with it
+never by a literal English heading
+git push -u origin docs/design-<slug>
+The human's choice of **Publish** authorizes this push, and only this one.
+With `code_host: none`, do not push
+the nine required-reading sections

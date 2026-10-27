@@ -1,0 +1,48 @@
+# Copy to .github/workflows/rastro.yml.
+name: rastro
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    env:
+      # The title checks count length and lowercase letters byte by byte; pin the locale so CI matches the local hook.
+      LC_ALL: C.UTF-8
+    steps:
+      # check-changed-paths diffs against the merge base, which a shallow clone does not have.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # toolchain: install the runtime and the dependencies your verify.* commands need, before run-verify.
+      # rastro cannot guess your stack; stack-detection.md in the rastro templates lists common setups.
+
+      # A PR title and a branch name are attacker-controlled text. They reach the shell through env, never interpolated into run:.
+      - name: PR title is a valid commit message
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: bash .rastro/git-hooks/check-pr-title "$PR_TITLE" "$HEAD_BRANCH"
+
+      # check-commits does nothing when code_host.merge is squash: the PR title is then the only commit that lands.
+      - name: Commit messages are valid when the merge keeps them
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: bash .rastro/git-hooks/check-commits "$BASE_REF" "$HEAD_BRANCH"
+
+      - name: No forbidden path in the change set
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+        run: bash .rastro/git-hooks/check-changed-paths "$BASE_REF"
+
+      - name: Verify
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+        run: bash .rastro/git-hooks/run-verify "$BASE_REF"

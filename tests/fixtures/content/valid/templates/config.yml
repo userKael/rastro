@@ -1,0 +1,10 @@
+project:
+  name:
+  languages:
+    human:
+tracker:
+  kind:
+verify:
+  lint:
+  unit:
+workspace: .agent/

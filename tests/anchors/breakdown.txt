@@ -1,0 +1,47 @@
+TRIAGE → INTENT → RECONCILIATION → SLICING → CREATION
+skills/reconcile/SKILL.md
+skills/design-doc/SKILL.md
+adapters/tracker/
+templates/work-item.md
+Anchor test
+intent.md
+What changes?
+Who observes?
+What contract exists today?
+"The team" is not an answer.
+If the violated contract cannot be pointed to, it is not a bug.
+superpowers:systematic-debugging
+Reproduce
+The item type is an output, never a question.
+H1
+H5
+S1
+S4
+PR <N> — <artifact>: <consequence>
+[no PR]
+Merge test
+Never copy the design doc into the item.
+No story points
+## Reconciliation
+docs.public_portal
+tracker.hierarchy
+Gate — slicing of
+The default is to stop.
+## Story rule
+## Subtask rule
+## Subtask summary format
+## Additional checks
+If the adapter file does not exist, stop and report.
+.rastro/profiles/writing.md
+<workspace>/breakdown-<slug>/
+<workspace>/<item id>/reconciliation.md
+not applicable: task or bug
+creation always passes the port type
+The `file:line` anchor stays required even then
+pushes the branch with `git push -u origin chore/<id>-<slug>`, and only then opens a PR
+The human's choice of **Create** authorizes this push, and only this one.
+commit on the branch, do not push, and say that the merge is manual
+each `D-n` with `executor: human` carries its human execution in the item
+- **Rollback:** how to undo it, or "not reversible".
+It is exempt from the 200-character budget and is never cut down to an anchor
+The decisions table keeps one short row per `D-n` and stays within the budget.

@@ -1,0 +1,15 @@
+project:
+  name: shelf
+  languages:
+    human: en
+tracker:
+  kind: fake
+  key: W
+  local_dir: work/
+docs:
+  kind: repo
+code_host:
+  kind: none
+verify:
+  unit: "true"
+workspace: .agent/

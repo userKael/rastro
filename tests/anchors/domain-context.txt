@@ -1,0 +1,18 @@
+## Context
+NOT VERIFIED
+domain_state.kind
+adapters/domain-state/
+## Step 0 — Domain state gate
+## Step 1 — Affected modules
+## Step 2 — Real schema
+## Step 3 — Domain sources
+## Step 4 — Migrations
+## Step 5 — Constraints checklist
+Never infer the schema from ORM entities when a database is declared.
+The prohibition is on executing a write, not on drafting it.
+architecture.modules
+architecture.golden_paths
+docs.public_portal
+If the adapter file does not exist, stop and report.
+## Additional checks
+.rastro/profiles/writing.md

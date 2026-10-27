@@ -1,0 +1,17 @@
+project:
+  name: shelf
+  languages:
+    human: pt-BR   # artefatos
+tracker:
+  kind: local
+  key: W
+docs:
+  kind: repo
+verify:
+  lint_file: "bash tests/fixtures/fake-lint.sh {file}"
+  source_globs: [src/**/*.ts, "lib/my dir/*.ts"]
+conventions:
+  commit: "{type}({scope}): [{id}] {subject}"
+  forbidden_paths: [.env*, "*.bak", coverage/]
+  note: "a#b"
+workspace: .agent/

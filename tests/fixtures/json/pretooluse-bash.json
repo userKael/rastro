@@ -1,0 +1,1 @@
+{"session_id":"s-1","transcript_path":"C:\\Users\\me\\.claude\\projects\\p\\s-1.jsonl","cwd":"C:\\Users\\me\\My Project","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"git commit -m \"say \\\"hi\\\"\"\nls","description":"commit"},"tool_use_id":"toolu_01"}

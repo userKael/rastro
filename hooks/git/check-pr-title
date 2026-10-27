@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -eu
+lib=${RASTRO_LIB:-$(dirname "$0")/../lib}
+. "$lib/config.sh"
+. "$lib/commit.sh"
+RASTRO_CONFIG=$(rastro_config_path) || exit 0
+
+merge=$(rastro_merge_mode)
+[ "$merge" = squash ] || exit 0
+if [ $# -lt 1 ]; then
+  echo "usage: check-pr-title <title> <head-branch>" >&2
+  exit 2
+fi
+
+title=$1
+# A draft marker is host or team convention, not part of the commit message.
+shopt -s nocasematch
+case $title in
+  "Draft: "*) title=${title:7} ;;
+  "[Draft] "*) title=${title:8} ;;
+  "WIP: "*) title=${title:5} ;;
+esac
+shopt -u nocasematch
+# Git writes Merge, fixup! and squash! subjects itself; a PR title is typed, so only a revert is exempt.
+case $title in
+  'Revert "'*) exit 0 ;;
+esac
+
+rc=0
+reason=$(rastro_check_header_strict "$title" "${2-}" 2>&1) || rc=$?
+case $rc in
+  0) ;;
+  1)
+    printf 'rastro: PR title rejected: %s\n  title: %s\n  With squash merge the title becomes the commit message.\n' "$reason" "$1" >&2
+    exit 1
+    ;;
+  *)
+    printf '%s\n' "$reason" >&2
+    exit "$rc"
+    ;;
+esac
