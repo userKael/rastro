@@ -155,7 +155,7 @@ A profile is a markdown file that replaces a default of one skill. Put it at `.r
 | `deliver` | the sections of the PR description |
 | every skill | `## Additional checks`: extra checks, each with the step where it runs, what it verifies and whether it is a gate or an observation |
 
-Writing rules go in `.rastro/profiles/writing.md`, and every skill applies them to the text a person reads. `profiles/examples/writing.md` is a starting point. `profiles/examples/architecture-services/` holds an example set of architecture rules in a bookstore domain, and four golden paths with gaps for your stack.
+Writing rules go in `.rastro/profiles/writing.md`, and every skill applies them to the text a person reads. `profiles/examples/writing.md` is a starting point. `profiles/examples/architecture-services/` holds an example set of architecture rules in a bookstore domain, and four example golden paths in the format of `templates/golden-path.md`, with gaps for your stack.
 
 `setup` does not create `.rastro/profiles/` or `.rastro/adapters/`, because git does not version an empty directory. Create each one when you have a first file for it.
 

@@ -12,6 +12,8 @@ The examples use a bookstore with three modules: `catalog`, `orders` and `invent
 | `service` | one business operation per entry point | other services, a `repository`, an external client |
 | `repository` | reads and writes of one persistence store | the store |
 | `domain` | optional; entities and value objects with their invariants | nothing outside itself |
+| `external-client` | one call to a system outside the process | that system |
+| `migration` | one change of a persistence schema, with its reversal | the store |
 
 Set `architecture.layers` in `.rastro/config.yml` to the layers you use, and `architecture.modules` to your module names. An external client sits beside the repository: a service reaches a system outside the process only through one of the two.
 

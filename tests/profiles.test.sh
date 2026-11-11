@@ -1,5 +1,6 @@
 tests_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 . "$tests_dir/lib/assert.sh"
+. "$tests_dir/../hooks/lib/frontmatter.sh"
 export LC_ALL=C.UTF-8
 root=$(cd "${1:-$tests_dir/..}" && pwd)
 ex="$root/profiles/examples"
@@ -58,7 +59,7 @@ test_rules_file() {
 test_rules_layers() {
   local layer
   require_file "$rules" || return 0
-  for layer in handler service repository domain; do
+  for layer in handler service repository domain external-client migration; do
     grep -qF -e "\`$layer\`" "$rules" || _assert_fail "rules.md does not name the layer \`$layer\`"
   done
 }
@@ -78,7 +79,7 @@ test_rules_cycle_is_advisory() {
 }
 
 test_golden_paths() {
-  local name file fences
+  local name file fences key value heading
   for name in "${GOLDEN_PATHS[@]}"; do
     file="$paths/$name.md"
     require_file "$file" || continue
@@ -89,6 +90,19 @@ test_golden_paths() {
     grep -qE 'catalog|orders|inventory' "$file" || _assert_fail "$name.md cites none of catalog, orders, inventory"
     fences=$(grep -c '^```' "$file")
     [ $((fences % 2)) -eq 0 ] || _assert_fail "$name.md has an unclosed code fence"
+    for key in id type version status verified_by instances origin; do
+      rastro_frontmatter_get "$file" "$key" >/dev/null || _assert_fail "$name.md lacks the frontmatter key: $key"
+    done
+    value=$(rastro_frontmatter_get "$file" id)
+    [ "$value" = "$name" ] || _assert_fail "$name.md has id '$value', not the file name"
+    value=$(rastro_frontmatter_get "$file" status)
+    [ "$value" = current ] || _assert_fail "$name.md has status '$value', not current"
+    value=$(rastro_frontmatter_get "$file" verified_by)
+    [ "$value" = review ] || _assert_fail "$name.md has verified_by '$value', not review"
+    for heading in '## When to use' '## Decisions' '## Security' '## Verification' '## Known debt' '## History'; do
+      grep -qxF "$heading" "$file" || _assert_fail "$name.md lacks the heading: $heading"
+    done
+    grep -qE '^- \*\*.*\*\* Why: .*Revisit if: ' "$file" || _assert_fail "$name.md has no decision with Why and Revisit if"
   done
 }
 

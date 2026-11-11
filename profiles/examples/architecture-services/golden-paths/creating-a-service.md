@@ -1,8 +1,27 @@
+---
+id: creating-a-service
+type: service
+version: 1.0.0
+status: current
+verified_by: review
+instances: [src/orders/services/place-order.service.ts:1]
+origin: example, bookstore, 2026-11-11
+---
+
 # Golden path: creating a service
+
+## When to use
 
 A service performs one business operation. A handler calls it. It calls other services, a repository and external clients. Replace every `<stack: ...>` gap with the tool, path or command of your stack, then list this file in `architecture.golden_paths` of `.rastro/config.yml`.
 
 Rules in play, defined in `../rules.md`: `[module-public-api]`, `[no-service-cycle]`, `[pure-domain]` and `[no-sensitive-log]`.
+
+## Decisions
+
+- **A service performs one business operation and has one public method.** Why: a second operation is a second service, so each name says what the service does and each stays small. Revisit if: two operations always change together and share one transaction.
+- **Another module is reached only through its public API.** Why: internals stay free to change, and the dependency edges between modules stay visible (`[module-public-api]`). Revisit if: the modules merge into one.
+- **The service decides the transaction boundary.** Why: the handler and the repository each see only part of the operation, and modules that do not share a transaction need a compensating call. Revisit if: a unit-of-work mechanism takes over the boundary.
+- **The service throws a typed error for each outcome a caller must tell apart.** Why: the handler maps the type to a response without reading a message. Revisit if: the stack returns results instead of throwing.
 
 ## Checklist
 
@@ -157,3 +176,22 @@ What the example shows:
 - `order.ts` imports no framework and no ORM. The repository owns the mapping to storage (`[pure-domain]`).
 - Typed errors let the handler pick a status code without reading a message.
 - A failed save releases the reservation, because `orders` and `inventory` do not share a transaction.
+
+## Security
+
+- Sensitive data in logs: the service logs the operation name and identifiers, and no field of `architecture.sensitive_data` (`[no-sensitive-log]`). Verified in review by the logging item of the checklist.
+- Partial failure that leaves the data inconsistent: the service decides the transaction boundary and compensates when a later step fails. Verified by the unit test with fakes, one case per typed error.
+
+## Verification
+
+A reviewer checks each instance against the checklist above. For `[no-service-cycle]`, the section `## Cycle detector` says how a tool enforces it; until that tool runs, report the rule as "not checked by a tool". No command enforces the rest of this golden path yet, so `verified_by` is `review`.
+
+## Known debt
+
+None.
+
+## History
+
+| Version | Date | Item | Change |
+|---|---|---|---|
+| 1.0.0 | 2026-11-11 | example | Created from the first instance |

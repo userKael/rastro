@@ -1,8 +1,26 @@
+---
+id: creating-an-endpoint
+type: handler
+version: 1.0.0
+status: current
+verified_by: review
+instances: [src/orders/handlers/place-order.handler.ts:1]
+origin: example, bookstore, 2026-11-11
+---
+
 # Golden path: creating an endpoint
+
+## When to use
 
 An endpoint is a handler. It receives a request, calls one service and turns the result into a response. A job or a queue consumer follows the same path with a different entry point. Replace every `<stack: ...>` gap with the tool, path or command of your stack, then list this file in `architecture.golden_paths` of `.rastro/config.yml`.
 
 Rules in play, defined in `../rules.md`: `[module-public-api]` and `[no-sensitive-log]`. The service the handler calls follows `creating-a-service.md`.
+
+## Decisions
+
+- **The handler validates the input before it calls a service.** Why: a malformed body must never reach business code, and a 400 at the boundary is cheaper than a failure deeper in. Revisit if: the framework validates the request before the handler runs.
+- **The handler calls exactly one service and makes no repository call.** Why: business state and business rules stay in the service, so the handler stays a translation layer. Revisit if: one request must run two operations that cannot sit in one service.
+- **The handler maps each typed error to a status code.** Why: the status code comes from the type of the error, never from reading a message. Revisit if: a shared error mapper replaces the per-handler mapping.
 
 ## Checklist
 
@@ -89,3 +107,23 @@ What the example shows:
 - The handler calls one service and holds no business rule: stock and catalog checks live in `PlaceOrderService`.
 - Each typed error of the service maps to one status code: 422 for an unknown book, 409 for short stock. Any other error is rethrown to the global handler.
 - The responses carry the `isbn` and the order id. They carry no customer data, and the handler logs none (`[no-sensitive-log]`).
+
+## Security
+
+- Untrusted input: the handler parses and validates the body at the boundary and rejects a malformed one with 400. Verified in review by the validation item of the checklist and by the handler test, which has one case per status code.
+- Unauthenticated or unauthorized access: authentication and authorization run before the handler body. Verified in review by the guard item of the checklist and by the end-to-end test of the route.
+- Sensitive data in logs and responses: the handler logs no field of `architecture.sensitive_data` and no whole request body (`[no-sensitive-log]`). Verified in review.
+
+## Verification
+
+A reviewer checks each instance against the checklist above. No command enforces this golden path yet, so `verified_by` is `review`.
+
+## Known debt
+
+None.
+
+## History
+
+| Version | Date | Item | Change |
+|---|---|---|---|
+| 1.0.0 | 2026-11-11 | example | Created from the first instance |
