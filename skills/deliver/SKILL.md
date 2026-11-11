@@ -218,6 +218,8 @@ Run here every check of `## Additional checks` that names this step.
 
 Then check the golden paths. For each `new` or `changes` component of the branch whose type has a golden path in the `architecture.golden_paths` folder, check each item of its `## Checklist` and its `## Security` against the diff. A golden path whose `verified_by` is `automated: <command>` is checked by running the command, never by reading. Add one row per golden path to the table, named by its id: ✅, or ⚠ with the `file:line`. When the rules table was skipped because no rules are defined, the golden-path rows form the table on their own. A ⚠ follows the rule above: a fix before the push, or a line in `## Recorded debt`. A component that contradicts a golden path with no decision is not debt: it goes back to `implement`, to its golden-path gate.
 
+A golden path of that check whose `status` is `current`, whose `verified_by` is `review` and whose `instances`, with those this branch adds, lists 2 or more entries is a candidate for an automated check: a later instance confirmed what the first one fixed. It goes to the continuity gate as an observation, never as a ⚠ and never as a gate of its own.
+
 ## Step 7 — Agent rulings
 
 `<workspace>/<id>/rulings.md` holds two kinds of line. After subagent execution, `implement` appended the rulings it extracted before deleting the subagent workspace. In a continuous run, each confirmation gate appended a line that starts with `- Continuous run,`. Read the file when it exists.
@@ -243,7 +245,7 @@ Extract the exact numbers from the output: test suites, tests, and the coverage 
 - A red type check is fixed in the code, never by an ignore comment, an escape-hatch type or a non-null assertion. An inventoried suppression debt only shrinks.
 - A command already red before this branch: prove it on `<target>` in a temporary worktree, never with `git stash`. Run `tmp=$(mktemp -d)` and `git worktree add --detach "$tmp/target" <target>`, rerun the command inside `$tmp/target`, then `git worktree remove --force "$tmp/target"`. A failure caused by the fresh worktree itself, such as missing dependencies, proves nothing. Record a proven pre-existing failure in `## Recorded debt`. Only then does the gate pass for that command.
 
-Coverage is not evidence of behavior. A mock that returns a complete fixture hides code that wipes a field, and a guard on the wrong field passes a full suite. When the PR touches an integration with an external system, `## Verification` says whether it was tested by hand against that system, and what is still not exercised.
+Coverage is not evidence of behavior. A mock that returns a complete fixture hides code that wipes a field, and a guard on the wrong field passes a full suite. When the PR touches an integration with an external system, `## Verification` says whether it was tested by hand against that system, and what is still not exercised. For a component whose type is in `architecture.boundary_types`, list there each real-system scenario of its golden path: run and passed, or not run, with the reason.
 
 ## Step 9 — Handoff
 
@@ -316,12 +318,15 @@ Print the title, then the state only:
 | Human execution | <none, done in some environments, or all pending> |
 | CI | <state from `ci_status`, or unavailable> |
 
-Each pending action becomes one note of one line below the table, never a parenthesis in a cell:
+Each pending action, and each candidate for an automated check from Step 6, becomes one note of one line below the table, never a parenthesis in a cell:
 
 - `Formal link pending: <the one action the human takes>.`
 - `⚠ <id> (<what it is>) is pending and blocks the merge of this PR.`
+- `Golden path <id>: <n> instances, verified by review. A candidate for an automated check.`
 
 `⚠` marks only what blocks the merge. The human should not discover it in the PR description after approving.
+
+A candidate for an automated check is an observation: it carries no `⚠`, and it neither blocks the merge nor stops a continuous run.
 
 Then ask with the structured question tool, without repeating the options in the text. Without that tool, end the turn with the question.
 
