@@ -33,3 +33,6 @@ The default is to stop.
 If the adapter file does not exist, stop and report.
 .rastro/profiles/writing.md
 bash .rastro/git-hooks/check-commits <target> <branch>
+Golden paths created or evolved
+checked by running the command, never by reading
+goes back to `implement`, to its golden-path gate

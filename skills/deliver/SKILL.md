@@ -188,6 +188,7 @@ Rules by section:
 - **Reconciliation.** Only with `tracker: none`, where the PR description is the home of the reconciliation.
 - **Divergences from the design doc.** Transposed from `reconciliation.md`. Without it the reviewer rereads the design doc and concludes the PR is wrong.
 - **Recorded debt.** What was left out on purpose: the branch name divergence of Step 2, the commits Step 3 could not rewrite, a red check proven pre-existing in Step 8, and every ⚠ of Step 6 that was not fixed.
+- **Golden paths created or evolved.** Only when the branch created a golden path or changed its version. One row per golden path, from its `## History`.
 - **Rule self-check.** Only when Step 6 left a ⚠.
 - **Agent rulings.** From Step 7. Removed whole without subagent execution.
 - **Executed plan.** The whole content of `plan.md`. Collapsed when the `collapsible` capability of the code-host adapter says supported, otherwise a plain section marked optional in its title. When the plan dominates the description, cut the tasks delivered by earlier PRs of the stack and say they were cut.
@@ -212,6 +213,8 @@ An entry whose fields are still `<...>` placeholders, as in the shipped example,
 When `docs.public_portal` is set, add one observation. If the diff touches a business rule, a contract or a published event and no portal file changed, answer in one sentence: is the published rule still true? If yes, go on. If not, fix the page now, or record in `## Recorded debt` which page is now wrong. This is a safety net. The primary detection belongs to `reconcile` and `breakdown`, and a page that arrives here outdated escaped both. Code commits rarely touch the public docs, which is why the question exists.
 
 Run here every check of `## Additional checks` that names this step.
+
+Then check the golden paths. For each `new` or `changes` component of the branch whose type has a golden path in the `architecture.golden_paths` folder, check each item of its `## Checklist` and its `## Security` against the diff. A golden path whose `verified_by` is `automated: <command>` is checked by running the command, never by reading. Add one row per golden path to the table, named by its id: ✓, or ⚠ with the `file:line`. A ⚠ follows the rule above: a fix before the push, or a line in `## Recorded debt`. A component that contradicts a golden path with no decision is not debt: it goes back to `implement`, to its golden-path gate.
 
 ## Step 7 — Agent rulings
 

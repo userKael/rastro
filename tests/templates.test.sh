@@ -153,7 +153,7 @@ test_pr_description() {
   require_all pr-description.md \
     '## Context' '## What this PR delivers' '## Closed decisions' '## Risks and rollback' \
     '## Verification' '## Next PRs' '## Divergences from the design doc' '## Recorded debt' \
-    '## Agent rulings' '## Pending human execution' '<details>'
+    '## Agent rulings' '## Pending human execution' '<details>' '## Golden paths created or evolved'
 }
 
 test_calibration() {
