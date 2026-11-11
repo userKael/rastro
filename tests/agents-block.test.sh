@@ -194,6 +194,16 @@ test_no_percentages() {
   [ -z "$hits" ] || _assert_fail "block states a percentage" "$hits"
 }
 
+test_golden_paths_section() {
+  local body
+  body=$(section "Golden paths")
+  need "golden paths" 'first instance' "$body"
+  need "golden paths" '`contradicts`' "$body"
+  grep -qF 'the golden-path checkpoint' "$block" ||
+    _assert_fail "doctrine line does not list the golden-path checkpoint"
+  need "source precedence" 'Neither wins silently.' "$(section "Source precedence")"
+}
+
 test_block_exists
 test_markers_wrap_the_block
 test_placeholders
@@ -209,4 +219,5 @@ test_gate_anatomy
 test_failing_test_verdict
 test_artifacts_not_versioned
 test_no_percentages
+test_golden_paths_section
 finish

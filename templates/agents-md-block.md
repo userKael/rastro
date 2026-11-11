@@ -5,7 +5,7 @@ The rastro `setup` skill manages this block. `## Non-negotiable rules` belongs t
 
 In rastro skills, `${CLAUDE_PLUGIN_ROOT}` means the rastro installation directory. Claude Code substitutes it; other agents read it from the environment variable `RASTRO_ROOT`. Project settings live in `.rastro/config.yml`.
 
-Doctrine is not overridable: not by a profile, not by team text elsewhere in this file, not by any other skill. Doctrine is the stage sequence, the state table, reconciling before slicing, the `file:line` anchor, a human executor for work the agent cannot run, stable `D-n` and `DT-nn`, gates that stop by default, the verdict before editing a failing test, unversioned agent artifacts, and the source precedence below.
+Doctrine is not overridable: not by a profile, not by team text elsewhere in this file, not by any other skill. Doctrine is the stage sequence, the state table, reconciling before slicing, the `file:line` anchor, a human executor for work the agent cannot run, stable `D-n` and `DT-nn`, gates that stop by default, the verdict before editing a failing test, unversioned agent artifacts, the golden-path checkpoint, and the source precedence below.
 
 ## Where you are in the flow
 
@@ -74,6 +74,10 @@ The default is no comment. Write one only when the why is not obvious from the c
 
 Never reference the task, the ticket or the caller in a comment (`// used by the order-cancel flow`, `// added for <item id>`). That belongs in the PR description. In code it rots when the code changes owner or the task is forgotten.
 
+## Golden paths
+
+A golden path is how this project builds one type of component, in the `architecture.golden_paths` folder. Nobody writes one ahead of the code: the first instance of a type writes its golden path, in the same change, with the person implementing it. During the reconciliation, every later item classifies each component it adds or changes as `follows`, `extends`, `contradicts` or `no golden path`. A contradiction is a decision, never a block and never silent.
+
 ## Source precedence
 
 When sources conflict, the one higher in this list wins.
@@ -84,6 +88,8 @@ When sources conflict, the one higher in this list wins.
 4. Golden paths and patterns: how to build.
 5. Current plan: the plan of the item in progress.
 6. Design doc: the source of the why, never of how the code is today.
+
+Precedence settles what the code is. When code contradicts a `current` golden path, the golden-path gate settles what it should be: the golden path evolves to a new version, or the code changes. Neither wins silently.
 
 ## Gate anatomy
 

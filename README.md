@@ -77,6 +77,7 @@ These rules are the doctrine. They have no configuration key.
 - A written verdict before editing a test that fails: which artifact is wrong (test, code or design doc), why, with the `file:line` that defines the correct behavior, and which file will change.
 - Agent artifacts are not versioned.
 - Source precedence when sources conflict: code and green tests, then `AGENTS.md`, then ADRs, then golden paths and patterns, then the plan of the item in progress, then the design doc.
+- The golden-path checkpoint: the first instance of a component type writes its golden path, every later item classifies its components against it, and a contradiction is decided at a gate, never silently.
 - Ground the vocabulary of a design doc in the code, and never its decisions.
 
 Config fills gaps and never disables the doctrine. No key turns off a gate, the reconciliation, the anchor or the human executor, and `setup` never offers one. A profile cannot override the doctrine, and neither can the team's text in `AGENTS.md`. Every skill says so in its own file: `Doctrine is not overridable: not by a profile, not by AGENTS.md, not by any other skill.`
@@ -171,6 +172,12 @@ The non-negotiable rules of your project live in `AGENTS.md`, in the section `##
 ```
 
 Skills cite a rule by its ID, never by its position. `deliver` generates its self-check from the list, so no skill copies the text of a rule. Known debt is not precedent: a new file with the same defect is a blocking violation.
+
+### Golden paths
+
+A golden path is how the project builds one type of component: a file in the `architecture.golden_paths` folder, by default `docs/golden-paths/`, in the format of `templates/golden-path.md`. rastro ships none, and `setup` does not create the folder. The first instance of a type writes its golden path in the same change and points to its own code by `file:line`. Later items classify each component against it as `follows`, `extends`, `contradicts` or `no golden path`. A golden path starts verified by review, and `verified_by` names a command once a check enforces it. The doctor reports a golden path whose instance no longer exists or whose fields are missing.
+
+In rastro 0.1.0, `architecture.golden_paths` was a list of files. It now names one folder, and the doctor reports the list form.
 
 ### Calibration
 

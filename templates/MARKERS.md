@@ -23,7 +23,7 @@ Identifiers are not translated either: `D-n`, `DT-nn`, rule IDs, domain names.
 | `contradicts` | `reconcile` → `implement` |
 | `no golden path` | `reconcile` → `breakdown`, `implement` |
 
-The last three tag the components of `## Code flows` in a design doc: `new` is a component that does not exist yet, `changes` is one that exists and this change edits, and `exists` is one that is reused without change.
+`new`, `changes` and `exists` tag the components of `## Code flows` in a design doc: `new` is a component that does not exist yet, `changes` is one that exists and this change edits, and `exists` is one that is reused without change.
 
 The four golden-path tags classify a `new` or `changes` component against the golden path of its type, in the `architecture.golden_paths` folder.
 

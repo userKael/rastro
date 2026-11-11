@@ -89,6 +89,13 @@ test_doctrine_is_listed_and_not_configurable() {
   done
 }
 
+test_golden_paths_are_documented() {
+  [ -f "$readme" ] || return 0
+  need_in_section 'What is not configurable' 'golden-path checkpoint'
+  need_in_section 'Configure' 'docs/golden-paths/'
+  need_in_section 'Configure' 'the doctor reports the list form'
+}
+
 test_hooks_section_states_what_ci_checks() {
   [ -f "$readme" ] || return 0
   need_in_section 'Hooks in three layers' 'squash'
@@ -142,6 +149,7 @@ test_agent_support_is_honest
 test_install_and_configure_name_the_real_commands
 test_modes_without_a_tool_are_tabled
 test_doctrine_is_listed_and_not_configurable
+test_golden_paths_are_documented
 test_hooks_section_states_what_ci_checks
 test_configure_states_defaults_and_env_example
 test_adapter_section_points_to_the_contract
