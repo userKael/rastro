@@ -42,3 +42,11 @@ The range ends at the base branch, not at `HEAD`
 Copy each human-execution block below the decisions table too, with its artifact verbatim.
 Read the six fields from the human-execution block of that `D-n` in the holder's `## Reconciliation`
 When the block is missing, or its artifact is, stop and report
+### Writing a golden path
+### Golden-path gate
+Gate — <component> contradicts golden path
+freezes its accidents
+drafted: do these decisions hold?
+A decision with no reason is a circumstance of the first instance
+Golden paths this item creates or evolves
+${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md

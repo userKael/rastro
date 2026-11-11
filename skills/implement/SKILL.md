@@ -22,6 +22,7 @@ Four stages, in order, never skipped: INTAKE → RECONCILIATION → PLAN → EXE
 - The `reconcile` skill, at `${CLAUDE_PLUGIN_ROOT}/skills/reconcile/SKILL.md`, which owns the reconciliation protocol and its gate.
 - The `deliver` skill, at `${CLAUDE_PLUGIN_ROOT}/skills/deliver/SKILL.md`, which receives the handoff.
 - Plan template: `${CLAUDE_PLUGIN_ROOT}/templates/plan.md`.
+- The template `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md`, when the item creates a golden path.
 - Team profile, optional: `.rastro/profiles/implement.md`. Its `## Additional checks` section lists extra checks, each with the stage where it runs and whether it is a gate or an observation. Run each one at its stage. Environment preparation before integration tests, and title aliases of the team's older design docs, belong there.
 - Writing rules, optional: when `.rastro/profiles/writing.md` exists, apply it to every text a person reads: reports, gates, the plan.
 - Optional skills, each with a built-in fallback:
@@ -179,7 +180,8 @@ The `## Global Constraints` block reaches the reviewer of each task verbatim. Wh
 
 - **Rules by ID.** Each rule ID from `architecture.rules` that this plan touches, with why. One line gives the resolved location of `architecture.rules`, such as `AGENTS.md#non-negotiable-rules`, so the reviewer can open the text there. The rule text is never copied.
 - **Delivery conventions.** The branch format and the commit format, repeated here for the reviewer.
-- **Applicable golden paths.** Only the files of `architecture.golden_paths` this plan uses, each with why.
+- **Applicable golden paths.** Only the golden paths of the `architecture.golden_paths` folder this plan uses, each with why.
+- **Golden paths this item creates or evolves.** Each `no golden path`, `extends` and decided `contradicts` row of the reconciliation: the golden path, the change (created, extended or changed) and the task that writes it. That task is the task of the instance, never a task of its own.
 - **Relevant state machines.** Each entity of `domain.stateful_entities` the plan touches: states, allowed transitions, and the `file:line` that defines them.
 - **Code-flow boundaries.** Only the `new` and `changes` items of the code flow that survived the reconciliation.
 - **Decisions of this item.** Each `D-n` and each `DT-nn` that still binds the plan.
@@ -265,6 +267,19 @@ The commit convention lives in the AGENTS.md block, which reaches every subagent
 
 A red test is a diagnosis before it is a fix. Before editing any file, write the `VERDICT` block of `## Failing tests` in the AGENTS.md block. When the wrong artifact is the design doc, stop and bring it to the human: a design doc is not fixed during execution.
 
+### Writing a golden path
+
+The task that delivers the first instance of a type writes its golden path, in the same commit as the instance:
+
+- Copy `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md` to `<architecture.golden_paths><type>.md`. Create the folder when it is absent.
+- Fill it from the code just written. `instances` holds the `file:line` of the instance and never a copy of its code. Every decision carries its `Why:` and its `Revisit if:`. A decision with no reason is a circumstance of the first instance, not a decision: leave it out.
+- Set `status: current`, `version: 1.0.0` and `verified_by: review`. An automated check written against one instance freezes its accidents. It comes when a later instance confirms the golden path.
+- Fill `## Security` for every type: the threats considered, the control for each and how it is verified, or "none identified" with the reason.
+
+An `extends` raises the minor version, adds the instance to `instances` and a row to `## History`. A `contradicts` decided for the golden path raises the major version, moves every instance that no longer follows it to `## Known debt`, and adds a row to `## History`.
+
+Before the commit, raise the golden-path review gate: the person implementing the task defines the golden path with the agent. **Gate — golden path `<id>` <version> drafted: do these decisions hold?** Class: deliberation. One row per decision the draft adds or changes: the decision, its `Why:`, its `Revisit if:` and the `file:line` of the instance that shows it, plus a quick-exit row, "all hold as drafted". The person confirms, rewrites or drops each decision, and the file keeps only what the person confirmed or rewrote. A subagent never raises this gate: it drafts the file and ends its task.
+
 ### Discovered-constraint gate
 
 Execution finds what the plan did not know: a constraint of a tool, a framework or a database that breaks a premise. That is a gate, not a footnote, because the path chosen changes what enters the PR.
@@ -289,6 +304,21 @@ Then ask with the structured question tool: one option per real path, each with 
 Never turn this gate into a paragraph. Constraint, alternatives, consequences and question in ten lines of prose make the human reread to find the decision. `Already ruled out` keeps the human from proposing what was already tried.
 
 A subagent never raises this gate. The subagent that meets the constraint fills the table as text, ends its task without working around the constraint, and the main session raises the gate. A workaround chosen inside a subagent is a production decision taken without the operating context.
+
+### Golden-path gate
+
+Execution can find what the reconciliation did not: the code this task needs breaks a decision or a checklist item of a `current` golden path. That is a gate, never a silent choice: otherwise the code that lands first becomes the precedent by default.
+
+**Gate — <component> contradicts golden path `<id>`: which one changes?** Class: fork. State:
+
+| | |
+|---|---|
+| Golden path | `<id>` <version>, the decision or item at `<file:line>` |
+| What the code needs | <the behavior, with the `file:line` that requires it> |
+| Instances that follow it | <count>, the first at `<file:line>` |
+| Already ruled out | <what was tried, and why it does not serve> |
+
+Ask with the structured question tool: change the code to follow the golden path, or evolve the golden path to a new major version, as `### Writing a golden path` says. Without that tool, end the turn with the question. A subagent never raises this gate: it fills the table as text and ends its task.
 
 ### Verification before any claim of done
 

@@ -27,6 +27,12 @@ Only the golden paths this plan uses.
 
 - `<path>`: <why it applies>
 
+### Golden paths this item creates or evolves
+
+From the `no golden path`, `extends` and decided `contradicts` rows of the reconciliation. The task of the instance writes the golden path.
+
+- `<id>`: <created | extended to <version> | changed to <version>>, in Task <n>
+
 ### Relevant state machines
 
 - `<entity>`: states `<a, b, c>`; allowed transitions `<a to b, b to c>`; defined at `<file:line>`
