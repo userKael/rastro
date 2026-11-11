@@ -70,8 +70,8 @@ architecture:
   layers:
   # Where the non-negotiable rules live; deliver generates its self-check from them.
   rules: "AGENTS.md#non-negotiable-rules"
-  # Files showing how to build each kind of component; implement reads the ones it uses.
-  golden_paths:
+  # Folder of golden paths, one file per component type, in the format of templates/golden-path.md. Versioned; setup does not create it.
+  golden_paths: docs/golden-paths/
   # Files that publish contracts (API specs, event schemas); one design doc per contract boundary.
   contract_sources: []
   # Classes of data that rules and deliver treat as sensitive.

@@ -42,6 +42,7 @@ test_template_parses() {
   assert_eq "squash" "$(rastro_config_get code_host.merge)" "default merge"
   assert_eq ".agent/" "$(rastro_config_get workspace)" "default workspace"
   assert_eq ".review-rules.md" "$(rastro_config_get review.rules)" "default review.rules is markdown"
+  assert_eq "docs/golden-paths/" "$(rastro_config_get architecture.golden_paths)" "default golden_paths is a folder"
   assert_eq $'feat\nfix\nrefactor\nchore\ndocs\nci\nperf' "$(rastro_config_list conventions.types)" "default types"
 }
 test_unsupported_lists() {
