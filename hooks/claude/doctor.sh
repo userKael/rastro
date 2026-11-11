@@ -336,12 +336,16 @@ if [ "$k_tracker" = local ] && get tracker.local_dir; then
 fi
 
 # gp_security FILE: prints missing, empty, none or ok for the ## Security section.
+# A section whose lines are all unfilled template placeholders counts as empty.
 gp_security() {
   awk '
     { sub(/\r$/, "") }
     !found && /^## Security[ \t]*$/ { found = 1; on = 1; next }
     on && /^##? / { exit }
-    on && /[^ \t]/ { text = 1; if (index(tolower($0), "none identified")) none = 1 }
+    on && /[^ \t]/ {
+      if ($0 !~ /^[ \t]*</ && index($0, "<threat>") == 0) text = 1
+      if (index(tolower($0), "none identified")) { text = 1; none = 1 }
+    }
     END { print (!found ? "missing" : !text ? "empty" : none ? "none" : "ok") }
   ' "$1"
 }
@@ -420,7 +424,10 @@ gp_check() {
           if [ -n "$bin" ]; then
             checks=$((checks + 1))
             if ! (cd "$root" 2>/dev/null && command -v -- "$bin" >/dev/null 2>&1); then
-              problem "golden path $rel: verified_by runs $bin, which is not on PATH; deliver cannot run the check until it is installed"
+              case $bin in
+                */*) problem "golden path $rel: verified_by runs $bin, which is not an executable file; deliver cannot run the check until it is installed" ;;
+                *) problem "golden path $rel: verified_by runs $bin, which is not on PATH; deliver cannot run the check until it is installed" ;;
+              esac
             fi
           fi
         fi

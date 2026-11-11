@@ -296,6 +296,17 @@ test_doctor_golden_path_check_env_prefix() {
   run_doctor "$repo"
   assert_closing 0 "gp check env prefix"
 }
+test_doctor_golden_path_check_path_not_executable() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  mkdir -p "$repo/scripts"
+  gp_sed "$repo" 's|^verified_by: .*|verified_by: automated: ./scripts/check-gp.sh --all|'
+  run_doctor "$repo"
+  assert_contains "$OUT" "- PROBLEM: golden path $GP_FILE: verified_by runs ./scripts/check-gp.sh, which is not an executable file; deliver cannot run the check until it is installed" "gp check path not executable"
+  assert_not_contains "$OUT" "which is not on PATH" "gp check path not executable: not the PATH message"
+  assert_closing 1 "gp check path not executable"
+}
 test_doctor_golden_path_check_never_runs() {
   local repo
   repo=$(new_repo doctor-ok)
@@ -401,6 +412,16 @@ test_doctor_boundary_security_crlf() {
   gp_sed "$repo" 's/$/\r/'
   run_doctor "$repo"
   assert_closing 0 "boundary security crlf"
+}
+test_doctor_boundary_security_placeholders_only() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "boundary_types: [processor]"
+  gp_append "$repo" $'\n## Security\n\n<A type in the list crosses a trust boundary. Draw its threats from a public reference.>\n\n- <threat>, from <reference and item>. Control: <the control>. Verified by: <how>.'
+  run_doctor "$repo"
+  assert_contains "$OUT" "processor is a boundary type and its ## Security section is empty" "boundary security placeholders only"
+  assert_closing 1 "boundary security placeholders only"
 }
 test_doctor_boundary_security_not_a_boundary() {
   local repo
@@ -1002,6 +1023,7 @@ test_doctor_golden_path_duplicate_type_retired_ignored
 test_doctor_golden_path_check_not_on_path
 test_doctor_golden_path_check_relative_path
 test_doctor_golden_path_check_env_prefix
+test_doctor_golden_path_check_path_not_executable
 test_doctor_golden_path_check_never_runs
 test_doctor_golden_path_check_retired_skipped
 test_doctor_golden_path_check_quoted_command
@@ -1011,6 +1033,7 @@ test_doctor_boundary_security_empty
 test_doctor_boundary_security_none_identified
 test_doctor_boundary_security_subsection_at_end
 test_doctor_boundary_security_crlf
+test_doctor_boundary_security_placeholders_only
 test_doctor_boundary_security_not_a_boundary
 test_doctor_boundary_security_retired_skipped
 test_doctor_boundary_types_not_a_layer
