@@ -47,7 +47,13 @@ test_golden_path() {
     'stay literal in English' \
     '## When to use' '## Decisions' 'Why:' 'Revisit if:' '## Checklist' '## Security' \
     'none identified' '## Verification' '## Known debt' '## History' \
-    '| Version | Date | Item | Change |'
+    '| Version | Date | Item | Change |' \
+    'architecture.boundary_types' '"none identified" does not serve it' \
+    'OWASP Application Security Verification Standard (ASVS)' 'OWASP API Security Top 10' \
+    'never copying its text' 'A rule of the project adds a threat by its ID.' \
+    'Control: <the control>. Verified by:' 'exits non-zero' 'Breaks processor, decision' 'Fix:' \
+    'Make `verify.lint` run the same command, so CI runs it too.' 'without mocks' \
+    '### Scenario: <what it proves>' '- Context:' '- Steps:' '- Success:' '- When blocked:'
   for key in id type version status verified_by instances origin; do
     rastro_frontmatter_get "$tpl/golden-path.md" "$key" >/dev/null ||
       _assert_fail "templates/golden-path.md frontmatter lacks $key"
