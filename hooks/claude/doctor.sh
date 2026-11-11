@@ -335,9 +335,20 @@ if [ "$k_tracker" = local ] && get tracker.local_dir; then
   fi
 fi
 
+# gp_security FILE: prints missing, empty, none or ok for the ## Security section.
+gp_security() {
+  awk '
+    { sub(/\r$/, "") }
+    !found && /^## Security[ \t]*$/ { found = 1; on = 1; next }
+    on && /^##? / { exit }
+    on && /[^ \t]/ { text = 1; if (index(tolower($0), "none identified")) none = 1 }
+    END { print (!found ? "missing" : !text ? "empty" : none ? "none" : "ok") }
+  ' "$1"
+}
+
 gp_check() {
   local file=$1 rel=$2 base key value v s dump id type version status vb origin sup inst path seen_t seen_rel cmd bin
-  local has_instances=0 instances=""
+  local has_instances=0 instances="" state
   base=${file##*/}
   base=${base%.md}
   checks=$((checks + 1))
@@ -399,6 +410,13 @@ gp_check() {
               *) break ;;
             esac
           done
+          case $bin in
+            \"?*\") bin=${bin#\"}; bin=${bin%\"} ;;
+            \'?*\') bin=${bin#\'}; bin=${bin%\'} ;;
+          esac
+          case $bin in
+            *[\"\']*) bin="" ;;
+          esac
           if [ -n "$bin" ]; then
             checks=$((checks + 1))
             if ! (cd "$root" 2>/dev/null && command -v -- "$bin" >/dev/null 2>&1); then
@@ -414,6 +432,19 @@ gp_check() {
     case $'\n'"$gp_layers" in
       *$'\n'"$type"$'\n'*) ;;
       *) problem "golden path $rel: type $type is not in architecture.layers" ;;
+    esac
+  fi
+  if [ -n "$type" ] && [ "$status" != retired ] && [ -n "$gp_boundary" ]; then
+    case $'\n'"$gp_boundary" in
+      *$'\n'"$type"$'\n'*)
+        checks=$((checks + 1))
+        state=$(gp_security "$file")
+        case $state in
+          missing) problem "golden path $rel: $type is a boundary type and has no ## Security section; list the threats considered, the control for each and how each control is verified" ;;
+          empty) problem "golden path $rel: $type is a boundary type and its ## Security section is empty; list the threats considered, the control for each and how each control is verified" ;;
+          none) problem "golden path $rel: $type is a boundary type and its ## Security section says \"none identified\"; list the threats considered, the control for each and how each control is verified" ;;
+        esac
+        ;;
     esac
   fi
   if [ -n "$type" ] && [ "$status" != retired ]; then
@@ -446,6 +477,38 @@ gp_check() {
   done
 }
 
+gp_boundary=""
+gp_layers=""
+gp_layers_read=0
+gp_read_layers() {
+  [ "$gp_layers_read" -eq 0 ] || return 0
+  gp_layers_read=1
+  gp_layers=$(rastro_config_list architecture.layers 2>/dev/null) || gp_layers=""
+  [ -z "$gp_layers" ] || gp_layers=$gp_layers$'\n'
+}
+if get architecture.boundary_types; then
+  case $val in
+    "" | "[]") ;;
+    *)
+      gp_boundary=$(rastro_config_list architecture.boundary_types 2>/dev/null) || gp_boundary=""
+      [ -z "$gp_boundary" ] || gp_boundary=$gp_boundary$'\n'
+      ;;
+  esac
+fi
+if [ -n "$gp_boundary" ]; then
+  gp_read_layers
+  if [ -n "$gp_layers" ]; then
+    checks=$((checks + 1))
+    while IFS= read -r bt; do
+      [ -n "$bt" ] || continue
+      case $'\n'"$gp_layers" in
+        *$'\n'"$bt"$'\n'*) ;;
+        *) problem "architecture.boundary_types names $bt, which is not in architecture.layers" ;;
+      esac
+    done <<<"$gp_boundary"
+  fi
+fi
+
 if get architecture.golden_paths; then
   gp_dir=${val:-docs/golden-paths/}
   case $gp_dir in
@@ -460,8 +523,7 @@ if get architecture.golden_paths; then
           checks=$((checks + 1))
           problem "could not check golden paths: $lib/frontmatter.sh not found"
         else
-          gp_layers=$(rastro_config_list architecture.layers 2>/dev/null) || gp_layers=""
-          [ -z "$gp_layers" ] || gp_layers=$gp_layers$'\n'
+          gp_read_layers
           gp_seen=""
           for f in "$root/$gp_dir"*.md; do
             [ -f "$f" ] || continue

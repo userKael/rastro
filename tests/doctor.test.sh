@@ -319,6 +319,134 @@ s|^verified_by: .*|verified_by: automated: rastro-no-such-check|'
   assert_closing 0 "gp check retired skipped"
 }
 
+test_doctor_golden_path_check_quoted_command() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" "s|^verified_by: .*|verified_by: automated: 'bash' scripts/arch.sh|"
+  run_doctor "$repo"
+  assert_closing 0 "gp check quoted command on PATH"
+  gp_sed "$repo" "s|^verified_by: .*|verified_by: automated: \"my tool\" --x|"
+  run_doctor "$repo"
+  assert_closing 0 "gp check quoted command with a space is skipped"
+  gp_sed "$repo" "s|^verified_by: .*|verified_by: automated: \"NAME=a b\" bash x|"
+  run_doctor "$repo"
+  assert_closing 0 "gp check quoted assignment with a space is skipped"
+  gp_sed "$repo" "s|^verified_by: .*|verified_by: automated: 'rastro-no-such-check' --all|"
+  run_doctor "$repo"
+  assert_contains "$OUT" "- PROBLEM: golden path $GP_FILE: verified_by runs rastro-no-such-check, which is not on PATH" "gp check quoted command not on path: quotes stripped"
+  assert_closing 1 "gp check quoted command not on path"
+}
+
+gp_append() {
+  printf '%s\n' "$2" >>"$1/$GP_FILE"
+}
+SEC_TAIL="list the threats considered, the control for each and how each control is verified"
+OK_SEC=$'\n## Security\n\n- Unbounded retries, from OWASP API Security Top 10 API4:2023. Control: a retry limit. Verified by: the retry test.'
+NONE_SEC=$'\n## Security\n\nNone identified: the processor reads no outside input.'
+
+test_doctor_boundary_security_ok() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "boundary_types: [processor]"
+  gp_append "$repo" "$OK_SEC"
+  run_doctor "$repo"
+  assert_closing 0 "boundary security ok"
+}
+test_doctor_boundary_security_missing() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "boundary_types: [processor]"
+  run_doctor "$repo"
+  assert_contains "$OUT" "- PROBLEM: golden path $GP_FILE: processor is a boundary type and has no ## Security section; $SEC_TAIL" "boundary security missing"
+  assert_closing 1 "boundary security missing"
+}
+test_doctor_boundary_security_empty() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "boundary_types: [processor]"
+  gp_append "$repo" $'\n## Security\n\n   \n## Verification\n\nThe checklist in review.'
+  run_doctor "$repo"
+  assert_contains "$OUT" "processor is a boundary type and its ## Security section is empty" "boundary security empty"
+  assert_closing 1 "boundary security empty"
+}
+test_doctor_boundary_security_none_identified() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "boundary_types: [processor]"
+  gp_append "$repo" "$NONE_SEC"
+  run_doctor "$repo"
+  assert_contains "$OUT" "its ## Security section says \"none identified\"" "boundary security none identified"
+  assert_closing 1 "boundary security none identified"
+}
+test_doctor_boundary_security_subsection_at_end() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "boundary_types: [processor]"
+  gp_append "$repo" $'\n## Security\n\n### Threats\n\n- Unbounded retries, from OWASP API Security Top 10 API4:2023. Control: a retry limit. Verified by: the retry test.'
+  run_doctor "$repo"
+  assert_closing 0 "boundary security subsection at end"
+}
+test_doctor_boundary_security_crlf() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "boundary_types: [processor]"
+  gp_append "$repo" $'\n## Security  \n\n- Unbounded retries, from OWASP API Security Top 10 API4:2023. Control: a retry limit. Verified by: the retry test.'
+  gp_sed "$repo" 's/$/\r/'
+  run_doctor "$repo"
+  assert_closing 0 "boundary security crlf"
+}
+test_doctor_boundary_security_not_a_boundary() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_append "$repo" "$NONE_SEC"
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "boundary type" "boundary security not a boundary"
+  assert_closing 0 "boundary security not a boundary"
+}
+test_doctor_boundary_security_retired_skipped() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "boundary_types: [processor]"
+  gp_sed "$repo" 's|^status: .*|status: retired|
+s|^origin: |superseded_by: worker\
+origin: |'
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "boundary type" "boundary security retired skipped"
+  assert_closing 0 "boundary security retired skipped"
+}
+test_doctor_boundary_types_not_a_layer() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  gp_config "$repo" $'layers: [handler, processor]\n  boundary_types: [external_client]'
+  run_doctor "$repo"
+  assert_contains "$OUT" "- PROBLEM: architecture.boundary_types names external_client, which is not in architecture.layers" "boundary types not a layer"
+  assert_closing 1 "boundary types not a layer"
+}
+test_doctor_boundary_types_without_layers() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  gp_config "$repo" "boundary_types: [external-client]"
+  run_doctor "$repo"
+  assert_closing 0 "boundary types without layers"
+}
+test_doctor_boundary_types_block_list() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  printf '\narchitecture:\n  boundary_types:\n    - processor\n' >>"$repo/.rastro/config.yml"
+  run_doctor "$repo"
+  assert_contains "$OUT" "- PROBLEM: config key architecture.boundary_types uses an unsupported list form" "boundary types block list"
+  assert_eq 1 "$(count_lines_containing "$OUT" "boundary_types")" "boundary types block list: reported once"
+}
+
 test_doctor_without_config() {
   local repo
   repo=$(make_tmp_repo)
@@ -876,4 +1004,16 @@ test_doctor_golden_path_check_relative_path
 test_doctor_golden_path_check_env_prefix
 test_doctor_golden_path_check_never_runs
 test_doctor_golden_path_check_retired_skipped
+test_doctor_golden_path_check_quoted_command
+test_doctor_boundary_security_ok
+test_doctor_boundary_security_missing
+test_doctor_boundary_security_empty
+test_doctor_boundary_security_none_identified
+test_doctor_boundary_security_subsection_at_end
+test_doctor_boundary_security_crlf
+test_doctor_boundary_security_not_a_boundary
+test_doctor_boundary_security_retired_skipped
+test_doctor_boundary_types_not_a_layer
+test_doctor_boundary_types_without_layers
+test_doctor_boundary_types_block_list
 finish
