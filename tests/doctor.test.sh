@@ -268,6 +268,56 @@ test_doctor_golden_path_duplicate_type_retired_ignored() {
   assert_not_contains "$OUT" "already has golden path" "gp retired earlier: not counted"
   assert_closing 0 "gp retired earlier"
 }
+test_doctor_golden_path_check_not_on_path() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's|^verified_by: .*|verified_by: automated: rastro-no-such-check --all|'
+  run_doctor "$repo"
+  assert_contains "$OUT" "- PROBLEM: golden path $GP_FILE: verified_by runs rastro-no-such-check, which is not on PATH; deliver cannot run the check until it is installed" "gp check not on path"
+  assert_closing 1 "gp check not on path"
+}
+test_doctor_golden_path_check_relative_path() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  mkdir -p "$repo/scripts"
+  printf '#!/bin/sh\nexit 0\n' >"$repo/scripts/check-gp.sh"
+  chmod +x "$repo/scripts/check-gp.sh"
+  gp_sed "$repo" 's|^verified_by: .*|verified_by: automated: ./scripts/check-gp.sh --all|'
+  run_doctor "$repo"
+  assert_closing 0 "gp check relative path"
+}
+test_doctor_golden_path_check_env_prefix() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's|^verified_by: .*|verified_by: automated: CHECK_MODE=strict bash scripts/arch.sh|'
+  run_doctor "$repo"
+  assert_closing 0 "gp check env prefix"
+}
+test_doctor_golden_path_check_never_runs() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's|^verified_by: .*|verified_by: automated: touch doctor-ran-the-check|'
+  run_doctor "$repo"
+  [ ! -e "$repo/doctor-ran-the-check" ] || _assert_fail "gp check never runs: not in the repository" "doctor-ran-the-check exists in $repo"
+  [ ! -e "$PWD/doctor-ran-the-check" ] || _assert_fail "gp check never runs: not in the working directory" "doctor-ran-the-check exists in $PWD"
+  assert_closing 0 "gp check never runs"
+}
+test_doctor_golden_path_check_retired_skipped() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's|^status: .*|status: retired|
+s|^origin: |superseded_by: worker\
+origin: |
+s|^verified_by: .*|verified_by: automated: rastro-no-such-check|'
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "which is not on PATH" "gp check retired skipped"
+  assert_closing 0 "gp check retired skipped"
+}
 
 test_doctor_without_config() {
   local repo
@@ -821,4 +871,9 @@ test_doctor_golden_path_lib_missing_never_blocks
 test_doctor_golden_path_type_in_layers
 test_doctor_golden_path_duplicate_type
 test_doctor_golden_path_duplicate_type_retired_ignored
+test_doctor_golden_path_check_not_on_path
+test_doctor_golden_path_check_relative_path
+test_doctor_golden_path_check_env_prefix
+test_doctor_golden_path_check_never_runs
+test_doctor_golden_path_check_retired_skipped
 finish

@@ -336,7 +336,7 @@ if [ "$k_tracker" = local ] && get tracker.local_dir; then
 fi
 
 gp_check() {
-  local file=$1 rel=$2 base key value v s dump id type version status vb origin sup inst path seen_t seen_rel
+  local file=$1 rel=$2 base key value v s dump id type version status vb origin sup inst path seen_t seen_rel cmd bin
   local has_instances=0 instances=""
   base=${file##*/}
   base=${base%.md}
@@ -380,7 +380,33 @@ gp_check() {
   fi
   if [ -n "$vb" ] && [ "$vb" != review ]; then
     case $vb in
-      "automated: "?*) ;;
+      "automated: "?*)
+        if [ "$status" != retired ]; then
+          cmd=${vb#automated:}
+          cmd=${cmd#"${cmd%%[![:space:]]*}"}
+          bin=""
+          while [ -n "$cmd" ]; do
+            bin=${cmd%%[[:space:]]*}
+            case $bin in
+              [A-Za-z_]*=*)
+                case ${bin%%=*} in
+                  *[!A-Za-z0-9_]*) break ;;
+                esac
+                cmd=${cmd#"$bin"}
+                cmd=${cmd#"${cmd%%[![:space:]]*}"}
+                bin=""
+                ;;
+              *) break ;;
+            esac
+          done
+          if [ -n "$bin" ]; then
+            checks=$((checks + 1))
+            if ! (cd "$root" 2>/dev/null && command -v -- "$bin" >/dev/null 2>&1); then
+              problem "golden path $rel: verified_by runs $bin, which is not on PATH; deliver cannot run the check until it is installed"
+            fi
+          fi
+        fi
+        ;;
       *) problem "golden path $rel: verified_by is neither review nor automated: <command>" ;;
     esac
   fi
