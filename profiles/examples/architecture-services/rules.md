@@ -15,7 +15,7 @@ The examples use a bookstore with three modules: `catalog`, `orders` and `invent
 | `external-client` | one call to a system outside the process | that system |
 | `migration` | one change of a persistence schema, with its reversal | the store |
 
-Set `architecture.layers` in `.rastro/config.yml` to the layers you use, and `architecture.modules` to your module names. An external client sits beside the repository: a service reaches a system outside the process only through one of the two.
+Set `architecture.layers` in `.rastro/config.yml` to the layers you use, and `architecture.modules` to your module names. An external client sits beside the repository: a service reaches a system outside the process only through one of the two. In the bookstore, `architecture.boundary_types` is `[handler, external-client]`: both take input from outside the process, so their golden paths list threats from a public reference and a scenario against the real system.
 
 ## Rules
 

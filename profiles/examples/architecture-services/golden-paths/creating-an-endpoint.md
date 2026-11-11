@@ -112,13 +112,22 @@ What the example shows:
 
 ## Security
 
-- Untrusted input: the handler parses and validates the body at the boundary and rejects a malformed one with 400. Verified in review by the validation item of the checklist and by the handler test, which has one case per status code.
-- Unauthenticated or unauthorized access: authentication and authorization run before the handler body. Verified in review by the guard item of the checklist and by the end-to-end test of the route.
-- Sensitive data in logs and responses: the handler logs no field of `architecture.sensitive_data` and no whole request body (`[no-sensitive-log]`). Verified in review.
+- Untrusted input, with properties that the caller must not set, from OWASP API Security Top 10 API3:2023 Broken Object Property Level Authorization. Control: the handler parses the body at the boundary, reads only the properties it declares and rejects a malformed body with 400. Verified by: the validation item of the checklist in review, and the handler test, which has one case per status code.
+- Access without authentication, from OWASP API Security Top 10 API2:2023 Broken Authentication. Control: authentication runs before the handler body. Verified by: the guard item of the checklist in review, the end-to-end test of the route, and the scenario below.
+- A request for an order of another customer, from OWASP API Security Top 10 API1:2023 Broken Object Level Authorization. Control: the handler passes the authenticated customer to the service, which refuses an order that customer does not own. Verified by: the scenario below.
+- Sensitive data in a response, from OWASP API Security Top 10 API3:2023 Broken Object Property Level Authorization. Control: the response carries the identifiers the caller needs and no field of `architecture.sensitive_data`. Verified by: review of the response shape, and the scenario below, which checks the bodies.
+- Sensitive data in a log, from the project rule `[no-sensitive-log]`. Control: the handler logs no field of `architecture.sensitive_data` and no whole request body. Verified by: the logging item of the checklist in review.
 
 ## Verification
 
 A reviewer checks each instance against the checklist above. No command enforces this golden path yet, so `verified_by` is `review`.
+
+### Scenario: one customer cannot read the order of another
+
+- Context: the service runs in a test environment, with two customers that each hold a token, and an order placed by customer A. Run `<stack: command to start the test environment and to obtain a token for each customer>`.
+- Steps: request the order of A with the token of customer B, then request it with no token: `<stack: HTTP client command>`.
+- Success: 404 for B, 401 with no token, and no field of the order of A in either body.
+- When blocked: with no test environment or no customer accounts, ask whoever looks after the environment, and record in the PR that the scenario did not run and which control is left unverified.
 
 ## Known debt
 

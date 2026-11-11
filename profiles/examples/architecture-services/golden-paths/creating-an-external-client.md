@@ -128,13 +128,21 @@ What the example shows:
 
 ## Security
 
-- Hanging calls: every call sets a timeout, read from validated configuration. Verified in review by the timeout item of the checklist and by a fake-transport test.
-- Secrets in source: the base URL, the credentials and the timeout come from configuration loaded at startup, never from the code. Verified in review.
-- Sensitive data in logs: the client logs the operation, the outcome and the duration, and no request header, credential or response body that holds data of `architecture.sensitive_data` (`[no-sensitive-log]`). Verified in review by the logging item of the checklist.
+- A call with no timeout, and a response used without validation, from OWASP API Security Top 10 API10:2023 Unsafe Consumption of APIs. Control: every call sets a timeout read from validated configuration, and the client maps the response to the module's own type and turns any other outcome into `MetadataUnavailableError`. Verified by: the timeout item of the checklist in review, a fake-transport test, and the scenario below.
+- An ISBN from the input placed in the URL path, from OWASP API Security Top 10 API7:2023 Server Side Request Forgery. Control: the client encodes the value as one path segment and builds the URL from the configured base URL only. Verified by: a fake-transport test with an ISBN that holds a slash, and review.
+- A secret in source, from OWASP API Security Top 10 API8:2023 Security Misconfiguration. Control: the base URL, the credentials and the timeout come from configuration loaded at startup, never from the code. Verified by: review, and the scenario below, which takes the key from the secret store.
+- Sensitive data in a log, from the project rule `[no-sensitive-log]`. Control: the client logs the operation, the outcome and the duration, and no request header, credential or response body that holds data of `architecture.sensitive_data`. Verified by: the logging item of the checklist in review, and the scenario below, which reads the logs.
 
 ## Verification
 
 A reviewer checks each instance against the checklist above, and the PR description lists what was not exercised against the sandbox. No command enforces this golden path yet, so `verified_by` is `review`.
+
+### Scenario: the client behaves against the real publisher sandbox
+
+- Context: the publisher's sandbox, and an API key read from `<stack: secret store>`, never typed into a file. Run `<stack: command to start the service or a script that builds the client from configuration>`.
+- Steps: look up a known ISBN, an unknown ISBN, and the known ISBN again with `timeoutMs` set to 1: `<stack: command to run the client against the sandbox>`.
+- Success: the book metadata for the known ISBN, `null` for the unknown one and `MetadataUnavailableError` for the short timeout, with the API key in no log line.
+- When blocked: with the sandbox down or no key, ask whoever owns the account with the publisher, and record in the PR that the scenario did not run and which control is left unverified.
 
 ## Known debt
 

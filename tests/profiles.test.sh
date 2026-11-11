@@ -156,6 +156,33 @@ test_profiles_are_english_lf_and_neutral() {
   done
 }
 
+section_of() {
+  awk -v want="## $2" '
+    { sub(/\r$/, "") }
+    $0 == want { on = 1; next }
+    /^## / { on = 0 }
+    on
+  ' "$1"
+}
+
+test_boundary_golden_paths() {
+  local name file sec ver label
+  for name in creating-an-endpoint creating-an-external-client; do
+    file="$paths/$name.md"
+    require_file "$file" || continue
+    sec=$(section_of "$file" Security)
+    ver=$(section_of "$file" Verification)
+    case $sec in *'OWASP API Security Top 10'*) ;; *) _assert_fail "$name.md: ## Security names no public reference" ;; esac
+    printf '%s\n' "$sec" | grep -qE 'API[0-9]+:2023' || _assert_fail "$name.md: ## Security cites no item of the reference"
+    printf '%s\n' "$sec" | grep -qF 'Verified by:' || _assert_fail "$name.md: ## Security says no Verified by"
+    ! printf '%s\n' "$sec" | grep -qi 'none identified' || _assert_fail "$name.md: a boundary type says none identified"
+    for label in '### Scenario:' '- Context:' '- Steps:' '- Success:' '- When blocked:'; do
+      case $ver in *"$label"*) ;; *) _assert_fail "$name.md: ## Verification lacks $label" ;; esac
+    done
+  done
+  grep -qF 'architecture.boundary_types' "$rules" || _assert_fail "rules.md does not name architecture.boundary_types"
+}
+
 test_rules_file
 test_rules_layers
 test_rules_cycle_is_advisory
@@ -165,4 +192,5 @@ test_writing_profile
 test_writing_names_its_destination
 test_writing_has_no_origin_measurement
 test_profiles_are_english_lf_and_neutral
+test_boundary_golden_paths
 finish
