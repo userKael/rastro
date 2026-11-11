@@ -276,14 +276,14 @@ A red test is a diagnosis before it is a fix. Before editing any file, write the
 The task that delivers the first instance of a type writes its golden path. The golden path lands in the same task as its instance:
 
 - Copy `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md` to a file named `<type>.md` in the `architecture.golden_paths` folder, `docs/golden-paths/` when the key is absent or empty. Create the folder when it is absent.
-- When the design doc recorded a `DT-nn` for this first instance, the draft starts from that `DT-nn`'s decisions. Fill the rest from the code just written. `instances` holds the `file:line` of the instance and never a copy of its code. Every decision carries its `Why:` and its `Revisit if:`. A decision with no reason is a circumstance of the first instance, not a decision: leave it out.
+- When the design doc recorded a `DT-nn` for this first instance, the draft starts from that `DT-nn`'s decisions and `## Security` from its threats. Fill the rest from the code just written. `instances` holds the `file:line` of the instance and never a copy of its code. Every decision carries its `Why:` and its `Revisit if:`. A decision with no reason is a circumstance of the first instance, not a decision: leave it out.
 - Set `status: current`, `version: 1.0.0` and `verified_by: review`. An automated check written against one instance freezes its accidents. It comes when a later instance confirms the golden path.
-- Fill `## Security` for every type: the threats considered, the control for each and how it is verified, or "none identified" with the reason. A type in `architecture.boundary_types` crosses a trust boundary, and "none identified" does not serve it: draw its threats from the public reference that `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md` names, one line per threat with its control and how the control is verified, and give `## Verification` at least one scenario against the real system, without mocks, in the shape the template gives.
+- Fill `## Security` for every type: the threats considered, the control for each and how it is verified, or "none identified" with the reason. A type in `architecture.boundary_types`, or one that its `DT-nn` says crosses a trust boundary (the same `DT-nn` that adds the layer), is a boundary type, and "none identified" does not serve it: draw its threats from the public reference that `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md` names, one line per threat with its control and how the control is verified, and give `## Verification` at least one scenario against the real system, without mocks, in the shape the template gives.
 - When the type is not yet in `architecture.layers`, the same commit adds it to `.rastro/config.yml`, as the decided `DT-nn` says, and to `architecture.boundary_types` when that `DT-nn` says the type crosses a trust boundary.
 
 An `extends` raises the minor version, adds the instance to `instances` and a row to `## History`. A `contradicts` decided for the golden path raises the major version, moves every instance that no longer follows it to `## Known debt`, and adds a row to `## History`. A `follows` adds the instance to `instances` when it is absent, in the same commit as the instance, with no version change and no review gate.
 
-A golden path moves from `verified_by: review` to `automated: <command>` only in a task that writes the check, never in the task of its first instance. Before the change, run the command twice and paste both outputs in the task report: on the branch, where it exits 0, and with one instance edited to break one decision, where it exits non-zero and prints what the template's `## Verification` asks. Undo that edit. The same commit raises the minor version, adds a row to `## History`, and makes `verify.lint` run the command, directly or through a script, so CI runs it too. This change adds no decision, so it raises no review gate.
+A golden path moves from `verified_by: review` to `automated: <command>` only in a task that writes the check, never in the task of its first instance. Before the change, run the command twice and paste both outputs in the task report: on the branch, where it exits 0, and with one instance edited to break one decision, where it exits non-zero and prints what the template's `## Verification` asks. Undo that edit. The same commit raises the minor version, adds a row to `## History`, rewrites `## Verification` to name the command, and makes `verify.lint` run the command, directly or through a script, so CI runs it too. This change adds no decision, so it raises no review gate.
 
 The person implementing the task defines the golden path with the agent, at the golden-path review gate:
 
@@ -302,7 +302,7 @@ Then the deliberation table, one row per decision the draft adds or changes, plu
 | <decision> | <the reason> | <the condition> | `<file:line>` |
 | all hold as drafted | | | |
 
-For a type in `architecture.boundary_types`, a second deliberation table follows, one row per threat the draft adds or changes in `## Security`, plus its own quick-exit row:
+For a type in `architecture.boundary_types`, or one that its `DT-nn` says crosses a trust boundary, a second deliberation table follows, one row per threat the draft adds or changes in `## Security`, plus its own quick-exit row:
 
 | Threat | Control | Verified by |
 |---|---|---|
@@ -360,7 +360,7 @@ Run the configured commands and paste their output literally: `verify.lint`, `ve
 
 The coverage figure comes from the output of `verify.unit` when it prints one. Every number that reaches the PR description, a review note or a commit is the same number, taken on the same revision. A number copied from an earlier run drifts between those three places.
 
-Coverage is not evidence of behavior. A mock that returns a complete fixture hides code that wipes a field. A guard written on the wrong field passes a full suite. When the change touches an integration with an external system, say in the report that a manual test is missing and what it must exercise. For a component whose type is in `architecture.boundary_types`, what the manual test must exercise starts with the real-system scenarios of its golden path's `## Verification`.
+Coverage is not evidence of behavior. A mock that returns a complete fixture hides code that wipes a field. A guard written on the wrong field passes a full suite. When the change touches an integration with an external system, say in the report that a manual test is missing and what it must exercise. When the type of a component has a golden path with real-system scenarios, the report lists them as the manual test to run.
 
 ### Preserve the rulings
 

@@ -188,7 +188,7 @@ Ground, do not derive. The code says what exists, and reuse is vocabulary. Choos
 
 A `new` component whose type has no golden path in the `architecture.golden_paths` folder is the first instance of that type. Record it as a `DT-nn`: the type, and the decisions this first instance fixes for every later one. The golden path itself is written with the code, by `implement`. A type outside `architecture.layers` is a `DT-nn` too: it adds the layer, and its first instance defines the golden path.
 
-When that type is in `architecture.boundary_types`, it crosses a trust boundary: its `DT-nn` also lists the threats considered, drawn from the public reference that `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md` names, the control for each and how each control is verified. "None identified" does not serve a boundary type. A `DT-nn` that adds a layer also says whether the new type crosses a trust boundary; when it does, the type joins `architecture.boundary_types`.
+When that type is in `architecture.boundary_types`, or the `DT-nn` that adds its layer says it crosses a trust boundary, it is a boundary type: its `DT-nn` also lists the threats considered, drawn from the public reference that `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md` names, the control for each and how each control is verified. "None identified" does not serve a boundary type. A `DT-nn` that adds a layer also says whether the new type crosses a trust boundary; when it does, the type joins `architecture.boundary_types`.
 
 One `###` per entry point: a request, a job, a webhook. A sad path goes in an `alt` block or in its own `###`.
 
@@ -204,7 +204,7 @@ Before the gate, check every item:
 - [ ] Candidate slicing carries the draft notice.
 - [ ] No estimate in days, points or phases with an owner.
 - [ ] No proposal contradicts an ADR or a golden path without saying so.
-- [ ] Every `DT-nn` of a first instance whose type is in `architecture.boundary_types` lists its threats, the control for each and how each is verified.
+- [ ] Every `DT-nn` of a first instance whose type is in `architecture.boundary_types`, or whose `DT-nn` says it crosses a trust boundary, lists its threats, the control for each and how each is verified.
 - [ ] Every `DT-nn` opens with its record and collapses its deliberation.
 - [ ] Every `DT-nn` has `Why (b) lost` filled with the argument, never a pointer.
 - [ ] Every section passed the question "If this is wrong, what changes?" and sits on the right side.

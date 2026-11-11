@@ -87,3 +87,7 @@ This change adds no decision, so it raises no review gate.
 | Threat | Control | Verified by |
 A boundary type keeps at least one threat.
 starts with the real-system scenarios of its golden path
+or one that its `DT-nn` says crosses a trust boundary
+the draft starts from that `DT-nn`'s decisions and `## Security` from its threats.
+adds a row to `## History`, rewrites `## Verification` to name the command, and makes `verify.lint` run the command
+When the type of a component has a golden path with real-system scenarios, the report lists them as the manual test to run.
