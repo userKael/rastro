@@ -48,13 +48,17 @@ Every gate below stops by default and declares its class and its mode, following
 
 Read these before anything else. A violation means stop and report, never work around.
 
-1. **Never create an item before the slicing gate.** Automating creation makes the ceremony fast, not good, and a badly formed item costs more than it saves. Measure on your backlog how often items without subtasks get cancelled. `.rastro/CALIBRATION.md` holds that question.
+1. **Never create an item before the slicing gate.** Automating creation makes the ceremony fast, not good, and a badly formed item costs more than it saves. Measure on your backlog how often items without subtasks get cancelled. `.rastro/CALIBRATION.md` holds that question. In a continuous run the gate still runs, and the choice made at the start answers it.
 2. **Never slice without reconciliation.** The reconciliation produces the `file:line` evidence that S3 requires. Slicing without an anchor is speculation.
 3. **Never copy the design doc into the item.** The description points to the source and never rewrites it. Two copies of the same truth diverge.
 4. **The item type is an output, never a question.** Bug, task or story comes out of the reconciliation (4.1), not out of the interview. A taxonomy that depends on judgment does not converge across authors.
 5. **No story points.** Never fill an estimate field. A field filled on only part of the items supports no ruler. Measure on your backlog before trusting one.
 6. **Never skip the reconciliation because `design-doc` wrote the design doc.** That design doc is grounded in vocabulary, not in decisions. It can still be wrong, and finding that is the job of the reconciliation. An empty reconciliation looks like success.
 7. **Never inherit the candidate slicing of a design doc as authority.** It is a seed, and its own template says so. The cut comes from the reconciliation and the merge test (4.7).
+
+## Step 0 — Execution mode
+
+Before triage, read the execution mode as `## Execution mode` in the rastro block of `AGENTS.md` says (template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`). No item exists yet, so the top item of this run is `breakdown-<slug>`, with `<slug>` derived here as Step 2 describes. Section 5.5 replaces it with the id of the top item.
 
 ## Step 1 — TRIAGE
 
@@ -337,7 +341,7 @@ Then ask with the structured question tool, recommended option first, without re
 - **Adjust the slicing**: the human says what changes, and the gate runs again.
 - **Stop**: nothing is created.
 
-Without a structured question tool, end the turn with the question. Create items only after an explicit choice of **Create**.
+Without a structured question tool, end the turn with the question. Create items only after an explicit choice of **Create**, at the gate or, in a continuous run, at the start. When the recommended option is not **Create**, the gate stops even in a continuous run: only the human can say what changes.
 
 ## Step 5 — CREATION
 
@@ -391,6 +395,10 @@ A `[no PR]` subtask writes `[no PR]` in Anchor and Revert. A subtask never repea
 - **`tracker: none`:** the item lives in the conversation and in the workspace, and the reconciliation goes to the PR description later. After creation, copy `<workspace>/breakdown-<slug>/reconciliation.md` to `<workspace>/<item id>/reconciliation.md`, where `<item id>` is the id of the top item, and say so at the continuity gate. `implement` reads it there, which keeps one stamped reading. Say that the work cannot be resumed before a PR exists.
 - **Any other tracker:** follow `create_item` and `item_types` of the adapter as written.
 
+### 5.5 The run after creation
+
+Write the id of the top item on the `item:` line of `<workspace>/mode`, so that `implement` and `deliver` recognize the run. In a continuous run, append the lines of `<workspace>/breakdown-<slug>/rulings.md` to `<workspace>/<first id>/rulings.md`, where `<first id>` is subtask 1, or the top item when it has no subtasks. The line of the continuity gate below goes there too. `implement` and `deliver` work in that folder, so the lines reach the first PR.
+
 ## Gate — continuity
 
 Print the title, then the state, with the created ids linked:
@@ -416,12 +424,12 @@ With `tracker: local`, add a note below the table: the items exist for other clo
 
 Then ask with the structured question tool, recommended option first, without repeating the options in the text above it:
 
-- **Stop here** (recommended): the items are ready; the PRs take days and involve other people.
-- **Implement <id>, PR 1**: invokes `implement` on the subtask, never on the story. For a task or a bug with no subtasks, on the item itself.
+- **Stop here** (recommended when the run stops at every gate): the items are ready; the PRs take days and involve other people. The run ends.
+- **Implement <id>, PR 1** (recommended in a continuous run): invokes `implement` on the subtask, never on the story. For a task or a bug with no subtasks, on the item itself.
 
 Without a structured question tool, end the turn with the question.
 
-The default is to stop. Never go on to implementation without an explicit choice. A flow of several PRs takes days and involves other people, and this skill does not pretend to run it in one go.
+The default is to stop. Never go on to implementation without an explicit choice. A continuous run is that choice, made at the start. A flow of several PRs takes days and involves other people, and this skill does not pretend to run it in one go.
 
 ## Handoff
 
@@ -429,7 +437,7 @@ When the human chooses to implement, invoke `implement` with the id of the subta
 
 With any tracker but `none`, the `## Reconciliation` section of the item is the copy `implement` inherits: it finds the section in the parent. With `tracker: none`, `implement` reads the copy at `<workspace>/<item id>/reconciliation.md` (5.4). Either way, it revalidates by delta over the declared scope instead of running the protocol again.
 
-After subtask 1, the loop goes on: `implement`, then `deliver`, then subtask 2. The human drives the loop at the continuity gate of `deliver`.
+After subtask 1, the loop goes on: `implement`, then `deliver`, then subtask 2. The human drives the loop at the continuity gate of `deliver`, or, in a continuous run, the choice made at the start.
 
 ## What this skill does NOT do
 

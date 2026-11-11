@@ -48,3 +48,11 @@ The decisions table keeps one short row per `D-n` and stays within the budget.
 never becomes its own subtask
 create the items?** Class: fork. Mode: confirmation.
 now?** Class: fork. Mode: confirmation.
+## Step 0 — Execution mode
+the top item of this run is `breakdown-<slug>`
+the choice made at the start answers it
+the gate stops even in a continuous run
+### 5.5 The run after creation
+<workspace>/<first id>/rulings.md
+(recommended in a continuous run)
+A continuous run is that choice, made at the start.
