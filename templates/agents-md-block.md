@@ -13,13 +13,16 @@ No skill drives the flow. The position follows from the artifacts: read the trac
 
 | What you observe | Next step |
 |---|---|
+| No source code yet | `init` |
 {{state_table_first_row}}
 | A {{tracker_item}} exists, without `## Reconciliation` in its description | `implement`, which calls `reconcile` |
 | A {{tracker_item}} with `## Reconciliation`, no branch | `implement` |
 | A branch with verified commits, no PR | `deliver` |
 | A PR is open | Review: automatic when `review.kind` is not `none`; human always |
 
-A request with no shape ("I want to rethink how stock reservation works") does not enter here. It goes to `design-doc`, which writes the design doc and publishes it. Publishing is not approving: the design doc goes back to the team for discussion, and then it enters through the first row.
+A request with no shape ("I want to rethink how stock reservation works") does not enter here. It goes to `design-doc`, which writes the design doc and publishes it. Publishing is not approving: the design doc goes back to the team for discussion, and then it enters through `breakdown`.
+
+A repository with no source code yet starts at `init`. It records the first decisions as ADRs with the person, runs `setup`, and writes the walking skeleton as the intent of the first item, which `breakdown` takes. No golden path is written ahead of that code. In such a repository, the reconciliation's search for code behavior the intent does not mention is empty by construction: the gate says so, instead of treating the empty result as suspect.
 
 Every gate stops by default. No skill moves to the next stage without an explicit choice: at the gate, or, in a continuous run, at the start, as `## Execution mode` says.
 
@@ -118,7 +121,7 @@ A subagent never asks the human. A subagent that meets a constraint returns the 
 
 At the start of each run, the person chooses how the gates of that run behave: stop at every gate, the default, or continuous. The choice holds for that run only and is never a config key.
 
-- **Who asks.** `breakdown`, `implement` and `deliver`, before their first gate, when no mode is recorded for the top item of the work: the parent of the item, or the item itself when it has no parent. `design-doc`, `setup`, and `reconcile` called on its own never ask, and their gates stop.
+- **Who asks.** `breakdown`, `implement` and `deliver`, before their first gate, when no mode is recorded for the top item of the work: the parent of the item, or the item itself when it has no parent. `design-doc`, `init`, `setup`, and `reconcile` called on its own never ask, and their gates stop.
 - **The question.** **Execution mode for <top item>: stop at every gate or continuous?** Ask with the structured question tool. **Stop at every gate** comes first and is recommended: every gate waits for an answer. **Continuous**: the confirmation gates take the recommended option and the PR lists them, while the decision and team gates still stop. Without that tool, end the turn with the question.
 - **Where it lives.** `<workspace>/mode`, in three lines: `mode: stop` or `mode: continuous`, then `item: <top item id>`, then `date: <YYYY-MM-DD>`. A file for another top item, or written on an earlier day, does not count: ask again and overwrite it.
 - **When it ends.** The run ends when the person stops at a gate, when a skill stops and sends the request elsewhere, or when the continuity gate of `deliver` finds no next item. Delete `<workspace>/mode` then, so a forgotten continuous mode never reaches the next run.

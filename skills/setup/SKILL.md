@@ -97,7 +97,7 @@ An optional file whose destination exists is never offered and never written. Le
 Answers that need a check before they are accepted:
 
 - **`tracker.local_dir`.** Refuse a directory equal to the workspace or inside it, and a directory that `git check-ignore -q` reports as ignored. Say why, then ask again: the state table reads items from git, and an unversioned item makes the table lose its source.
-- **`tracker: none`.** Before accepting it, say what it loses. The item lives only in the conversation and the workspace. The work cannot be resumed before the PR exists. The reconciliation goes to the PR description. The state table starts at the branch row. Name `local` as the option that keeps items versioned without a tracker tool.
+- **`tracker: none`.** Before accepting it, say what it loses. The item lives only in the conversation and the workspace. The work cannot be resumed before the PR exists. The reconciliation goes to the PR description. The state table has no item rows. Name `local` as the option that keeps items versioned without a tracker tool.
 - **A tool with no adapter.** When the answer names a tool that has no adapter file in either location, point to `${CLAUDE_PLUGIN_ROOT}/adapters/CONTRACT.md`. The team writes `.rastro/adapters/<dir>/<kind>.md` from it. Until that file exists, every skill that uses the port stops, and the doctor reports `missing adapter <dir>/<kind>`. Offer the tool-free kind of that port for the meantime: `local` or `none` for the tracker, `repo` for docs, `none` for the code host.
 
 ## Step 3 — Compose
@@ -119,7 +119,7 @@ Copy `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md` and fill its two place
 | No <item> exists | `breakdown` |
 ```
 
-With `tracker: none`, delete the `{{state_table_first_row}}` line and the two rows that contain `{{tracker_item}}`. Delete the lines themselves, so no blank line is left inside the table: the table starts at the branch row.
+With `tracker: none`, delete the `{{state_table_first_row}}` line and the two rows that contain `{{tracker_item}}`. Delete the lines themselves, so no blank line is left inside the table: after the `init` row, the table goes on at the branch row.
 
 After filling, search the block for `{{`. When any placeholder remains, stop and report it with its line: the template has a placeholder this skill does not fill, and writing it would put a raw placeholder in `AGENTS.md`.
 

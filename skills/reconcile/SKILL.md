@@ -90,6 +90,8 @@ The code-flow section of a design doc (`## Code flows` in `${CLAUDE_PLUGIN_ROOT}
 - **`rect` blocks.** The owner named in a transaction block can open one transaction that covers every write listed inside it. When the code has no mechanism for that, it goes to `Not sized`.
 - **Renaming a `new` component is not a divergence.** A change of type, module, module crossing, transaction owner or async boundary is.
 
+The walking skeleton intent that `init` writes, whose header says `origin: init`, lists its components under `## Components`, tagged as above. Contest them the same way. Every component of the skeleton is `new`, so each type with no golden path gets its `no golden path` row, and the task of its first instance writes the golden path.
+
 ### Bug mode
 
 When the intent is the root cause of a bug, the direction inverts. Do not contest the document against the code. Contest the expected behavior against the observed behavior. Each row asks: which pre-existing contract is violated, and where is it written?
@@ -111,6 +113,8 @@ Walk the files of the declared scope, not the intent, and list with `file:line` 
 - **Unmentioned published rule:** what the public docs say today about the changed path (see `### Public docs` below).
 
 Zero findings in the weak direction is a suspicious result, not a good one. When the search finds nothing, write one line saying where you searched and why it came back empty.
+
+One exception: a repository with no source code at the stamp. When no path outside `.rastro/` that `git ls-tree -r --name-only <sha7>` lists matches `verify.source_globs`, there is no code behavior for the intent to ignore, and this direction is empty by construction. Write that one line, with the stamp, and leave the table empty. When `verify.source_globs` is empty, the exception does not apply: search as above.
 
 Run the additional checks that name this step.
 
@@ -172,7 +176,7 @@ Each `D-n` needs its own answer, so the decision is a table, not a question widg
 | Base | `<base_branch>@<sha7>` |
 | Divergences | <n> |
 | Already delivered | <n> of <n> slices, <n> left |
-| Not sized / code not mentioned | <n> / <n> |
+| Not sized / code not mentioned | <n> / <n, or empty by construction: no source code> |
 | Size signal | <fired, n rows / not fired> |
 
 | Decision | Recommendation | Executor |
@@ -182,7 +186,7 @@ Each `D-n` needs its own answer, so the decision is a table, not a question widg
 | All | Approve as recommended: closes the agent decisions only | — |
 ```
 
-Below the tables, add one note per claim that is `NOT VERIFIED`, and one note when the item is only human execution. Prefix a note with `⚠` only when it blocks the merge.
+Below the tables, add one note per claim that is `NOT VERIFIED`, and one note when the item is only human execution. Prefix a note with `⚠` only when it blocks the merge. With no source code at the stamp, no note calls the empty direction suspect.
 
 "Approve as recommended" closes the technical recommendations only. It authorizes nobody to run anything. For each `D-n` with a human executor, the human says whether they will run it, when, and in which environment. Until they say so, the state is pending, and it stays pending in the plan and in the PR description.
 

@@ -25,3 +25,5 @@ no key sets the execution mode
 write these files?** Class: fork. Mode: decision.
 Read the CI workflow files and the manifests
 A command that a CI workflow runs comes first
+after the `init` row, the table goes on at the branch row
+The state table has no item rows.

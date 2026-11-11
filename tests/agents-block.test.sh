@@ -76,7 +76,7 @@ test_doctrine_line() {
 }
 
 test_state_table() {
-  local rows first_row_line first_item_line
+  local rows first_row_line first_item_line init_row_line
   # The row that sends a missing item to `breakdown` is the {{state_table_first_row}} placeholder, filled by setup.
   rows=$(grep -E '^\|' "$block")
   need "state table" '| What you observe | Next step |' "$rows"
@@ -85,12 +85,17 @@ test_state_table() {
   need "state table" '`deliver`' "$rows"
   need "state table" 'no PR' "$rows"
   need "state table" 'review.kind' "$rows"
+  need "state table" '| No source code yet | `init` |' "$rows"
   first_row_line=$(grep -nxF '{{state_table_first_row}}' "$block" | head -n 1 | cut -d: -f1)
   first_item_line=$(grep -n '^|.*{{tracker_item}}' "$block" | head -n 1 | cut -d: -f1)
   if [ -z "$first_row_line" ] || [ -z "$first_item_line" ]; then
     _assert_fail "{{state_table_first_row}} must sit alone on its line, above the rows that use {{tracker_item}}"
   elif [ "$first_row_line" -ge "$first_item_line" ]; then
     _assert_fail "{{state_table_first_row}} must come before the first row that uses {{tracker_item}}"
+  fi
+  init_row_line=$(grep -nxF '| No source code yet | `init` |' "$block" | head -n 1 | cut -d: -f1)
+  if [ -z "$init_row_line" ] || [ -z "$first_row_line" ] || [ "$init_row_line" -ge "$first_row_line" ]; then
+    _assert_fail "the init row must come before {{state_table_first_row}}, so every tracker keeps it"
   fi
 }
 
@@ -100,6 +105,10 @@ test_flow_section() {
   need "flow section" '`design-doc`' "$body"
   need "flow section" 'Publishing is not approving' "$body"
   need "flow section" 'Every gate stops by default' "$body"
+  need "flow section" 'and then it enters through `breakdown`.' "$body"
+  need "flow section" 'A repository with no source code yet starts at `init`.' "$body"
+  need "flow section" 'No golden path is written ahead of that code.' "$body"
+  need "flow section" 'empty by construction' "$body"
 }
 
 test_rules_section() {
@@ -212,6 +221,7 @@ test_execution_mode_section() {
     _assert_fail "block has no ## Execution mode section"
     return
   fi
+  need "execution mode" '`design-doc`, `init`, `setup`, and `reconcile` called on its own never ask' "$body"
   need "execution mode" 'never a config key' "$body"
   need "execution mode" '`<workspace>/mode`' "$body"
   need "execution mode" 'written on an earlier day, does not count' "$body"
