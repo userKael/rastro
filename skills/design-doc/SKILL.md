@@ -52,7 +52,7 @@ Run the protocol of `${CLAUDE_PLUGIN_ROOT}/skills/domain-context/SKILL.md` in fu
 |---|---|
 | The modules touched, from `architecture.modules`, and the public API crossing between them | to name things right |
 | The real schema, through `domain-context` | tables, columns, enums, nullability and uniqueness, never the ORM entity |
-| The files in `architecture.golden_paths`: golden paths, patterns and ADRs | to avoid proposing against a decision already taken |
+| The golden paths in the `architecture.golden_paths` folder, and the repository's patterns and ADRs | to avoid proposing against a decision already taken |
 | The current state machines of the entities in `domain.stateful_entities` | base of the state diagram |
 | The contracts on the touched path, from `architecture.contract_sources`: events, routes other repositories call, the error map when one is listed | the contracts other teams consume |
 
@@ -185,6 +185,8 @@ Ground, do not derive. The code says what exists, and reuse is vocabulary. Choos
 | 3 | Every module crossing in a sequence goes through that module's public API; cite the rule by its ID from `architecture.rules` | a crossing that bypasses the public API |
 | 4 | Every transaction boundary of the invariants becomes a `rect` with a named owner; a transaction that crosses modules cites its mechanism | a cross-module transaction with no mechanism |
 | 5 | A lane is a listed component or an external actor; a pure domain service and a module's own repository become a `Note`; one `box` per module | a diagram too wide to read |
+
+A `new` component whose type has no golden path in the `architecture.golden_paths` folder is the first instance of that type. Record it as a `DT-nn`: the type, and the decisions this first instance fixes for every later one. The golden path itself is written with the code, by `implement`. A type outside `architecture.layers` is a `DT-nn` too: it adds the layer, and its first instance defines the golden path.
 
 One `###` per entry point: a request, a job, a webhook. A sad path goes in an `alt` block or in its own `###`.
 

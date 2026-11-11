@@ -33,3 +33,5 @@ git push -u origin docs/design-<slug>
 The human's choice of **Publish** authorizes this push, and only this one.
 With `code_host: none`, do not push
 the nine required-reading sections
+is the first instance of that type
+The golden path itself is written with the code

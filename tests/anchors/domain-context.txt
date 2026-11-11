@@ -16,3 +16,4 @@ docs.public_portal
 If the adapter file does not exist, stop and report.
 ## Additional checks
 .rastro/profiles/writing.md
+read the golden paths in the `architecture.golden_paths` folder

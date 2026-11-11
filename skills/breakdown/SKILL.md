@@ -267,6 +267,8 @@ Summaries that fail:
 
 Out of the rule, on purpose: independence, isolated value, demonstrability and estimate. Slice 1 is often a foundation, and a foundation almost never demonstrates anything. INVEST is a story ruler and stays one. A subtask is a decomposition of work.
 
+A `no golden path` or `extends` row of the reconciliation never becomes its own subtask. The subtask that delivers the first instance writes the golden path, and the subtask that delivers the extension raises its version. A golden path with no instance has nothing to point at, and an instance with no golden path is the drift the reconciliation found.
+
 When `.rastro/profiles/breakdown.md` has a `## Subtask rule` section, it replaces S1 to S4. The `file:line` anchor stays required even then, because it is doctrine: a profile that drops S3 does not drop the anchor. When it has a `## Subtask summary format` section, that format replaces the one above. `.rastro/CALIBRATION.md` asks which format the team already uses.
 
 ### 4.4 The `[no PR]` valve

@@ -82,7 +82,7 @@ Before any query, list:
 ## Step 3 — Domain sources
 
 1. Search the code by the name of the entity or the operation.
-2. Without a useful result, read the files listed in `architecture.golden_paths` and the repository's own architecture, pattern and decision docs: state machines, invariants, domain events.
+2. Without a useful result, read the golden paths in the `architecture.golden_paths` folder and the repository's own architecture, pattern and decision docs: state machines, invariants, domain events.
 3. When `docs.public_portal` is set, read the published rules for the affected modules. When a page and the code disagree, the code wins, and the pair (page `file:line`, code `file:line`) goes to `Divergences` in the block. `reconcile` turns that finding into work.
 
 ## Step 4 — Migrations
