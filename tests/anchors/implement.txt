@@ -63,3 +63,9 @@ execute it as announced?** Class: fork. Mode: confirmation.
 do these decisions hold?** Class: deliberation. Mode: decision.
 which path do I take?** Class: fork. Mode: decision.
 which one changes?** Class: fork. Mode: decision.
+the top item is the parent, or the item itself when it has no parent
+### Inline or subagents
+A `[HUMAN]` task that blocks a remaining task stops execution there
+Never overwrite the file: a continuous run may already have written its confirmations there.
+Leave each `- Continuous run,` line as it is
+In a continuous run, invoke it with the id.

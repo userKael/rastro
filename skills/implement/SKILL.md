@@ -7,7 +7,7 @@ description: Implements one work item end to end, from its id. It reads the item
 
 **Input:** the id of the item to implement: a subtask, or a task or bug that has no subtasks. Never an item that has subtasks. With `tracker: none`, the input is the item file in the workspace, `<workspace>/<slug>/item.md`.
 
-**Output:** a branch with verified commits, plus the workspace `<workspace>/<id>/`: the frozen copy of the design doc, `reconciliation.md`, `plan.md` and, after subagent execution, `rulings.md`. The workspace is gitignored. `deliver` transposes it into the PR description.
+**Output:** a branch with verified commits, plus the workspace `<workspace>/<id>/`: the frozen copy of the design doc, `reconciliation.md`, `plan.md` and `rulings.md`, after subagent execution or a continuous run. The workspace is gitignored. `deliver` transposes it into the PR description.
 
 Four stages, in order, never skipped: INTAKE → RECONCILIATION → PLAN → EXECUTION.
 
@@ -64,7 +64,7 @@ The direction matters. Tracing from a design doc to its item is weak: a design d
 
 ### Steps
 
-1. Read the item with `read_item`: title, description, children, and the real parent. Read the parent with `read_item` too.
+1. Read the item with `read_item`: title, description, children, and the real parent. Read the parent with `read_item` too. Then read the execution mode, as `## Execution mode` in the AGENTS.md block says: the top item is the parent, or the item itself when it has no parent.
 2. Extract the acceptance criteria from the item. An item without them yields the first finding of the reconciliation.
 3. Find the design doc in `## Sources` of the parent when the item has one, otherwise of the item itself: the item that holds, or will hold, `## Reconciliation`. When the parent has no `## Sources`, fall back to the item's own. With `tracker: local`, the sources may sit in the `sources:` frontmatter field instead of a section. Otherwise look for a design doc link in the description. Otherwise stop and ask the human which design doc applies. When the human says there is none, the item description is the intent: materialize it in place of the design doc, at the same path and with the same header.
    - A bug with no design doc: its root cause is the intent. Skip the role mapping: `reconcile` runs in root-cause mode.
@@ -208,13 +208,14 @@ Read the six fields from the human-execution block of that `D-n` in the holder's
 
 - Never tick a box by inference. Only the human's explicit confirmation closes it.
 - Never start a blocked task while its boxes are open. When the human orders to go on anyway, record that order in the plan; `deliver` carries it to the PR.
+- In a continuous run, a `[HUMAN]` task that blocks no remaining task stays open, and execution goes on; `deliver` reports it under `Pending human execution`. A `[HUMAN]` task that blocks a remaining task stops execution there, as in a run that stops at every gate.
 - Never rewrite the artifact. It was reviewed at the reconciliation gate, and a rewritten artifact is one nobody reviewed.
 
 ## Stage 4 — EXECUTION
 
 Execution starts only after the human approved the plan at the gate below.
 
-### Execution mode
+### Inline or subagents
 
 Use `superpowers:subagent-driven-development` when any of these holds:
 
@@ -223,9 +224,9 @@ Use `superpowers:subagent-driven-development` when any of these holds:
 - the plan touches 2 or more modules of `architecture.modules`;
 - the plan includes a migration.
 
-Otherwise, inline execution. Without superpowers, inline execution is the only mode, whatever the criterion says.
+Otherwise, inline execution. Without superpowers, inline execution is the only option, whatever the criterion says.
 
-Announce the mode and the criterion that set it. The human may override it at the gate.
+Announce inline or subagent execution and the criterion that set it. The human may override it at the gate.
 
 **Gate — plan for <id>: execute it as announced?** Class: fork. Mode: confirmation. State:
 
@@ -235,9 +236,9 @@ Announce the mode and the criterion that set it. The human may override it at th
 | PRs in the parent's stack | <n> |
 | Modules touched | <names> |
 | Migration | <yes or no> |
-| Mode | <subagents or inline>, because <criterion> |
+| Execution | <subagents or inline>, because <criterion> |
 
-Ask with the structured question tool, recommended option first: execute as announced, switch the mode, or adjust the plan. Without that tool, end the turn with the question.
+Ask with the structured question tool, recommended option first: execute as announced, switch between inline and subagents, or adjust the plan. Without that tool, end the turn with the question.
 
 ### Inline execution
 
@@ -250,7 +251,7 @@ Run the tasks one at a time, in plan order:
 5. For a task that wrote or extended a golden path, raise the golden-path review gate of `### Writing a golden path` before the commit.
 6. Commit with explicit paths, following the convention.
 7. Tick the task in `plan.md`.
-8. At a `[HUMAN]` task, stop and ask the human. Never start a task it blocks.
+8. At a `[HUMAN]` task, stop and ask the human, unless `### Human execution steps` lets a continuous run go on. Never start a task it blocks.
 
 ### Branch and commits
 
@@ -296,7 +297,7 @@ Then the deliberation table, one row per decision the draft adds or changes, plu
 | <decision> | <the reason> | <the condition> | `<file:line>` |
 | all hold as drafted | | | |
 
-The person confirms, rewrites or drops each decision, and the file keeps only what the person confirmed or rewrote. The sequence depends on the execution mode:
+The person confirms, rewrites or drops each decision, and the file keeps only what the person confirmed or rewrote. The sequence depends on inline or subagent execution:
 
 - Inline: draft the golden path, raise the review gate, then commit the instance and the confirmed golden path together.
 - With subagents: the subagent commits the instance with the drafted golden path and returns the review-gate rows as text, and never raises the gate, so the main session raises the review gate before it dispatches the next task. The person's answers land in one more commit of the same task that touches only the golden path.
@@ -353,15 +354,15 @@ Coverage is not evidence of behavior. A mock that returns a complete fixture hid
 
 Preserve rulings before deleting the workspace. Subagent execution keeps a workspace with a ledger of the controller's judgment calls: parked findings, rulings, deferred minors. Before deleting that workspace:
 
-1. Extract every ledger line that carries `Ruling:`, `parked` or `minor (deferred)` into `<workspace>/<id>/rulings.md`.
-2. Edit the file into readable prose: one line per item, with `file:line` when there is one.
+1. Append every ledger line that carries `Ruling:`, `parked` or `minor (deferred)` to `<workspace>/<id>/rulings.md`. Never overwrite the file: a continuous run may already have written its confirmations there.
+2. Edit the lines you appended into readable prose: one line per item, with `file:line` when there is one. Leave each `- Continuous run,` line as it is: `deliver` reads it by that prefix.
 3. Only then delete the subagent workspace.
 
 Do not commit `rulings.md`. It becomes the agent rulings and recorded debt sections of the PR description. Deleted before that, a conscious decision looks to the reviewer like an oversight.
 
 ## Handoff
 
-When every task is done and verification is green, print this block, then stop:
+When every task is done and verification is green, print this block:
 
 ```
 READY FOR deliver — <id>
@@ -373,7 +374,7 @@ Workspace <workspace>/<id>/, gitignored, for deliver to transpose:
 - design-doc.md: frozen copy, version <v>, <date>; only the link goes to the PR
 - reconciliation.md: divergences and decided D-n, for the PR sections
 - plan.md: the executed plan, for the collapsed block
-- rulings.md: agent rulings, for their section; absent without subagents
+- rulings.md: agent rulings and continuous-run confirmations, for their section; absent without either
 
 Verification, on this revision:
 - lint: <output>   type check: <output>
@@ -385,7 +386,7 @@ Decisions to cite: <D-1, DT-03, ...>
 Risks to record: <...>
 ```
 
-The next stage is `deliver`, at `${CLAUDE_PLUGIN_ROOT}/skills/deliver/SKILL.md`. It runs when the human asks for it: this skill does not move on by itself.
+The next stage is `deliver`, at `${CLAUDE_PLUGIN_ROOT}/skills/deliver/SKILL.md`. In a run that stops at every gate, it runs when the human asks for it: this skill does not move on by itself. In a continuous run, invoke it with the id.
 
 ## What this skill does NOT do
 

@@ -188,6 +188,8 @@ Below the tables, add one note per claim that is `NOT VERIFIED`, and one note wh
 
 Proceed only on an explicit answer. Record it in the file under each `D-n`, as `Decided (<YYYY-MM-DD>): <answer, and who decided>`.
 
+Called by `breakdown` or `implement`, this skill follows the execution mode of their run, as `## Execution mode` in the AGENTS.md block says: in a continuous run, a reconciliation with no `D-n` counts as a confirmation, and its line goes to `<directory>/rulings.md`. Called on its own, it asks no mode, and both of its gates stop.
+
 A subagent never asks the human. When this skill runs inside a subagent, it writes the file, returns the gate text and the file path as its result, and ends. The session that dispatched it raises the gate, and records each answer in the file as `Decided (<YYYY-MM-DD>): <answer, and who decided>`.
 
 ## Delta revalidation
