@@ -14,6 +14,7 @@ Identifiers are not translated either: `D-n`, `DT-nn`, rule IDs, domain names.
 | `[no PR]` | `breakdown` → rulers |
 | `## Context` | `domain-context` → `reconcile` |
 | `Decided (<YYYY-MM-DD>):` | deliberation gate → `implement` |
+| `- Continuous run,` | a confirmation gate in a continuous run → `deliver` |
 | `D-n`, `DT-nn` | decision identifiers; stable once cited |
 | `new` | `design-doc` → `reconcile`, `implement` |
 | `changes` | `design-doc` → `reconcile`, `implement` |

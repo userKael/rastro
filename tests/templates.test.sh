@@ -58,7 +58,8 @@ test_markers_file() {
   require_all MARKERS.md \
     '`## Reconciliation`' '`reconciliation.md`' '`NOT VERIFIED`' '`[HUMAN]`' '`[no PR]`' \
     '`## Context`' '`Decided (<YYYY-MM-DD>):`' '`D-n`' '`DT-nn`' \
-    '| `follows` | `reconcile` → `implement` |' '| `new` |' '| `changes` |' '| `exists` |' '| `## Acceptance criteria` |'
+    '| `follows` | `reconcile` → `implement` |' '| `new` |' '| `changes` |' '| `exists` |' '| `## Acceptance criteria` |' \
+    '`- Continuous run,`'
 }
 
 test_reconciliation() {
@@ -192,6 +193,12 @@ test_no_origin_calibration_numbers() {
   done
 }
 
+test_config_has_no_mode_key() {
+  local hits
+  hits=$(grep -nE '^[[:space:]]*[a-z_]*mode[a-z_]*:' "$tpl/config.yml")
+  [ -z "$hits" ] || _assert_fail "templates/config.yml has a mode key; the execution mode is chosen per run" "$hits"
+}
+
 test_golden_path
 test_markers_file
 test_reconciliation
@@ -207,4 +214,5 @@ test_pr_description
 test_calibration
 test_stack_detection
 test_no_origin_calibration_numbers
+test_config_has_no_mode_key
 finish

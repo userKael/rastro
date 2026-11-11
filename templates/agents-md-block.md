@@ -5,7 +5,7 @@ The rastro `setup` skill manages this block. `## Non-negotiable rules` belongs t
 
 In rastro skills, `${CLAUDE_PLUGIN_ROOT}` means the rastro installation directory. Claude Code substitutes it; other agents read it from the environment variable `RASTRO_ROOT`. Project settings live in `.rastro/config.yml`.
 
-Doctrine is not overridable: not by a profile, not by team text elsewhere in this file, not by any other skill. Doctrine is the stage sequence, the state table, reconciling before slicing, the `file:line` anchor, a human executor for work the agent cannot run, stable `D-n` and `DT-nn`, gates that stop by default, the verdict before editing a failing test, unversioned agent artifacts, the golden-path checkpoint, and the source precedence below.
+Doctrine is not overridable: not by a profile, not by team text elsewhere in this file, not by any other skill. Doctrine is the stage sequence, the state table, reconciling before slicing, the `file:line` anchor, a human executor for work the agent cannot run, stable `D-n` and `DT-nn`, gates that stop by default, the execution mode chosen per run, the verdict before editing a failing test, unversioned agent artifacts, the golden-path checkpoint, and the source precedence below.
 
 ## Where you are in the flow
 
@@ -21,7 +21,7 @@ No skill drives the flow. The position follows from the artifacts: read the trac
 
 A request with no shape ("I want to rethink how stock reservation works") does not enter here. It goes to `design-doc`, which writes the design doc and publishes it. Publishing is not approving: the design doc goes back to the team for discussion, and then it enters through the first row.
 
-Every gate stops by default. No skill moves to the next stage without an explicit choice.
+Every gate stops by default. No skill moves to the next stage without an explicit choice: at the gate, or, in a continuous run, at the start, as `## Execution mode` says.
 
 ## Non-negotiable rules
 
@@ -110,9 +110,32 @@ Three prohibitions:
 - **Never exceed the cell budget, and never nest an explanatory parenthesis in a cell.** A generous slot gets filled with prose. The budget applies to prose: a value that must stay verbatim, such as a PR title, a `file:line` or a URL, is exempt, because truncating an identifier is worse than overflowing the cell.
 - **Never print the same question twice.** A menu in the text plus a question widget is one decision in two formats.
 
-Every gate declares its class. The skill that prints the gate is its authority.
+Every gate declares its class and its mode on its title line, as in `Class: fork. Mode: confirmation.`, and `## Execution mode` defines the modes. The skill that prints the gate is its authority.
 
 A subagent never asks the human. A subagent that meets a constraint returns the finding as text and ends its task; the session that dispatched it raises the gate. If there is no structured question tool, end the turn with the question.
+
+## Execution mode
+
+At the start of each run, the person chooses how the gates of that run behave: stop at every gate, the default, or continuous. The choice holds for that run only and is never a config key.
+
+- **Who asks.** `breakdown`, `implement` and `deliver`, before their first gate, when no mode is recorded for the top item of the work: the parent of the item, or the item itself when it has no parent. `design-doc`, `setup`, and `reconcile` called on its own never ask, and their gates stop.
+- **The question.** **Execution mode for <top item>: stop at every gate or continuous?** Ask with the structured question tool. **Stop at every gate** comes first and is recommended: every gate waits for an answer. **Continuous**: the confirmation gates take the recommended option and the PR lists them, while the decision and team gates still stop. Without that tool, end the turn with the question.
+- **Where it lives.** `<workspace>/mode`, in three lines: `mode: stop` or `mode: continuous`, then `item: <top item id>`, then `date: <YYYY-MM-DD>`. A file for another top item, or written on an earlier day, does not count: ask again and overwrite it.
+- **When it ends.** The run ends when the person stops at a gate, when a skill stops and sends the request elsewhere, or when the continuity gate of `deliver` finds no next item. Delete `<workspace>/mode` then, so a forgotten continuous mode never reaches the next run.
+
+Every gate declares its mode next to its class. The mode says what a continuous run does at that gate.
+
+| Mode | The answer | In a continuous run |
+|---|---|---|
+| `confirmation` | confirms what the agent prepared | takes the recommended option |
+| `decision` | changes the content: a `D-n`, a revalidation, a discovered constraint, a golden path | stops |
+| `team` | belongs to the team, such as publishing a design doc | stops |
+
+At a confirmation gate, a continuous run still prints the title and the state, then one line, `Continuous run: took <option>.`, and appends `- Continuous run, <skill>: <gate title> Took: <option>.` to `rulings.md` in the workspace folder of the item. `deliver` turns those lines into rows of `## Agent rulings`. A confirmation whose recommended option needs the person's input, such as adjusting the slicing, stops.
+
+A decision gate with no open item counts as a confirmation: a reconciliation with no `D-n`, or a golden-path review with no decision row. A `D-n` with a human executor does not stop a continuous run: its `[HUMAN]` task stays open, the run goes on unless that task blocks a later one, and the step appears under `Pending human execution` in the PR.
+
+A continuous run passes gates only. A question that gathers input, such as the interview of `breakdown` or the repositories that consume a contract, still waits for the answer.
 
 ## Failing tests
 

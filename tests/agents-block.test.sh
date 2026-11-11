@@ -205,6 +205,31 @@ test_golden_paths_section() {
   need "source precedence" 'Neither wins silently.' "$(section "Source precedence")"
 }
 
+test_execution_mode_section() {
+  local body
+  body=$(section "Execution mode")
+  if [ -z "$body" ]; then
+    _assert_fail "block has no ## Execution mode section"
+    return
+  fi
+  need "execution mode" 'never a config key' "$body"
+  need "execution mode" '`<workspace>/mode`' "$body"
+  need "execution mode" 'written on an earlier day, does not count' "$body"
+  need "execution mode" '`confirmation`' "$body"
+  need "execution mode" '`decision`' "$body"
+  need "execution mode" '`team`' "$body"
+  need "execution mode" 'Continuous run: took <option>.' "$body"
+  need "execution mode" '- Continuous run, <skill>: <gate title> Took: <option>.' "$body"
+  need "execution mode" "needs the person's input" "$body"
+  need "execution mode" 'counts as a confirmation' "$body"
+  need "execution mode" 'Pending human execution' "$body"
+  need "execution mode" 'A continuous run passes gates only.' "$body"
+  need "gate anatomy" 'declares its class and its mode' "$(section "Gate anatomy")"
+  need "flow section" 'in a continuous run, at the start' "$(section "Where you are in the flow")"
+  grep -qF 'the execution mode chosen per run' "$block" ||
+    _assert_fail "doctrine line does not list the execution mode chosen per run"
+}
+
 test_block_exists
 test_markers_wrap_the_block
 test_placeholders
@@ -221,4 +246,5 @@ test_failing_test_verdict
 test_artifacts_not_versioned
 test_no_percentages
 test_golden_paths_section
+test_execution_mode_section
 finish

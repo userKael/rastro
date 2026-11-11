@@ -144,6 +144,13 @@ test_marketplace_manifest_is_exact() {
   assert_eq "$want" "$got" ".claude-plugin/marketplace.json differs from the required manifest"
 }
 
+test_execution_mode_is_documented() {
+  [ -f "$readme" ] || return 0
+  need_in_section 'The flow' 'stop at every gate, the default, or continuous'
+  need_in_section 'What is not configurable' 'chosen at the start of each run'
+  need_in_section 'What is not configurable' 'never a config key'
+}
+
 test_readme_has_every_section
 test_agent_support_is_honest
 test_install_and_configure_name_the_real_commands
@@ -155,4 +162,5 @@ test_configure_states_defaults_and_env_example
 test_adapter_section_points_to_the_contract
 test_readme_has_no_internal_plan_terms
 test_marketplace_manifest_is_exact
+test_execution_mode_is_documented
 finish

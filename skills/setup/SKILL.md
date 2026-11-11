@@ -29,7 +29,7 @@ With `--doctor`, the output is the doctor's report, verbatim.
 
 Setup writes configuration. It does not decide doctrine.
 
-Doctrine is not overridable: not by a profile, not by AGENTS.md, not by any other skill. No key of `.rastro/config.yml` turns off a gate, the reconciliation, the `file:line` anchor or the human executor. Setup never offers such a key and never writes one.
+Doctrine is not overridable: not by a profile, not by AGENTS.md, not by any other skill. No key of `.rastro/config.yml` turns off a gate, the reconciliation, the `file:line` anchor or the human executor, and no key sets the execution mode, which the person chooses at the start of each run. Setup never offers such a key and never writes one.
 
 The text of `AGENTS.md` outside the markers belongs to the team. Setup never edits it.
 

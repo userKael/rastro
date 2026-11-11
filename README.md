@@ -61,6 +61,8 @@ Every skill stops at a gate before the step that is hard to undo, and a gate sto
 2. A two-column state table.
 3. The decision. A fork between two to four paths goes through the structured question tool when the agent has one. A list of `D-n` or `DT-nn` items that each need an answer goes in a table, one item per row. Where there is no question tool, the gate ends the turn with the question. A subagent never asks the human.
 
+At the start of each run, `breakdown`, `implement` and `deliver` ask how its gates behave: stop at every gate, the default, or continuous. In a continuous run, a gate that only confirms what the agent prepared takes the recommended option, and the PR lists it among the agent's rulings. A gate whose answer changes the content, such as a `D-n` or a golden path, always stops, and so does publishing a design doc.
+
 Work files live in the workspace, `.agent/` by default. It is gitignored. What has to outlive the branch goes in the PR description: the divergences from the design doc, the closed decisions, the agent's rulings and the plan.
 
 ## What is not configurable
@@ -74,6 +76,7 @@ These rules are the doctrine. They have no configuration key.
 - A decision the agent cannot execute has a human executor. The agent drafts the artifact and a person runs it.
 - Stable `D-n` and `DT-nn` identifiers: a number is never reused or renumbered.
 - Gates that stop by default, with the fixed anatomy above.
+- The execution mode, chosen at the start of each run: stop at every gate, the default, or continuous. It is never a config key, and a continuous run passes only the gates that confirm; the gates that decide still stop.
 - A written verdict before editing a test that fails: which artifact is wrong (test, code or design doc), why, with the `file:line` that defines the correct behavior, and which file will change.
 - Agent artifacts are not versioned.
 - Source precedence when sources conflict: code and green tests, then `AGENTS.md`, then ADRs, then golden paths and patterns, then the plan of the item in progress, then the design doc.
