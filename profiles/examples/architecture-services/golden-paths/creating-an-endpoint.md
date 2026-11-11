@@ -114,7 +114,7 @@ What the example shows:
 
 - Untrusted input, with properties that the caller must not set, from OWASP API Security Top 10 API3:2023 Broken Object Property Level Authorization. Control: the handler parses the body at the boundary, reads only the properties it declares, takes the customer from the authenticated principal rather than the body, and rejects a malformed body with 400. Verified by: the validation item of the checklist in review, and the handler test, which has one case per status code.
 - Access without authentication, from OWASP API Security Top 10 API2:2023 Broken Authentication. Control: authentication runs before the handler body. Verified by: the guard item of the checklist in review, the end-to-end test of the route, and the scenario below.
-- A request for an order of another customer, from OWASP API Security Top 10 API1:2023 Broken Object Level Authorization. Control: the handler passes the authenticated customer to the service, which refuses an order that customer does not own. Verified by: the scenario below.
+- A request that names the customer of another person, from OWASP API Security Top 10 API1:2023 Broken Object Level Authorization. Control: the handler takes the customer id from the authenticated principal and ignores any customer id in the body, so the order is created for the caller and for no one else. Verified by: the scenario below.
 - Sensitive data in a response, from OWASP API Security Top 10 API3:2023 Broken Object Property Level Authorization. Control: the response carries the identifiers the caller needs and no field of `architecture.sensitive_data`. Verified by: review of the response shape, and the scenario below, which checks the bodies.
 - Sensitive data in a log, from the project rule `[no-sensitive-log]`. Control: the handler logs no field of `architecture.sensitive_data` and no whole request body. Verified by: the logging item of the checklist in review.
 
@@ -122,11 +122,11 @@ What the example shows:
 
 A reviewer checks each instance against the checklist above. No command enforces this golden path yet, so `verified_by` is `review`.
 
-### Scenario: one customer cannot read the order of another
+### Scenario: one customer cannot place an order as another
 
-- Context: the service runs in a test environment, with two customers that each hold a token, and an order placed by customer A. Run `<stack: command to start the test environment and to obtain a token for each customer>`.
-- Steps: request the order of A with the token of customer B, then request it with no token: `<stack: HTTP client command>`.
-- Success: 404 for B, 401 with no token, and no field of the order of A in either body.
+- Context: the service runs in a test environment, with two customers, A and B, that each hold a token. Run `<stack: command to start the test environment and to obtain a token for each customer>`.
+- Steps: post to `POST /orders` with the token of customer B and a body that names the id of A, then post with no token: `<stack: HTTP client command>`.
+- Success: 201 with the order created for B, and none for A; 401 with no token, and no order created.
 - When blocked: with no test environment or no customer accounts, ask whoever looks after the environment, and record in the PR that the scenario did not run and which control is left unverified.
 
 ## Known debt

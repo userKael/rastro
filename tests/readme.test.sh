@@ -162,6 +162,8 @@ test_golden_path_checks_are_documented() {
   need_in_section 'Configure' 'architecture.boundary_types'
   need_in_section 'Configure' 'OWASP API Security Top 10'
   need_in_section 'Configure' 'without mocks'
+  need_in_section 'Configure' 'asks for the threats and `implement` writes both'
+  need_in_section 'Configure' 'is not in `architecture.layers`'
 }
 
 test_readme_has_every_section

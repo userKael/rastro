@@ -32,7 +32,7 @@ Not covered here: a call from `orders` to another module of the same process, su
 - [ ] Read the base URL, the credentials and the timeout from configuration validated at startup, never from source: `<stack: configuration and secret loading>`.
 - [ ] Set a timeout on every call: `<stack: HTTP client and its timeout option>`.
 - [ ] Retry only calls that are safe to repeat, with a bounded number of attempts and a growing delay: `<stack: retry helper>`. Retry a call that creates something only when the system accepts an idempotency key.
-- [ ] Translate every failure to a type of your own: a missing record becomes `null`, an unreachable system becomes `MetadataUnavailableError`. A caller never sees a raw status code or a transport error.
+- [ ] Translate every failure to a type of your own: a missing record becomes `null`, an unreachable system or a response that fails shape validation becomes `MetadataUnavailableError`. A caller never sees a raw status code or a transport error.
 - [ ] Log the operation, the outcome and the duration. Log no request header, no credential and no response body that holds data of `architecture.sensitive_data` (`[no-sensitive-log]`): `<stack: logger>`.
 - [ ] Test the client against a fake transport, one case per translated outcome. Keep one recorded response of the real system as a fixture: `<stack: HTTP mocking or fixture tool>`.
 - [ ] Exercise the client once against the system's sandbox: `<stack: sandbox or emulator, and where its credentials come from>`. List in the PR description what you did not exercise.
@@ -89,32 +89,41 @@ export class PublisherDataClient implements BookMetadataSource {
   ) {}
 
   async find(isbn: string): Promise<BookMetadata | null> {
-    let response: Response;
     try {
-      response = await this.fetchFn(
+      const response = await this.fetchFn(
         `${this.config.baseUrl}/books/${encodeURIComponent(isbn)}`,
         {
           headers: { authorization: `Bearer ${this.config.apiKey}` },
           signal: AbortSignal.timeout(this.config.timeoutMs),
         },
       );
-    } catch {
+      if (response.status === 404) {
+        return null;
+      }
+      if (!response.ok) {
+        throw new MetadataUnavailableError(`status ${response.status}`);
+      }
+      const book = (await response.json()) as PublisherBook;
+      if (
+        typeof book?.isbn13 !== 'string' ||
+        typeof book.title !== 'string' ||
+        !Array.isArray(book.contributors)
+      ) {
+        throw new MetadataUnavailableError('unexpected response');
+      }
+      return {
+        isbn: book.isbn13,
+        title: book.title,
+        authors: book.contributors
+          .filter((contributor) => contributor.role === 'author')
+          .map((contributor) => contributor.name),
+      };
+    } catch (error) {
+      if (error instanceof MetadataUnavailableError) {
+        throw error;
+      }
       throw new MetadataUnavailableError('no response');
     }
-    if (response.status === 404) {
-      return null;
-    }
-    if (!response.ok) {
-      throw new MetadataUnavailableError(`status ${response.status}`);
-    }
-    const book = (await response.json()) as PublisherBook;
-    return {
-      isbn: book.isbn13,
-      title: book.title,
-      authors: book.contributors
-        .filter((contributor) => contributor.role === 'author')
-        .map((contributor) => contributor.name),
-    };
   }
 }
 ```
@@ -124,13 +133,14 @@ What the example shows:
 - The client takes `fetch` as a constructor argument, so a test passes a fake transport and makes no network call.
 - The timeout is set on every call, and the credential comes from `config`, not from source.
 - A 404 becomes `null`, and any other failure becomes `MetadataUnavailableError`. The publisher's field names (`isbn13`, `contributors`) stop inside the client.
+- A response that fails validation becomes `MetadataUnavailableError`: the client checks the shape of the body before it maps it, so an unexpected response never reaches the caller as a half-filled value.
 - The example has no retry and no logging. Add both as the checklist says: `<stack: retry helper>` for the read, `<stack: logger>` for the outcome and the duration.
 
 ## Security
 
-- A call with no timeout, and a response used without validation, from OWASP API Security Top 10 API10:2023 Unsafe Consumption of APIs. Control: every call sets a timeout read from validated configuration, and the client maps the response to the module's own type and turns any other outcome into `MetadataUnavailableError`. Verified by: the timeout item of the checklist in review, a fake-transport test, and the scenario below.
+- A call with no timeout, and a response used without validation, from OWASP API Security Top 10 API10:2023 Unsafe Consumption of APIs. Control: every call sets a timeout read from validated configuration, and the client checks the shape of the response before it maps it to the module's own type, and turns a response that fails the check and any other outcome into `MetadataUnavailableError`. Verified by: the timeout item of the checklist in review, a fake-transport test, and the scenario below.
 - An ISBN from the input placed in the URL path, from OWASP API Security Top 10 API7:2023 Server Side Request Forgery. Control: the client encodes the value as one path segment and builds the URL from the configured base URL only. Verified by: a fake-transport test with an ISBN that holds a slash, and review.
-- A secret in source, from OWASP API Security Top 10 API8:2023 Security Misconfiguration. Control: the base URL, the credentials and the timeout come from configuration loaded at startup, never from the code. Verified by: review, and the scenario below, which takes the key from the secret store.
+- A secret in source, from OWASP ASVS 4.0.3 requirement V2.10.4, which keeps integration secrets and API keys out of source code. Control: the base URL, the credentials and the timeout come from configuration loaded at startup, never from the code. Verified by: review, and the scenario below, which takes the key from the secret store.
 - Sensitive data in a log, from the project rule `[no-sensitive-log]`. Control: the client logs the operation, the outcome and the duration, and no request header, credential or response body that holds data of `architecture.sensitive_data`. Verified by: the logging item of the checklist in review, and the scenario below, which reads the logs.
 
 ## Verification
