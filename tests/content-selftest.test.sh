@@ -238,6 +238,30 @@ test_skills_tool_names() {
   expect_fail "tool name in a skill" skills "$r" "names a tool product or stack" "SKILL.md:"
 }
 
+test_skills_gate_modes() {
+  local r title='**Gate — alpha ready: go on?**' lineno msg='gate does not declare its mode next to its class' line
+  r=$(fresh)
+  append "$r" skills/alpha/SKILL.md "$title Class: fork. Mode: confirmation. State:"
+  expect_pass "gate with class and mode" skills "$r"
+  r=$(fresh)
+  append "$r" skills/alpha/SKILL.md "$title Class: fork. State:"
+  lineno=$(wc -l <"$r/skills/alpha/SKILL.md")
+  expect_fail "gate without a mode" skills "$r" "skills/alpha/SKILL.md:$lineno: $msg"
+  r=$(fresh)
+  append "$r" skills/alpha/SKILL.md "$title Class: fork."
+  append "$r" skills/alpha/SKILL.md "Mode: confirmation."
+  expect_fail "mode on the next line" skills "$r" "$msg"
+  r=$(fresh)
+  append "$r" skills/alpha/SKILL.md "$title Class: fork. Mode: optional."
+  expect_fail "unknown mode" skills "$r" "$msg"
+  r=$(fresh)
+  append "$r" skills/alpha/SKILL.md "$title Mode: team."
+  expect_fail "mode without a class" skills "$r" "$msg"
+  r=$(fresh)
+  line="$title Class: fork. Mode: team."
+  printf '%s\r\n' "$line" >>"$r/skills/alpha/SKILL.md"
+  expect_pass "gate line ending in CRLF" skills "$r"
+}
 test_adapters_missing_files() {
   local r
   r=$(fresh)
@@ -507,6 +531,7 @@ test_skills_plugin_paths
 test_skills_bare_paths
 test_skills_config_keys
 test_skills_tool_names
+test_skills_gate_modes
 test_adapters_missing_files
 test_adapters_title
 test_adapters_requirements

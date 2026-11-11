@@ -215,11 +215,11 @@ An item that fails and cannot be resolved becomes a line in Open questions. It i
 
 ## Step 4 — Gate and publication
 
-Stop before publishing. The gate follows `## Gate anatomy` in the rastro block of `AGENTS.md` (template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`). **Class: fork.** Print the state only:
+Stop before publishing. The gate follows `## Gate anatomy` in the rastro block of `AGENTS.md` (template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`). Print the title, then the state only:
+
+**Gate — design doc of <slug> ready: publish it?** Class: fork. Mode: team.
 
 ```markdown
-**Gate — design doc of <slug> ready: publish it?**
-
 | | |
 |---|---|
 | Profile applied | <full / core>, <one document / plus sibling <slug>> |

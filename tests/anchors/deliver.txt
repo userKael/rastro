@@ -38,3 +38,6 @@ checked by running the command, never by reading
 goes back to `implement`, to its golden-path gate
 named by its id: ✅, or ⚠ with the `file:line`
 the golden-path rows form the table on their own
+is this the right context?** Class: fork. Mode: confirmation.
+or update its description?** Class: fork. Mode: confirmation.
+continue to <next id>?** Class: fork. Mode: confirmation.

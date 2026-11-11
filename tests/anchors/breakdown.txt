@@ -46,3 +46,5 @@ each `D-n` with `executor: human` carries its human execution in the item
 It is exempt from the 200-character budget and is never cut down to an anchor
 The decisions table keeps one short row per `D-n` and stays within the budget.
 never becomes its own subtask
+create the items?** Class: fork. Mode: confirmation.
+now?** Class: fork. Mode: confirmation.

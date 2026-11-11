@@ -161,11 +161,11 @@ When the whole item depends on human execution and no code is left, say so at th
 
 Stop. Do not slice, do not plan, do not write code.
 
-**Class: deliberation.** Each `D-n` needs its own answer, so the decision is a table, not a question widget. Print the gate in this shape, in `project.languages.human`:
+Each `D-n` needs its own answer, so the decision is a table, not a question widget. Print the title, then the tables, in `project.languages.human`:
+
+**Gate — reconciliation of <id>: do I close the decisions as recommended?** Class: deliberation. Mode: decision.
 
 ```markdown
-**Gate — reconciliation of <id>: do I close the decisions as recommended?**
-
 | | |
 |---|---|
 | File | `<directory>/reconciliation.md` |
@@ -209,11 +209,11 @@ The range ends at the base branch, never at `HEAD`. Run from a feature branch, `
 
 When the log is not empty, append the revalidation block of `${CLAUDE_PLUGIN_ROOT}/templates/reconciliation.md` below the five sections. Never rewrite the five sections.
 
-Closed decisions do not reopen unless the delta contradicts them. When a commit contradicts a closed `D-n`, stop and raise a deliberation gate again. **Class: deliberation.** Print it in this shape, in `project.languages.human`:
+Closed decisions do not reopen unless the delta contradicts them. When a commit contradicts a closed `D-n`, stop and raise a deliberation gate again. Print the title, then the tables, in `project.languages.human`:
+
+**Gate — revalidation of <id>: do the contradicted decisions still hold after <sha7>?** Class: deliberation. Mode: decision.
 
 ```markdown
-**Gate — revalidation of <id>: do the contradicted decisions still hold after <sha7>?**
-
 | | |
 |---|---|
 | Source | <`<directory>/reconciliation.md` / `## Reconciliation` of <id>> |

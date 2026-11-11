@@ -171,7 +171,7 @@ Show the diff of each file against the repository, with `git diff --no-index` fo
 
 When nothing differs, say that the installation is current and stop: there is nothing to approve.
 
-**Gate — setup of <project.name>: write these files?** Class: fork. State:
+**Gate — setup of <project.name>: write these files?** Class: fork. Mode: decision. State:
 
 | | |
 |---|---|

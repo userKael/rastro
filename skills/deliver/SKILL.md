@@ -66,7 +66,7 @@ The branch is pushed when `git ls-remote --heads origin <branch>` prints it. A P
 - The Context section of the PR carries only links that outlive the workspace: the item, and the design doc with its version and date.
 - When the parent declared in the design doc differs from the item's real parent, record the divergence in the PR description. Do not propagate it.
 
-**Gate — traceability of <id>: is this the right context?** Class: fork. State:
+**Gate — traceability of <id>: is this the right context?** Class: fork. Mode: confirmation. State:
 
 | Field | Value |
 |---|---|
@@ -268,7 +268,7 @@ Who runs the row:
 - With `superpowers:finishing-a-development-branch` and no PR open, hand it exactly this title, body and target at its PR option. Its option menu is the push decision: do not raise the gate below. After a Step 3 rewrite, raise the gate and run the lease push here first, then hand over. The lease push never leaves this skill.
 - Without that skill, raise the gate below, then run the row.
 
-**Gate — PR for <id>: push <branch> and open the PR, or update its description?** Class: fork. State:
+**Gate — PR for <id>: push <branch> and open the PR, or update its description?** Class: fork. Mode: confirmation. State:
 
 | | |
 |---|---|
@@ -298,9 +298,9 @@ Never pretend the link exists. The report names the path that produced the resul
 
 ## Gate — continuity
 
-Class: fork. Print the state only:
+Print the title, then the state only:
 
-**Gate — PR <ref> open: stop for review or continue to <next id>?**
+**Gate — PR <ref> open: stop for review or continue to <next id>?** Class: fork. Mode: confirmation.
 
 | | |
 |---|---|

@@ -22,3 +22,4 @@ Gate — setup of
 `GH` for the shipped adapter whose item ids are `GH-<n>`
 when `architecture.golden_paths` is empty, write the template's default and its new comment
 no key sets the execution mode
+write these files?** Class: fork. Mode: decision.

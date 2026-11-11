@@ -42,7 +42,7 @@ For rules, conventions and rulers, the order is `AGENTS.md`, then the team profi
 
 This skill is the operational authority for the story rule, the subtask rule, the `[no PR]` valve and the merge test. The `AGENTS.md` block does not repeat them.
 
-Every gate below stops by default and declares its class, following `## Gate anatomy` in the `AGENTS.md` block.
+Every gate below stops by default and declares its class and its mode, following `## Gate anatomy` in the `AGENTS.md` block.
 
 ## Inviolable rules
 
@@ -308,11 +308,11 @@ Merge when 1 and 2 are yes. Question 3 is the only size criterion, and it can on
 
 ## Gate — slicing
 
-Stop. Nothing has been created yet. **Class: fork.** Print the state and the proposal only:
+Stop. Nothing has been created yet. Print the title, then the state and the proposal only:
+
+**Gate — slicing of <slug> proposed: create the items?** Class: fork. Mode: confirmation.
 
 ```markdown
-**Gate — slicing of <slug> proposed: create the items?**
-
 | | |
 |---|---|
 | Base | `<base_branch>@<sha7>` |
@@ -393,11 +393,11 @@ A `[no PR]` subtask writes `[no PR]` in Anchor and Revert. A subtask never repea
 
 ## Gate — continuity
 
-**Class: fork.** Print the state, with the created ids linked:
+Print the title, then the state, with the created ids linked:
+
+**Gate — <id> created: implement <subtask 1 / the item> now?** Class: fork. Mode: confirmation.
 
 ```markdown
-**Gate — <id> created: implement <subtask 1 / the item> now?**
-
 | | |
 |---|---|
 | Created | [<id>](<url>), <type>, <k subtasks / no subtasks> |

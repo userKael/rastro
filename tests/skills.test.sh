@@ -165,6 +165,18 @@ check_config_keys() {
   done < <(grep -oE '`[a-z_]+(\.[a-z_]+)+`' "$file" | tr -d '`' | sort -u)
 }
 
+check_gate_modes() {
+  local skill=$1 file=$2 entry lineno text
+  while IFS= read -r entry; do
+    lineno=${entry%%:*}
+    text=${entry#*:}
+    case $text in
+      *'Class: '*'Mode: confirmation.'* | *'Class: '*'Mode: decision.'* | *'Class: '*'Mode: team.'*) ;;
+      *) _assert_fail "skills/$skill/SKILL.md:$lineno: gate does not declare its mode next to its class" "gate: ${text%$'\r'}" ;;
+    esac
+  done < <(grep -n -e '^\*\*Gate —' "$file")
+}
+
 check_skill() {
   local skill=$1 anchors=$2 file="$root/skills/$1/SKILL.md" heading
   if ! exists_exact "$root" "skills/$skill/SKILL.md"; then
@@ -180,6 +192,7 @@ check_skill() {
   check_plugin_paths "$skill" "$file"
   check_bare_paths "$skill" "$file"
   check_config_keys "$skill" "$file"
+  check_gate_modes "$skill" "$file"
 }
 
 test_skills() {

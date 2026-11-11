@@ -227,7 +227,7 @@ Otherwise, inline execution. Without superpowers, inline execution is the only m
 
 Announce the mode and the criterion that set it. The human may override it at the gate.
 
-**Gate — plan for <id>: execute it as announced?** Class: fork. State:
+**Gate — plan for <id>: execute it as announced?** Class: fork. Mode: confirmation. State:
 
 | | |
 |---|---|
@@ -280,7 +280,9 @@ The task that delivers the first instance of a type writes its golden path. The 
 
 An `extends` raises the minor version, adds the instance to `instances` and a row to `## History`. A `contradicts` decided for the golden path raises the major version, moves every instance that no longer follows it to `## Known debt`, and adds a row to `## History`. A `follows` adds the instance to `instances` when it is absent, in the same commit as the instance, with no version change and no review gate.
 
-The person implementing the task defines the golden path with the agent, at the golden-path review gate: **Gate — golden path `<id>` <version> drafted: do these decisions hold?** Class: deliberation. State, a two-column table:
+The person implementing the task defines the golden path with the agent, at the golden-path review gate:
+
+**Gate — golden path `<id>` <version> drafted: do these decisions hold?** Class: deliberation. Mode: decision. State, a two-column table:
 
 | | |
 |---|---|
@@ -309,7 +311,7 @@ Raise it when any of these holds:
 - the workaround changes global configuration, rollback semantics or migration order;
 - the alternatives have different operational consequences for whoever runs production.
 
-**Gate — <the constraint in one line>: which path do I take?** Class: fork. State:
+**Gate — <the constraint in one line>: which path do I take?** Class: fork. Mode: decision. State:
 
 | | |
 |---|---|
@@ -328,7 +330,7 @@ A subagent never raises this gate. The subagent that meets the constraint fills 
 
 Execution can find what the reconciliation did not: the code this task needs breaks a decision or a checklist item of a `current` golden path. That is a gate, never a silent choice: otherwise the code that lands first becomes the precedent by default.
 
-**Gate — <component> contradicts golden path `<id>`: which one changes?** Class: fork. State:
+**Gate — <component> contradicts golden path `<id>`: which one changes?** Class: fork. Mode: decision. State:
 
 | | |
 |---|---|
