@@ -166,6 +166,22 @@ test_golden_path_checks_are_documented() {
   need_in_section 'Configure' 'is not in `architecture.layers`'
 }
 
+test_init_is_documented() {
+  [ -f "$readme" ] || return 0
+  need_in_section 'What rastro is' 'rastro is eight skills'
+  need_in_section 'What rastro is' '| `init` |'
+  need_in_section 'What rastro is' 'the eight skills'
+  need_in_section 'The flow' '| No source code yet | `init` |'
+  need_in_section 'The flow' 'empty by construction'
+  need_in_section 'Install' '/rastro:init'
+  need_in_section 'Configure' 'the CI workflow files'
+  need_in_section 'Configure' '### Starting from an empty directory'
+  need_in_section 'Configure' 'would be fabricated'
+  need_in_section 'Configure' '`init` writes no golden path'
+  need_in_section 'Working without an issue tracker or a docs tool' 'The state table has no item rows.'
+  ! grep -qiF 'seven skills' "$readme" || _assert_fail "README.md still counts seven skills"
+}
+
 test_readme_has_every_section
 test_agent_support_is_honest
 test_install_and_configure_name_the_real_commands
@@ -179,4 +195,5 @@ test_readme_has_no_internal_plan_terms
 test_marketplace_manifest_is_exact
 test_execution_mode_is_documented
 test_golden_path_checks_are_documented
+test_init_is_documented
 finish

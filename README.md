@@ -4,10 +4,11 @@ A development workflow for coding agents, packaged as a Claude Code plugin: skil
 
 ## What rastro is
 
-rastro is seven skills that take a change from an unshaped request to an open pull request, and the files they share.
+rastro is eight skills that take a project from an empty directory, and a change from an unshaped request, to an open pull request, and the files they share.
 
 | Skill | Takes | Produces |
 |---|---|---|
+| `init` | an empty directory, or a repository with no source code | ADRs in `docs/adr/`, the setup, and the walking skeleton as the first intent |
 | `setup` | your repository | `.rastro/config.yml`, a block in `AGENTS.md`, git hooks |
 | `design-doc` | a request with no shape, an ADR, a requirements document | a design doc published for the team to discuss |
 | `breakdown` | a design doc, a bug or a well-formed request | work items, with the reconciliation in the top item |
@@ -22,9 +23,9 @@ What ships in the repository:
 
 | Directory | Holds |
 |---|---|
-| `skills/` | the seven skills |
+| `skills/` | the eight skills |
 | `adapters/` | one markdown file per tool, grouped by port, and the contract they follow |
-| `templates/` | the config, the `AGENTS.md` block, the work item, the design doc, the plan, the PR description, CI files |
+| `templates/` | the config, the `AGENTS.md` block, the ADR, the work item, the design doc, the plan, the PR description, CI files |
 | `hooks/` | the git hooks and the Claude Code hooks |
 | `profiles/examples/` | an example architecture profile and an example set of writing rules |
 | `scripts/` | the checks the repository runs on itself |
@@ -35,6 +36,8 @@ Status: version 0.1.0. The tool commands in the shipped adapters were not verifi
 
 ## The flow
 
+A repository with no source code yet starts with `init`. It interviews you about the first decisions, drafts them as ADRs for you to approve, runs `setup` with your answers, and writes the walking skeleton, one entry point end to end with the verify commands green, as the intent of the first item. The skeleton then goes through the stages below like any change, and each component type it creates writes its first golden path from its code.
+
 Five stages, in this order:
 
 1. `design-doc`, when the request has no shape yet.
@@ -43,12 +46,13 @@ Five stages, in this order:
 4. `deliver`, which opens the PR and links it to the item.
 5. Review of the open PR: automatic when `review.kind` is not `none`, human always.
 
-`reconcile` and `domain-context` run inside the stages. `breakdown` and `implement` call `reconcile`, which compares the intent with the code in both directions: what the intent says that the code contradicts, and what the code does that the intent ignores. It calls `domain-context` to read the real schema. Zero findings in the second direction is treated as suspect, not as success.
+`reconcile` and `domain-context` run inside the stages. `breakdown` and `implement` call `reconcile`, which compares the intent with the code in both directions: what the intent says that the code contradicts, and what the code does that the intent ignores. It calls `domain-context` to read the real schema. Zero findings in the second direction is treated as suspect, not as success. The exception is a repository with no source code yet: there the second direction is empty by construction, and the gate says so.
 
 No skill drives the flow. The position follows from the artifacts: read the tracker and git, and the next step is in this table. `setup` writes the table into your `AGENTS.md`, with "item" worded for your tracker.
 
 | What you observe | Next step |
 |---|---|
+| No source code yet | `init` |
 | No work item exists | `breakdown` |
 | An item exists, without `## Reconciliation` | `implement`, which calls `reconcile` |
 | An item with `## Reconciliation`, no branch | `implement` |
@@ -102,13 +106,13 @@ To try a local checkout without installing it:
 claude --plugin-dir <path-to-rastro>
 ```
 
-Claude Code invokes the skills of a plugin as `/<plugin>:<skill>`, so these are `/rastro:setup`, `/rastro:design-doc`, `/rastro:breakdown`, `/rastro:reconcile`, `/rastro:domain-context`, `/rastro:implement` and `/rastro:deliver`.
+Claude Code invokes the skills of a plugin as `/<plugin>:<skill>`, so these are `/rastro:init`, `/rastro:setup`, `/rastro:design-doc`, `/rastro:breakdown`, `/rastro:reconcile`, `/rastro:domain-context`, `/rastro:implement` and `/rastro:deliver`.
 
-Install the plugin once per machine. Run `/rastro:setup` once per repository.
+Install the plugin once per machine. Run `/rastro:setup` once per repository, or `/rastro:init` in a directory with no source code yet, which runs `setup` for you.
 
 ## Configure
 
-Run `/rastro:setup` in your repository. It detects before it asks: the git remote, the stack manifest, the MCP servers in `.mcp.json` and `~/.claude.json`, an existing `AGENTS.md` or `CLAUDE.md`, and any linter or commit-message tool. It asks the rest one question at a time, shows the diff of every file, and stops for your approval. It writes nothing before that and it never commits.
+Run `/rastro:setup` in your repository. It detects before it asks: the git remote, the stack manifest and the CI workflow files, the MCP servers in `.mcp.json` and `~/.claude.json`, an existing `AGENTS.md` or `CLAUDE.md`, and any linter or commit-message tool. It asks the rest one question at a time, shows the diff of every file, and stops for your approval. It writes nothing before that and it never commits. A command that your CI already runs comes first among the proposals for the `verify` commands, because it is the one that really runs.
 
 On approval, it writes:
 
@@ -145,6 +149,10 @@ verify:
 Required: `project.name`, `project.languages.human`, `tracker.kind`, `tracker.key` unless the kind is `none`, `code_host.kind`, and at least one `verify` command. `templates/config.yml` lists every key with its default and a comment. A key left out takes that default, so the config above still refuses `.env*`, `*.bak` and `.agent/` at commit time, and still validates the PR title as with `squash`. An explicit empty list, `[]`, stays empty. Lists are written inline (`[a, b]`), because the hooks read nothing else.
 
 The default pattern `.env*` also refuses `.env.example`. Negation is not supported: to commit `.env.example`, list exact names in `conventions.forbidden_paths` instead, such as `[.env, .env.local, "*.bak"]`.
+
+### Starting from an empty directory
+
+In an empty directory, or a repository with no source code yet, run `/rastro:init`. It asks one question at a time: the purpose of the project, the stack, the modules ("none yet" is an answer), the component types in `architecture.layers`, which of them cross a trust boundary in `architecture.boundary_types`, the verify commands, the tracker, the docs tool, the code host and the languages. It drafts an ADR for each decision in `docs/adr/`, from `templates/adr.md`, and you confirm, rewrite or drop each one at its gate: an ADR the agent wrote without your decision would be fabricated. It writes nothing before that gate, runs `git init` only after it when the directory is not a repository, and never commits. Then it runs `setup` with your answers, and `setup` asks only the rest. Last, it writes the walking skeleton as the intent of the first item: one entry point end to end through the layers you chose, with the verify commands green. Commit the files it lists, then run `/rastro:init` again or `/rastro:breakdown`. `init` writes no golden path: each component type of the skeleton writes its own from its code, as any first instance does.
 
 ### Profiles
 
@@ -197,7 +205,7 @@ You need neither. Each row below is a mode that needs no external tool. Together
 | Setting | What the flow does | What you lose |
 |---|---|---|
 | `tracker: local` | An item is a markdown file in `tracker.local_dir` (default `work/`), with frontmatter and the same sections as a tracker item. There is no status field: the state table reads the branch and the PR | An item exists for other clones only after its PR merges into the base branch |
-| `tracker: none` | The item lives in the conversation and in the workspace. The reconciliation goes to the PR description | The work cannot be resumed before the PR exists. The state table starts at the branch row. `setup` says so before it accepts `none` |
+| `tracker: none` | The item lives in the conversation and in the workspace. The reconciliation goes to the PR description | The work cannot be resumed before the PR exists. The state table has no item rows. `setup` says so before it accepts `none` |
 | `docs: repo` | `design-doc` creates the branch `docs/design-<slug>` and opens a PR with `docs/design/<slug>.md`. The PR is where the team discusses, and its merge is the approval. The publication gate opens the PR and never merges it | The version is a commit sha, not a counter. With `code_host: none` there is no PR, so there is no place for the discussion |
 | `code_host: none` | `deliver` audits the branch and writes the PR description to `<workspace>/<id>/pr-description.md` | A person pushes the branch and opens the PR. There is no URL, no CI state and no automatic link between item and PR |
 | `domain_state: none` | `domain-context` reads the migrations and the ORM schema | Every claim about the live database is marked `NOT VERIFIED` |
