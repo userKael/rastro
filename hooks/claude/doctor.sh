@@ -336,27 +336,36 @@ if [ "$k_tracker" = local ] && get tracker.local_dir; then
 fi
 
 gp_check() {
-  local file=$1 rel=$2 base key v s id type status vb inst path list
+  local file=$1 rel=$2 base key value v s dump id type version status vb origin sup inst path seen_t seen_rel
+  local has_instances=0 instances=""
   base=${file##*/}
   base=${base%.md}
   checks=$((checks + 1))
-  rastro_frontmatter_get "$file" id >/dev/null 2>&1 && s=0 || s=$?
-  if [ "$s" -eq 2 ]; then
+  dump=$(rastro_frontmatter_dump "$file" 2>/dev/null) && s=0 || s=$?
+  if [ "$s" -ne 0 ]; then
     problem "golden path $rel: no frontmatter"
     return
   fi
-  for key in id type version status verified_by instances origin; do
-    v=$(rastro_frontmatter_get "$file" "$key" 2>/dev/null) || v=""
-    if [ -z "$v" ]; then
-      problem "golden path $rel: missing $key"
-    fi
+  id="" type="" version="" status="" vb="" origin="" sup=""
+  while IFS=$'\t' read -r key value; do
     case $key in
-      id) id=$v ;;
-      type) type=$v ;;
-      status) status=$v ;;
-      verified_by) vb=$v ;;
+      id) id=$value ;;
+      type) type=$value ;;
+      version) version=$value ;;
+      status) status=$value ;;
+      verified_by) vb=$value ;;
+      origin) origin=$value ;;
+      superseded_by) sup=$value ;;
+      instances) has_instances=1; instances=$value ;;
     esac
-  done
+  done <<<"$dump"
+  [ -n "$id" ] || problem "golden path $rel: missing id"
+  [ -n "$type" ] || problem "golden path $rel: missing type"
+  [ -n "$version" ] || problem "golden path $rel: missing version"
+  [ -n "$status" ] || problem "golden path $rel: missing status"
+  [ -n "$vb" ] || problem "golden path $rel: missing verified_by"
+  [ -n "$instances" ] || problem "golden path $rel: missing instances"
+  [ -n "$origin" ] || problem "golden path $rel: missing origin"
   if [ -n "$id" ] && [ "$id" != "$base" ]; then
     problem "golden path $rel: id $id does not match the file name"
   fi
@@ -364,8 +373,7 @@ gp_check() {
     case $status in
       current | under-review) ;;
       retired)
-        v=$(rastro_frontmatter_get "$file" superseded_by 2>/dev/null) || v=""
-        [ -n "$v" ] || problem "golden path $rel: retired without superseded_by"
+        [ -n "$sup" ] || problem "golden path $rel: retired without superseded_by"
         ;;
       *) problem "golden path $rel: status $status is not current, under-review or retired" ;;
     esac
@@ -382,17 +390,25 @@ gp_check() {
       *) problem "golden path $rel: type $type is not in architecture.layers" ;;
     esac
   fi
-  list=$(rastro_frontmatter_list "$file" instances 2>/dev/null) && s=0 || s=$?
+  if [ -n "$type" ] && [ "$status" != retired ]; then
+    while IFS=$'\t' read -r seen_t seen_rel; do
+      if [ "$seen_t" = "$type" ]; then
+        problem "golden path $rel: type $type already has golden path $seen_rel"
+        break
+      fi
+    done <<<"$gp_seen"
+    gp_seen=$gp_seen$type$'\t'$rel$'\n'
+  fi
+  [ "$has_instances" -eq 1 ] || return 0
+  rastro_frontmatter_split "$instances" && s=0 || s=$?
   if [ "$s" -eq 3 ]; then
     problem "golden path $rel: instances is not an inline list"
     return
   fi
-  [ "$s" -eq 0 ] || return 0
-  if [ "$status" = current ] && [ -z "$list" ]; then
+  if [ "$status" = current ] && [ "${#RASTRO_FM_ITEMS[@]}" -eq 0 ]; then
     problem "golden path $rel: current with no instance"
   fi
-  while IFS= read -r inst; do
-    [ -n "$inst" ] || continue
+  for inst in ${RASTRO_FM_ITEMS[@]+"${RASTRO_FM_ITEMS[@]}"}; do
     path=$inst
     case $path in
       *:*[0-9])
@@ -401,7 +417,7 @@ gp_check() {
         ;;
     esac
     [ -e "$root/$path" ] || problem "golden path $rel: instance $path does not exist"
-  done <<<"$list"
+  done
 }
 
 if get architecture.golden_paths; then
@@ -420,6 +436,7 @@ if get architecture.golden_paths; then
         else
           gp_layers=$(rastro_config_list architecture.layers 2>/dev/null) || gp_layers=""
           [ -z "$gp_layers" ] || gp_layers=$gp_layers$'\n'
+          gp_seen=""
           for f in "$root/$gp_dir"*.md; do
             [ -f "$f" ] || continue
             [ "${f##*/}" != README.md ] || continue

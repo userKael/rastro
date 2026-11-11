@@ -199,6 +199,76 @@ test_doctor_golden_path_crlf() {
   assert_closing 0 "gp crlf"
 }
 
+test_doctor_golden_path_without_frontmatter() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put "$repo" docs/golden-paths/processor.md "# Golden path: processor"
+  run_doctor "$repo"
+  assert_status 0 "gp no frontmatter: status"
+  assert_contains "$OUT" "- PROBLEM: golden path $GP_FILE: no frontmatter" "gp no frontmatter"
+  assert_eq 1 "$(count_lines_containing "$OUT" "golden path")" "gp no frontmatter: one line"
+}
+test_doctor_golden_path_instances_not_a_list() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's|^instances: .*|instances: a.ts|'
+  run_doctor "$repo"
+  assert_contains "$OUT" "- PROBLEM: golden path $GP_FILE: instances is not an inline list" "gp instances not a list"
+}
+test_doctor_golden_path_lib_missing_never_blocks() {
+  local repo lib
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  lib="$RASTRO_TEST_TMP/lib-no-frontmatter"
+  mkdir -p "$lib"
+  cp "$RASTRO_TESTS_DIR/../hooks/lib/"*.sh "$lib/"
+  rm -f "$lib/frontmatter.sh"
+  run_cmd env CLAUDE_PROJECT_DIR="$repo" RASTRO_ROOT="$FIXTURE_ROOT" RASTRO_LIB="$lib" HOME="$EMPTY_HOME" bash "$DOCTOR"
+  assert_status 0 "gp lib missing: status"
+  assert_contains "$OUT" "- PROBLEM: could not check golden paths: $lib/frontmatter.sh not found" "gp lib missing: reported"
+  assert_closing 1 "gp lib missing"
+}
+test_doctor_golden_path_type_in_layers() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "layers: [handler, processor]"
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "architecture.layers" "gp type in layers: no layer problem"
+  assert_closing 0 "gp type in layers"
+}
+test_doctor_golden_path_duplicate_type() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  cp "$repo/$GP_FILE" "$repo/docs/golden-paths/worker.md"
+  sed 's/^id: .*/id: worker/' "$repo/docs/golden-paths/worker.md" >"$repo/docs/golden-paths/worker.new"
+  mv "$repo/docs/golden-paths/worker.new" "$repo/docs/golden-paths/worker.md"
+  run_doctor "$repo"
+  assert_status 0 "gp duplicate type: status"
+  assert_contains "$OUT" "- PROBLEM: golden path docs/golden-paths/worker.md: type processor already has golden path $GP_FILE" "gp duplicate type"
+  assert_eq 1 "$(count_lines_containing "$OUT" "already has golden path")" "gp duplicate type: reported once"
+  assert_closing 1 "gp duplicate type"
+}
+test_doctor_golden_path_duplicate_type_retired_ignored() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  sed -e 's/^id: .*/id: worker/' -e 's/^status: .*/status: retired/' -e 's/^instances: .*/instances: []/' \
+    -e 's/^origin: /superseded_by: processor\'$'\n''origin: /' "$repo/$GP_FILE" >"$repo/docs/golden-paths/worker.md"
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "already has golden path" "gp retired later: not counted"
+  assert_closing 0 "gp retired later"
+  # a retired golden path that sorts first does not make the current one a duplicate
+  mv "$repo/docs/golden-paths/worker.md" "$repo/docs/golden-paths/archive.md"
+  sed -i.bak 's/^id: worker/id: archive/' "$repo/docs/golden-paths/archive.md"
+  rm -f "$repo/docs/golden-paths/archive.md.bak"
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "already has golden path" "gp retired earlier: not counted"
+  assert_closing 0 "gp retired earlier"
+}
+
 test_doctor_without_config() {
   local repo
   repo=$(make_tmp_repo)
@@ -745,4 +815,10 @@ test_doctor_golden_paths_folder_without_slash
 test_doctor_golden_paths_skip_readme
 test_doctor_golden_paths_list_form
 test_doctor_golden_path_crlf
+test_doctor_golden_path_without_frontmatter
+test_doctor_golden_path_instances_not_a_list
+test_doctor_golden_path_lib_missing_never_blocks
+test_doctor_golden_path_type_in_layers
+test_doctor_golden_path_duplicate_type
+test_doctor_golden_path_duplicate_type_retired_ignored
 finish
