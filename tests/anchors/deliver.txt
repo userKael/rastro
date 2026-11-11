@@ -41,3 +41,9 @@ the golden-path rows form the table on their own
 is this the right context?** Class: fork. Mode: confirmation.
 or update its description?** Class: fork. Mode: confirmation.
 continue to <next id>?** Class: fork. Mode: confirmation.
+the top item is the parent, or the item itself when it has no parent
+each confirmation gate appended a line that starts with `- Continuous run,`
+The gate of Step 9 gets no row: the open PR is its record.
+its option menu would stop the run at a confirmation
+(recommended in a continuous run)
+When no item is left under the parent, or the item has no parent, there is nothing to choose

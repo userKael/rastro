@@ -5,7 +5,7 @@ description: Prepares a branch with verified commits for review and opens its PR
 
 # deliver
 
-**Input:** a branch with verified commits, plus the workspace `<workspace>/<id>/` that `implement` left: `design-doc.md`, the frozen copy of the design doc; `reconciliation.md`; `plan.md`; and, after subagent execution, `rulings.md`.
+**Input:** a branch with verified commits, plus the workspace `<workspace>/<id>/` that `implement` left: `design-doc.md`, the frozen copy of the design doc; `reconciliation.md`; `plan.md`; and `rulings.md`, after subagent execution or a continuous run.
 
 **Output:** a PR open on the code host and linked to its item, with a description that holds everything that has to outlive the workspace. With `code_host.kind` set to `none`, the output is the description file the code-host adapter writes, for a human to publish.
 
@@ -59,6 +59,8 @@ Collect and print these fields before anything else:
 | Branch state | Not pushed, Pushed, no PR, or Pushed with a PR open | yes |
 
 With `tracker: none`, the item is `<workspace>/<slug>/item.md`. With `tracker: local`, `read_item` reads the item file.
+
+Once the item and its parent are read, read the execution mode, as `## Execution mode` in the AGENTS.md block says: the top item is the parent, or the item itself when it has no parent.
 
 The branch is pushed when `git ls-remote --heads origin <branch>` prints it. A PR is open when the human, or an earlier run of this skill, gives its URL. When that is not known, the gate below asks.
 
@@ -190,7 +192,7 @@ Rules by section:
 - **Recorded debt.** What was left out on purpose: the branch name divergence of Step 2, the commits Step 3 could not rewrite, a red check proven pre-existing in Step 8, and every ⚠ of Step 6 that was not fixed.
 - **Golden paths created or evolved.** Only when the branch created a golden path or changed its version. One row per golden path, from its `## History`.
 - **Rule self-check.** Only when Step 6 left a ⚠.
-- **Agent rulings.** From Step 7. Removed whole without subagent execution.
+- **Agent rulings.** From Step 7. Removed whole when Step 7 writes no row.
 - **Executed plan.** The whole content of `plan.md`. Collapsed when the `collapsible` capability of the code-host adapter says supported, otherwise a plain section marked optional in its title. When the plan dominates the description, cut the tasks delivered by earlier PRs of the stack and say they were cut.
 
 The numbers stay in sync. After each commit that answers a review, rerun Step 8 and update the description with `update_body` in the same push. A test added during review without that update leaves one PR with several counts, and the description is the only source of the numbers.
@@ -218,13 +220,15 @@ Then check the golden paths. For each `new` or `changes` component of the branch
 
 ## Step 7 — Agent rulings
 
-After subagent execution, `implement` extracted the rulings into `<workspace>/<id>/rulings.md` before deleting the subagent workspace. Read that file.
+`<workspace>/<id>/rulings.md` holds two kinds of line. After subagent execution, `implement` appended the rulings it extracted before deleting the subagent workspace. In a continuous run, each confirmation gate appended a line that starts with `- Continuous run,`. Read the file when it exists.
 
-If the file is missing and the subagent workspace still exists, extract now from its ledger every line that carries `Ruling:`, `parked` or `minor (deferred)`. Once that workspace is deleted, nothing is recoverable.
+If the file holds no subagent ruling and the subagent workspace still exists, extract now from its ledger every line that carries `Ruling:`, `parked` or `minor (deferred)`. Once that workspace is deleted, nothing is recoverable.
 
 Write one row per ruling in `## Agent rulings`: the task, the finding, the ruling, and where it went (a next item, recorded debt, or dropped). Subagents read local files and never see the session that dispatched them. A ruling that lives only in their workspace never reaches the human reviewer, and the PR description is the one durable place.
 
-Without subagent execution, remove the section whole. Never leave an empty heading.
+Write one row per `- Continuous run,` line too: the skill as the task, the gate title as the finding, the option taken as the ruling, and `continuous run` as where it went. The gate of Step 9 gets no row: the open PR is its record.
+
+When the file is absent and there was no subagent execution, remove the section whole. Never leave an empty heading.
 
 ## Step 8 — Final verification
 
@@ -265,7 +269,8 @@ Who runs the row:
 
 - With `code_host.kind` set to `none`, nothing is pushed, even when the finishing skill is installed: `none` wins. `open_change_request` or `update_body` writes the description file and gives the human the push command.
 - With a PR open, this skill runs the row itself. A branch-finishing skill would open a second PR.
-- With `superpowers:finishing-a-development-branch` and no PR open, hand it exactly this title, body and target at its PR option. Its option menu is the push decision: do not raise the gate below. After a Step 3 rewrite, raise the gate and run the lease push here first, then hand over. The lease push never leaves this skill.
+- With `superpowers:finishing-a-development-branch`, no PR open and a run that stops at every gate, hand it exactly this title, body and target at its PR option. Its option menu is the push decision: do not raise the gate below. After a Step 3 rewrite, raise the gate and run the lease push here first, then hand over. The lease push never leaves this skill.
+- In a continuous run, raise the gate below and run the row here, even with the finishing skill installed: its option menu would stop the run at a confirmation.
 - Without that skill, raise the gate below, then run the row.
 
 **Gate — PR for <id>: push <branch> and open the PR, or update its description?** Class: fork. Mode: confirmation. State:
@@ -321,10 +326,12 @@ Then ask with the structured question tool, without repeating the options in the
 
 | Option | What it does |
 |---|---|
-| Stop here (recommended) | Hands the PR to review: automatic through the review port when `review.kind` is not `none`, and human always |
-| Next item <id> | Starts `implement` on that item, only once the review of this PR is addressed |
+| Stop here (recommended when the run stops at every gate) | Hands the PR to review: automatic through the review port when `review.kind` is not `none`, and human always. The run ends |
+| Next item <id> (recommended in a continuous run) | Starts `implement` on that item: once the review of this PR is addressed, or at once in a continuous run |
 
-The default is to stop. A stack of PRs takes days and involves other people, and this skill does not pretend to run it in one go.
+The default is to stop. A stack of PRs takes days and involves other people, and this skill does not pretend to run it in one go. A continuous run is the person's choice, made at the start, to go on: the line of this gate goes to `<workspace>/<next id>/rulings.md`, so it reaches the next PR.
+
+When no item is left under the parent, or the item has no parent, there is nothing to choose: print the title and the state, end the run by deleting `<workspace>/mode`, and stop without asking.
 
 A subagent never raises a gate of this skill. It returns the state as text and ends; the session that dispatched it asks the human.
 
