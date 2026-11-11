@@ -36,3 +36,11 @@ Never stamp HEAD of a feature branch.
 architecture.layers
 Gate — revalidation of
 The range ends at the base branch, never at `HEAD`.
+`follows`
+`extends`
+`contradicts`
+`no golden path`
+Neither wins silently.
+${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md
+classify against its `superseded_by`
+find them in the repository's docs

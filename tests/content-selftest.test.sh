@@ -53,6 +53,10 @@ write_core_markers() {
 | `## Reconciliation` | breakdown |
 | `reconciliation.md` | reconcile |
 | `NOT VERIFIED` | domain-context |
+| `follows` | reconcile |
+| `extends` | reconcile |
+| `contradicts` | reconcile |
+| `no golden path` | reconcile |
 | `[HUMAN]` | implement |
 | `[no PR]` | breakdown |
 | `## Context` | domain-context |
@@ -62,6 +66,7 @@ MARKERS
   cat >"$1/templates/core-markers.md" <<'BODY'
 ## Reconciliation
 reconciliation.md NOT VERIFIED [HUMAN] [no PR]
+follows extends contradicts no golden path
 ## Context
 Decided (<YYYY-MM-DD>): D-n DT-nn
 BODY

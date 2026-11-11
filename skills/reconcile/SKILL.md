@@ -48,7 +48,7 @@ When `.rastro/profiles/reconcile.md` exists, read its `## Additional checks` sec
 
 1. Run `${CLAUDE_PLUGIN_ROOT}/skills/domain-context/SKILL.md` whole, over the declared scope: the modules and the public APIs that cross them, the real schema, the domain docs, the most recent migrations of the tables in scope, and the constraints (nullability, uniqueness, indexes, enum values). Keep its `## Context` block.
 2. A claim that `domain-context` marked `NOT VERIFIED` stays marked in the file and goes to the gate. Never present it as confirmed.
-3. Read the architecture sources: the files in `architecture.golden_paths`, and the repository's architecture, pattern and decision docs. No config key names the ADRs: find them through `architecture.golden_paths` and the repository's docs.
+3. Read the architecture sources: the golden paths in the `architecture.golden_paths` folder, and the repository's architecture, pattern and decision docs. No config key names the ADRs: find them in the repository's docs.
 4. Read the rules that `architecture.rules` points to, and note their IDs. Step 2 cites them.
 5. Read the files in `architecture.contract_sources` that the scope touches: API specs, event schemas, any published contract.
 6. Work that needs a write becomes a `D-n` with a human executor (see `### Work the agent cannot run`). It never blocks the reconciliation.
@@ -80,6 +80,13 @@ The code-flow section of a design doc (`## Code flows` in `${CLAUDE_PLUGIN_ROOT}
 
 - **`exists` and `changes`.** The component exists under that name, and its path points to one real file. When it does not exist, or the path matches more than one file, it is a divergence. Their paths go into the declared scope of the header.
 - **`new`.** Its type is a name from `architecture.layers`; any other type is a divergence. Its type and module respect the rules of `architecture.rules`. Check each rule by ID. A violation is a divergence that cites the rule ID and the `file:line` where the rule lives.
+- **Golden paths.** Classify each `new` and `changes` component against the golden path of its type in the `architecture.golden_paths` folder, with one of four tags:
+  - `follows`: the component fits the current golden path. No row.
+  - `extends`: the component needs something the golden path neither covers nor forbids. A row in `Not sized`: the task of the component raises the golden path's minor version.
+  - `contradicts`: the component breaks a decision or a checklist item of a `current` golden path. A row in `Divergences: intent vs code`, with the golden path's `file:line` as evidence, and a `D-n` with two options: the golden path evolves to a new major version, or the intent changes to follow it. Neither wins silently.
+  - `no golden path`: no golden path has this type. A row in `Not sized`: the task that delivers this first instance also writes the golden path, from `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md`.
+
+  A golden path with status `retired` is not a contract: classify against its `superseded_by`.
 - **`rect` blocks.** The owner named in a transaction block can open one transaction that covers every write listed inside it. When the code has no mechanism for that, it goes to `Not sized`.
 - **Renaming a `new` component is not a divergence.** A change of type, module, module crossing, transaction owner or async boundary is.
 
