@@ -153,6 +153,17 @@ test_execution_mode_is_documented() {
   need_in_section 'What is not configurable' 'never a config key'
 }
 
+test_golden_path_checks_are_documented() {
+  [ -f "$readme" ] || return 0
+  need_in_section 'Configure' 'exits non-zero'
+  need_in_section 'Configure' 'make `verify.lint` run it'
+  need_in_section 'Configure' 'and never runs it'
+  need_in_section 'Configure' 'two or more instances'
+  need_in_section 'Configure' 'architecture.boundary_types'
+  need_in_section 'Configure' 'OWASP API Security Top 10'
+  need_in_section 'Configure' 'without mocks'
+}
+
 test_readme_has_every_section
 test_agent_support_is_honest
 test_install_and_configure_name_the_real_commands
@@ -165,4 +176,5 @@ test_adapter_section_points_to_the_contract
 test_readme_has_no_internal_plan_terms
 test_marketplace_manifest_is_exact
 test_execution_mode_is_documented
+test_golden_path_checks_are_documented
 finish
