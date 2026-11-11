@@ -43,7 +43,8 @@ test_golden_path() {
   local key
   require_all golden-path.md \
     'version: 1.0.0' 'status: current' 'verified_by: review' 'instances: [' 'origin:' \
-    'superseded_by' 'under-review' 'retired' \
+    'superseded_by' 'under-review' 'retired' 'origin: <item id>, <branch>, <YYYY-MM-DD>' \
+    'stay literal in English' \
     '## When to use' '## Decisions' 'Why:' 'Revisit if:' '## Checklist' '## Security' \
     'none identified' '## Verification' '## Known debt' '## History' \
     '| Version | Date | Item | Change |'
@@ -57,7 +58,7 @@ test_markers_file() {
   require_all MARKERS.md \
     '`## Reconciliation`' '`reconciliation.md`' '`NOT VERIFIED`' '`[HUMAN]`' '`[no PR]`' \
     '`## Context`' '`Decided (<YYYY-MM-DD>):`' '`D-n`' '`DT-nn`' \
-    '| `new` |' '| `changes` |' '| `exists` |' '| `## Acceptance criteria` |'
+    '| `follows` | `reconcile` → `implement` |' '| `new` |' '| `changes` |' '| `exists` |' '| `## Acceptance criteria` |'
 }
 
 test_reconciliation() {

@@ -199,6 +199,7 @@ test_golden_paths_section() {
   body=$(section "Golden paths")
   need "golden paths" 'first instance' "$body"
   need "golden paths" '`contradicts`' "$body"
+  need "golden paths" '`docs/golden-paths/` by default' "$body"
   grep -qF 'the golden-path checkpoint' "$block" ||
     _assert_fail "doctrine line does not list the golden-path checkpoint"
   need "source precedence" 'Neither wins silently.' "$(section "Source precedence")"

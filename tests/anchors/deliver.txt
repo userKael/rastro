@@ -36,3 +36,5 @@ bash .rastro/git-hooks/check-commits <target> <branch>
 Golden paths created or evolved
 checked by running the command, never by reading
 goes back to `implement`, to its golden-path gate
+named by its id: ✅, or ⚠ with the `file:line`
+the golden-path rows form the table on their own

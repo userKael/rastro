@@ -79,12 +79,12 @@ Run the additional checks that name this step.
 The code-flow section of a design doc (`## Code flows` in `${CLAUDE_PLUGIN_ROOT}/templates/design-doc.md`) is the part of the intent closest to the code. Design docs write headings in `project.languages.human`, so find the section by its role: the section that lists components tagged `new`, `changes` and `exists`. Never look for the literal English heading. Contest the components against `<base_branch>@<sha7>`:
 
 - **`exists` and `changes`.** The component exists under that name, and its path points to one real file. When it does not exist, or the path matches more than one file, it is a divergence. Their paths go into the declared scope of the header.
-- **`new`.** Its type is a name from `architecture.layers`; any other type is a divergence. Its type and module respect the rules of `architecture.rules`. Check each rule by ID. A violation is a divergence that cites the rule ID and the `file:line` where the rule lives.
-- **Golden paths.** Classify each `new` and `changes` component against the golden path of its type in the `architecture.golden_paths` folder, with one of four tags:
+- **`new`.** Its type is a name from `architecture.layers`; any other type is a divergence, unless a decided `DT-nn` adds the layer. Its type and module respect the rules of `architecture.rules`. Check each rule by ID. A violation is a divergence that cites the rule ID and the `file:line` where the rule lives.
+- **Golden paths.** Classify each `new` and `changes` component against the golden path whose `type` is the component's type in the `architecture.golden_paths` folder, with one of four tags:
   - `follows`: the component fits the current golden path. No row.
   - `extends`: the component needs something the golden path neither covers nor forbids. A row in `Not sized`: the task of the component raises the golden path's minor version.
   - `contradicts`: the component breaks a decision or a checklist item of a `current` golden path. A row in `Divergences: intent vs code`, with the golden path's `file:line` as evidence, and a `D-n` with two options: the golden path evolves to a new major version, or the intent changes to follow it. Neither wins silently.
-  - `no golden path`: no golden path has this type. A row in `Not sized`: the task that delivers this first instance also writes the golden path, from `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md`.
+  - `no golden path`: no golden path has this type, and its evidence is the `architecture.golden_paths` folder, which has no golden path of that type. A row in `Not sized`: the task that delivers this first instance also writes the golden path, from `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md`.
 
   A golden path with status `retired` is not a contract: classify against its `superseded_by`.
 - **`rect` blocks.** The owner named in a transaction block can open one transaction that covers every write listed inside it. When the code has no mechanism for that, it goes to `Not sized`.

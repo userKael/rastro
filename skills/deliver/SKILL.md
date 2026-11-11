@@ -214,7 +214,7 @@ When `docs.public_portal` is set, add one observation. If the diff touches a bus
 
 Run here every check of `## Additional checks` that names this step.
 
-Then check the golden paths. For each `new` or `changes` component of the branch whose type has a golden path in the `architecture.golden_paths` folder, check each item of its `## Checklist` and its `## Security` against the diff. A golden path whose `verified_by` is `automated: <command>` is checked by running the command, never by reading. Add one row per golden path to the table, named by its id: ✓, or ⚠ with the `file:line`. A ⚠ follows the rule above: a fix before the push, or a line in `## Recorded debt`. A component that contradicts a golden path with no decision is not debt: it goes back to `implement`, to its golden-path gate.
+Then check the golden paths. For each `new` or `changes` component of the branch whose type has a golden path in the `architecture.golden_paths` folder, check each item of its `## Checklist` and its `## Security` against the diff. A golden path whose `verified_by` is `automated: <command>` is checked by running the command, never by reading. Add one row per golden path to the table, named by its id: ✅, or ⚠ with the `file:line`. When the rules table was skipped because no rules are defined, the golden-path rows form the table on their own. A ⚠ follows the rule above: a fix before the push, or a line in `## Recorded debt`. A component that contradicts a golden path with no decision is not debt: it goes back to `implement`, to its golden-path gate.
 
 ## Step 7 — Agent rulings
 

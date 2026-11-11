@@ -12,7 +12,7 @@ origin: example, bookstore, 2026-11-11
 
 ## When to use
 
-A migration changes the schema and carries the way back. The migration tool writes it, and a person reviews it. Replace every `<stack: ...>` gap with the tool, path or command of your stack, then list this file in `architecture.golden_paths` of `.rastro/config.yml`.
+A migration changes the schema and carries the way back. The migration tool writes it, and a person reviews it. Replace every `<stack: ...>` gap with the tool, path or command of your stack. This file shows the format of a golden path in a bookstore; it is not one to adopt, because in your project the first instance of a type writes its own golden path, pointing to its own code. The worked example copies code only because no real code exists here to point at.
 
 Rule in play, defined in `../rules.md`: `[migration-via-tool]`.
 

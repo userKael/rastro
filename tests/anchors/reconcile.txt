@@ -44,3 +44,6 @@ Neither wins silently.
 ${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md
 classify against its `superseded_by`
 find them in the repository's docs
+the golden path whose `type` is the component's type
+unless a decided `DT-nn` adds the layer
+its evidence is the `architecture.golden_paths` folder, which has no golden path of that type

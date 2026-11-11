@@ -76,7 +76,7 @@ Never reference the task, the ticket or the caller in a comment (`// used by the
 
 ## Golden paths
 
-A golden path is how this project builds one type of component, in the `architecture.golden_paths` folder. Nobody writes one ahead of the code: the first instance of a type writes its golden path, in the same change, with the person implementing it. During the reconciliation, every later item classifies each component it adds or changes as `follows`, `extends`, `contradicts` or `no golden path`. A contradiction is a decision, never a block and never silent.
+A golden path is how this project builds one type of component, in the `architecture.golden_paths` folder, `docs/golden-paths/` by default and when the key is empty. Nobody writes one ahead of the code: the first instance of a type writes its golden path, in the same change, with the person implementing it. During the reconciliation, every later item classifies each component it adds or changes as `follows`, `extends`, `contradicts` or `no golden path`. A contradiction is a decision, never a block and never silent.
 
 ## Source precedence
 

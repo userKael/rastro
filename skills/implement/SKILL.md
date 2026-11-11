@@ -247,9 +247,10 @@ Run the tasks one at a time, in plan order:
 2. Write the failing test for one scenario, run it, and see it fail for the expected reason.
 3. Implement the smallest change that makes it pass, and run it again.
 4. Repeat for each scenario of the task.
-5. Commit with explicit paths, following the convention.
-6. Tick the task in `plan.md`.
-7. At a `[HUMAN]` task, stop and ask the human. Never start a task it blocks.
+5. For a task that wrote or extended a golden path, raise the golden-path review gate of `### Writing a golden path` before the commit.
+6. Commit with explicit paths, following the convention.
+7. Tick the task in `plan.md`.
+8. At a `[HUMAN]` task, stop and ask the human. Never start a task it blocks.
 
 ### Branch and commits
 
@@ -269,16 +270,34 @@ A red test is a diagnosis before it is a fix. Before editing any file, write the
 
 ### Writing a golden path
 
-The task that delivers the first instance of a type writes its golden path, in the same commit as the instance:
+The task that delivers the first instance of a type writes its golden path. The golden path lands in the same task as its instance:
 
-- Copy `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md` to `<architecture.golden_paths><type>.md`. Create the folder when it is absent.
-- Fill it from the code just written. `instances` holds the `file:line` of the instance and never a copy of its code. Every decision carries its `Why:` and its `Revisit if:`. A decision with no reason is a circumstance of the first instance, not a decision: leave it out.
+- Copy `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md` to a file named `<type>.md` in the `architecture.golden_paths` folder, `docs/golden-paths/` when the key is absent or empty. Create the folder when it is absent.
+- When the design doc recorded a `DT-nn` for this first instance, the draft starts from that `DT-nn`'s decisions. Fill the rest from the code just written. `instances` holds the `file:line` of the instance and never a copy of its code. Every decision carries its `Why:` and its `Revisit if:`. A decision with no reason is a circumstance of the first instance, not a decision: leave it out.
 - Set `status: current`, `version: 1.0.0` and `verified_by: review`. An automated check written against one instance freezes its accidents. It comes when a later instance confirms the golden path.
 - Fill `## Security` for every type: the threats considered, the control for each and how it is verified, or "none identified" with the reason.
+- When the type is not yet in `architecture.layers`, the same commit adds it to `.rastro/config.yml`, as the decided `DT-nn` says.
 
-An `extends` raises the minor version, adds the instance to `instances` and a row to `## History`. A `contradicts` decided for the golden path raises the major version, moves every instance that no longer follows it to `## Known debt`, and adds a row to `## History`.
+An `extends` raises the minor version, adds the instance to `instances` and a row to `## History`. A `contradicts` decided for the golden path raises the major version, moves every instance that no longer follows it to `## Known debt`, and adds a row to `## History`. A `follows` adds the instance to `instances` when it is absent, in the same commit as the instance, with no version change and no review gate.
 
-Before the commit, raise the golden-path review gate: the person implementing the task defines the golden path with the agent. **Gate — golden path `<id>` <version> drafted: do these decisions hold?** Class: deliberation. One row per decision the draft adds or changes: the decision, its `Why:`, its `Revisit if:` and the `file:line` of the instance that shows it, plus a quick-exit row, "all hold as drafted". The person confirms, rewrites or drops each decision, and the file keeps only what the person confirmed or rewrote. A subagent never raises this gate: it drafts the file and ends its task.
+The person implementing the task defines the golden path with the agent, at the golden-path review gate: **Gate — golden path `<id>` <version> drafted: do these decisions hold?** Class: deliberation. State, a two-column table:
+
+| | |
+|---|---|
+| Golden path | `<id>` <version>, new or extended |
+| Instance | `<file:line>` |
+
+Then the deliberation table, one row per decision the draft adds or changes, plus the quick-exit row:
+
+| Decision | Why | Revisit if | Instance |
+|---|---|---|---|
+| <decision> | <the reason> | <the condition> | `<file:line>` |
+| all hold as drafted | | | |
+
+The person confirms, rewrites or drops each decision, and the file keeps only what the person confirmed or rewrote. The sequence depends on the execution mode:
+
+- Inline: draft the golden path, raise the review gate, then commit the instance and the confirmed golden path together.
+- With subagents: the subagent commits the instance with the drafted golden path and returns the review-gate rows as text, and never raises the gate, so the main session raises the review gate before it dispatches the next task. The person's answers land in one more commit of the same task that touches only the golden path.
 
 ### Discovered-constraint gate
 

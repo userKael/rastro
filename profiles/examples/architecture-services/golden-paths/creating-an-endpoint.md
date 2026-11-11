@@ -12,7 +12,7 @@ origin: example, bookstore, 2026-11-11
 
 ## When to use
 
-An endpoint is a handler. It receives a request, calls one service and turns the result into a response. A job or a queue consumer follows the same path with a different entry point. Replace every `<stack: ...>` gap with the tool, path or command of your stack, then list this file in `architecture.golden_paths` of `.rastro/config.yml`.
+An endpoint is a handler. It receives a request, calls one service and turns the result into a response. A job or a queue consumer follows the same path with a different entry point. Replace every `<stack: ...>` gap with the tool, path or command of your stack. This file shows the format of a golden path in a bookstore; it is not one to adopt, because in your project the first instance of a type writes its own golden path, pointing to its own code. The worked example copies code only because no real code exists here to point at.
 
 Rules in play, defined in `../rules.md`: `[module-public-api]` and `[no-sensitive-log]`. The service the handler calls follows `creating-a-service.md`.
 

@@ -5,12 +5,12 @@ version: 1.0.0
 status: current
 verified_by: review
 instances: [<path>:<line>]
-origin: <item id>, <change request>, <YYYY-MM-DD>
+origin: <item id>, <branch>, <YYYY-MM-DD>
 ---
 
 # Golden path: <type>
 
-> **Template.** Delete this note when filling in. Write the headings in `project.languages.human`; the frontmatter keys and values stay literal. The first instance of a component type writes this file, in the same change as the instance, and names it after the type. `status` is `current`, `under-review` or `retired`; a retired golden path adds `superseded_by: <id>`. `verified_by` is `review` until a check enforces the golden path, then `automated: <command>`. `instances` points to real code by `file:line` and never copies it.
+> **Template.** Delete this note when filling in. The headings and the frontmatter keys and values stay literal in English, because skills find sections by them; write the text under them in `project.languages.human`. The first instance of a component type writes this file, in the same change as the instance, and names it after the type. `status` is `current`, `under-review` or `retired`; a retired golden path adds `superseded_by: <id>`. `verified_by` is `review` until a check enforces the golden path, then `automated: <command>`. `instances` points to real code by `file:line` and never copies it.
 
 ## When to use
 

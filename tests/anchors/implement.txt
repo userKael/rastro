@@ -50,3 +50,12 @@ drafted: do these decisions hold?
 A decision with no reason is a circumstance of the first instance
 Golden paths this item creates or evolves
 ${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md
+`docs/golden-paths/` when the key is absent or empty
+The golden path lands in the same task as its instance
+returns the review-gate rows as text
+the main session raises the review gate before it dispatches the next task
+For a task that wrote or extended a golden path, raise the golden-path review gate
+the draft starts from that `DT-nn`'s decisions
+A `follows` adds the instance to `instances` when it is absent
+the same commit adds it to `.rastro/config.yml`
+all hold as drafted

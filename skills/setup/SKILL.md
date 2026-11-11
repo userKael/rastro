@@ -106,7 +106,7 @@ Build every file in a temporary directory outside the repository, from `mktemp -
 
 ### `.rastro/config.yml`
 
-Start from `${CLAUDE_PLUGIN_ROOT}/templates/config.yml`, keeping its comments, and fill in the answers. Lists stay inline, as `[a, b]`: the hooks read nothing else. On a re-run, start from the existing file instead. Change only the keys answered in this run, and add the keys that are new in the template with their defaults.
+Start from `${CLAUDE_PLUGIN_ROOT}/templates/config.yml`, keeping its comments, and fill in the answers. Lists stay inline, as `[a, b]`: the hooks read nothing else. On a re-run, start from the existing file instead. Change only the keys answered in this run, and add the keys that are new in the template with their defaults. Also on a re-run, when `architecture.golden_paths` is empty, write the template's default and its new comment: the key changed from a list of files to a folder.
 
 ### The AGENTS.md block
 

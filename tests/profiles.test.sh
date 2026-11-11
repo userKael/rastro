@@ -103,6 +103,8 @@ test_golden_paths() {
       grep -qxF "$heading" "$file" || _assert_fail "$name.md lacks the heading: $heading"
     done
     grep -qE '^- \*\*.*\*\* Why: .*Revisit if: ' "$file" || _assert_fail "$name.md has no decision with Why and Revisit if"
+    grep -qF 'not one to adopt' "$file" || _assert_fail "$name.md does not say it is not one to adopt"
+    ! grep -qF 'list this file in' "$file" || _assert_fail "$name.md still tells adopters to list it in the config"
   done
 }
 

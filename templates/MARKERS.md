@@ -18,7 +18,7 @@ Identifiers are not translated either: `D-n`, `DT-nn`, rule IDs, domain names.
 | `new` | `design-doc` → `reconcile`, `implement` |
 | `changes` | `design-doc` → `reconcile`, `implement` |
 | `exists` | `design-doc` → `reconcile` |
-| `follows` | `reconcile` → `implement`, `deliver` |
+| `follows` | `reconcile` → `implement` |
 | `extends` | `reconcile` → `breakdown`, `implement` |
 | `contradicts` | `reconcile` → `implement` |
 | `no golden path` | `reconcile` → `breakdown`, `implement` |
