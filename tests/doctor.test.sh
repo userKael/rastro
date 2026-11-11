@@ -58,6 +58,147 @@ fake_framework() {
   printf '%s\n' "$root"
 }
 
+put_gp() {
+  mkdir -p "$1/docs/golden-paths" "$1/src/workers"
+  cp "$FIXTURE_ROOT/golden-paths/processor.md" "$1/docs/golden-paths/processor.md"
+  printf 'x\n' >"$1/src/workers/send-receipt.processor.ts"
+}
+gp_config() {
+  printf '\narchitecture:\n  %s\n' "$2" >>"$1/.rastro/config.yml"
+}
+gp_sed() {
+  local file="$1/docs/golden-paths/processor.md"
+  sed "$2" "$file" >"$file.new" && mv "$file.new" "$file"
+}
+GP_FILE=docs/golden-paths/processor.md
+
+test_doctor_golden_paths_absent_is_silent() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  run_doctor "$repo"
+  assert_closing 0 "gp absent"
+  assert_not_contains "$OUT" "golden path" "gp absent: silent"
+}
+test_doctor_golden_path_ok() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  run_doctor "$repo"
+  assert_closing 0 "gp ok"
+}
+test_doctor_golden_path_missing_key() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" '/^verified_by:/d'
+  run_doctor "$repo"
+  assert_contains "$OUT" "- PROBLEM: golden path $GP_FILE: missing verified_by" "gp missing key"
+  assert_closing 1 "gp missing key"
+}
+test_doctor_golden_path_bad_status() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's/^status: .*/status: draft/'
+  run_doctor "$repo"
+  assert_contains "$OUT" "golden path $GP_FILE: status draft is not current, under-review or retired" "gp bad status"
+}
+test_doctor_golden_path_retired_needs_successor() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's/^status: .*/status: retired/'
+  run_doctor "$repo"
+  assert_contains "$OUT" "retired without superseded_by" "gp retired"
+}
+test_doctor_golden_path_id_mismatch() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's/^id: .*/id: worker/'
+  run_doctor "$repo"
+  assert_contains "$OUT" "id worker does not match the file name" "gp id mismatch"
+}
+test_doctor_golden_path_verified_by() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's/^verified_by: .*/verified_by: lint/'
+  run_doctor "$repo"
+  assert_contains "$OUT" "verified_by is neither review nor automated: <command>" "gp verified_by lint"
+  gp_sed "$repo" 's/^verified_by: .*/verified_by: automated: bash scripts\/arch.sh/'
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "verified_by is neither" "gp verified_by automated"
+  assert_closing 0 "gp verified_by automated"
+}
+test_doctor_golden_path_missing_instance() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  rm "$repo/src/workers/send-receipt.processor.ts"
+  run_doctor "$repo"
+  assert_contains "$OUT" "instance src/workers/send-receipt.processor.ts does not exist" "gp missing instance"
+}
+test_doctor_golden_path_instance_with_spaces() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  put "$repo" "src/my dir/a.ts" x
+  gp_sed "$repo" 's|^instances: .*|instances: ["src/my dir/a.ts:4"]|'
+  run_doctor "$repo"
+  assert_closing 0 "gp spaces"
+}
+test_doctor_golden_path_type_not_a_layer() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "layers: [handler, service]"
+  run_doctor "$repo"
+  assert_contains "$OUT" "type processor is not in architecture.layers" "gp layer"
+}
+test_doctor_golden_path_current_without_instance() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's/^instances: .*/instances: []/'
+  run_doctor "$repo"
+  assert_contains "$OUT" "current with no instance" "gp no instance"
+}
+test_doctor_golden_paths_folder_without_slash() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "golden_paths: docs/golden-paths"
+  gp_sed "$repo" 's/^status: .*/status: draft/'
+  run_doctor "$repo"
+  assert_contains "$OUT" "status draft" "gp no slash"
+}
+test_doctor_golden_paths_skip_readme() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  put "$repo" docs/golden-paths/README.md "# Golden paths"
+  run_doctor "$repo"
+  assert_closing 0 "gp readme"
+}
+test_doctor_golden_paths_list_form() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  gp_config "$repo" "golden_paths: [a.md, b.md]"
+  run_doctor "$repo"
+  assert_eq 1 "$(count_lines_containing "$OUT" "golden_paths")" "gp list form: one line"
+  assert_closing 1 "gp list form"
+  assert_contains "$OUT" "it now names one folder" "gp list form"
+}
+test_doctor_golden_path_crlf() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's/$/\r/'
+  run_doctor "$repo"
+  assert_closing 0 "gp crlf"
+}
+
 test_doctor_without_config() {
   local repo
   repo=$(make_tmp_repo)
@@ -589,4 +730,19 @@ test_doctor_unsupported_list_form
 test_doctor_unreadable_config
 test_doctor_without_git
 test_doctor_missing_lib_never_blocks
+test_doctor_golden_paths_absent_is_silent
+test_doctor_golden_path_ok
+test_doctor_golden_path_missing_key
+test_doctor_golden_path_bad_status
+test_doctor_golden_path_retired_needs_successor
+test_doctor_golden_path_id_mismatch
+test_doctor_golden_path_verified_by
+test_doctor_golden_path_missing_instance
+test_doctor_golden_path_instance_with_spaces
+test_doctor_golden_path_type_not_a_layer
+test_doctor_golden_path_current_without_instance
+test_doctor_golden_paths_folder_without_slash
+test_doctor_golden_paths_skip_readme
+test_doctor_golden_paths_list_form
+test_doctor_golden_path_crlf
 finish

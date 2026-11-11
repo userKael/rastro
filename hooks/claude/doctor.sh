@@ -335,6 +335,106 @@ if [ "$k_tracker" = local ] && get tracker.local_dir; then
   fi
 fi
 
+gp_check() {
+  local file=$1 rel=$2 base key v s id type status vb inst path
+  local -a layers items
+  base=${file##*/}
+  base=${base%.md}
+  checks=$((checks + 1))
+  rastro_frontmatter_get "$file" id >/dev/null 2>&1 && s=0 || s=$?
+  if [ "$s" -eq 2 ]; then
+    problem "golden path $rel: no frontmatter"
+    return
+  fi
+  for key in id type version status verified_by instances origin; do
+    v=$(rastro_frontmatter_get "$file" "$key" 2>/dev/null) || v=""
+    if [ -z "$v" ]; then
+      problem "golden path $rel: missing $key"
+    fi
+    case $key in
+      id) id=$v ;;
+      type) type=$v ;;
+      status) status=$v ;;
+      verified_by) vb=$v ;;
+    esac
+  done
+  if [ -n "$id" ] && [ "$id" != "$base" ]; then
+    problem "golden path $rel: id $id does not match the file name"
+  fi
+  if [ -n "$status" ]; then
+    case $status in
+      current | under-review) ;;
+      retired)
+        v=$(rastro_frontmatter_get "$file" superseded_by 2>/dev/null) || v=""
+        [ -n "$v" ] || problem "golden path $rel: retired without superseded_by"
+        ;;
+      *) problem "golden path $rel: status $status is not current, under-review or retired" ;;
+    esac
+  fi
+  if [ -n "$vb" ] && [ "$vb" != review ]; then
+    case $vb in
+      "automated: "?*) ;;
+      *) problem "golden path $rel: verified_by is neither review nor automated: <command>" ;;
+    esac
+  fi
+  if [ -n "$type" ]; then
+    mapfile -t layers < <(rastro_config_list architecture.layers 2>/dev/null)
+    if [ "${#layers[@]}" -gt 0 ] && [ -n "${layers[*]}" ]; then
+      s=1
+      for v in "${layers[@]}"; do
+        [ "$v" != "$type" ] || s=0
+      done
+      [ "$s" -eq 0 ] || problem "golden path $rel: type $type is not in architecture.layers"
+    fi
+  fi
+  mapfile -t items < <(rastro_frontmatter_list "$file" instances 2>/dev/null)
+  rastro_frontmatter_list "$file" instances >/dev/null 2>&1 && s=0 || s=$?
+  if [ "$s" -eq 3 ]; then
+    problem "golden path $rel: instances is not an inline list"
+    return
+  fi
+  [ "$s" -eq 0 ] || return 0
+  if [ "$status" = current ] && [ "${#items[@]}" -eq 0 ]; then
+    problem "golden path $rel: current with no instance"
+  fi
+  for inst in "${items[@]}"; do
+    [ -n "$inst" ] || continue
+    path=$inst
+    case $path in
+      *:*[0-9])
+        v=${path##*:}
+        case $v in *[!0-9]*) ;; *) path=${path%:*} ;; esac
+        ;;
+    esac
+    [ -e "$root/$path" ] || problem "golden path $rel: instance $path does not exist"
+  done
+}
+
+if get architecture.golden_paths; then
+  gp_dir=${val:-docs/golden-paths/}
+  case $gp_dir in
+    '['*)
+      checks=$((checks + 1))
+      problem "architecture.golden_paths is a list; it now names one folder, such as docs/golden-paths/"
+      ;;
+    *)
+      case $gp_dir in */) ;; *) gp_dir=$gp_dir/ ;; esac
+      if [ -d "$root/$gp_dir" ]; then
+        if ! . "$lib/frontmatter.sh" 2>/dev/null; then
+          checks=$((checks + 1))
+          problem "could not check golden paths: $lib/frontmatter.sh not found"
+        else
+          for f in "$root/$gp_dir"*.md; do
+            [ -f "$f" ] || continue
+            [ "${f##*/}" != README.md ] || continue
+            gp_check "$f" "$gp_dir${f##*/}"
+          done
+        fi
+      fi
+      ;;
+  esac
+fi
+
 drift=0
 for pair in lib:hooks/lib git-hooks:hooks/git; do
   installed=$root/.rastro/${pair%%:*}
