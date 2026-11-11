@@ -27,3 +27,6 @@ Read the CI workflow files and the manifests
 A command that a CI workflow runs comes first
 after the `init` row, the table goes on at the branch row
 The state table has no item rows.
+When `init` invokes this skill, the answers it hands over count as answered
+return to `init` after the closing report
+init runs first and calls setup with its answers

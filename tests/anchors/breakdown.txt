@@ -62,3 +62,12 @@ the PRs take days and involve other people. The run ends, and `<workspace>/mode`
 With `tracker: local` and an item PR not merged yet, the recommended option is **Stop here** in both modes
 A failing check marked as a gate makes the recommended option of that gate "adjust", so the gate stops even in a continuous run.
 A failing gate check makes the recommended option adjust too.
+Five branches.
+An intent file whose header says `origin: init`
+### 2.4 Walking skeleton branch
+<workspace>/breakdown-walking-skeleton/intent.md
+the three questions of 2.3 do not run again
+its anchors are the accepted ADRs in `docs/adr/` and `.rastro/config.yml`
+Any other request in a repository with no source code goes to `init` first.
+the S3 anchor is the `file:line` of the ADR or of `.rastro/config.yml` that decides the slice
+for the walking skeleton, each ADR it builds on, by path

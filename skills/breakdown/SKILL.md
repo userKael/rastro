@@ -1,6 +1,6 @@
 ---
 name: breakdown
-description: Entry skill of the rastro flow. Turns an intent (a published design doc, an observed bug, or a well-formed change request) into work items through the tracker port. The result is a bug, a task, or a story with subtasks, each subtask anchored in file:line, with the reconciliation embedded in the top item under the Reconciliation section. Use when the request is "start X", "I have a design doc to break down", "I found a bug and want an item", or "split this story into subtasks". Do NOT use when an item already exists and the request is to implement it; that is implement. Do NOT use for a shapeless request; that goes to design-doc. Ends by handing over the created item ids. It creates no implementation branch, writes no code and opens no implementation PR.
+description: Entry skill of the rastro flow. Turns an intent (a published design doc, an observed bug, a well-formed change request, or the walking skeleton that init writes) into work items through the tracker port. The result is a bug, a task, or a story with subtasks, each subtask anchored in file:line, with the reconciliation embedded in the top item under the Reconciliation section. Use when the request is "start X", "I have a design doc to break down", "I found a bug and want an item", or "split this story into subtasks". Do NOT use when an item already exists and the request is to implement it; that is implement. Do NOT use for a shapeless request; that goes to design-doc. Ends by handing over the created item ids. It creates no implementation branch, writes no code and opens no implementation PR.
 ---
 
 # breakdown
@@ -62,10 +62,11 @@ Before triage, read the execution mode as `## Execution mode` in the rastro bloc
 
 ## Step 1 — TRIAGE
 
-Four branches. Choose by observation, not by an open question.
+Five branches. Choose by observation, not by an open question.
 
 | Signal in the input | Branch | Go to |
 |---|---|---|
+| An intent file whose header says `origin: init`: the walking skeleton | walking skeleton | 2.4 |
 | A reference to a published design doc | design doc | 2.1 |
 | Observed behavior contradicts a pre-existing contract: a test, a design doc, an ADR, a golden path, a doc | bug | 2.2 |
 | A nameable request, with a clear object and a clear contract | interview | 2.3 |
@@ -87,7 +88,7 @@ The skill is `${CLAUDE_PLUGIN_ROOT}/skills/design-doc/SKILL.md`. Do not supply t
 
 ### Anchor test
 
-Before going down any branch, ask: does the flow you will change already exist, so it can be read? With no existing flow to change, the work has no boundary. When the test fails, the branch is shapeless, even when a design doc exists.
+Before going down any branch, ask: does the flow you will change already exist, so it can be read? With no existing flow to change, the work has no boundary. When the test fails, the branch is shapeless, even when a design doc exists. In a repository with no source code, the walking skeleton is the exception: no flow exists to read, so its anchors are the accepted ADRs in `docs/adr/` and `.rastro/config.yml`, by `file:line`. Any other request in a repository with no source code goes to `init` first.
 
 ### Branch declaration: not a question
 
@@ -184,6 +185,10 @@ captured_on: <YYYY-MM-DD>
 
 When the answer to question 2 is still generic after one re-ask, the request probably belongs to the shapeless branch. Say so and stop.
 
+### 2.4 Walking skeleton branch
+
+`init` wrote this intent with the person, after its gate, at `<workspace>/breakdown-walking-skeleton/intent.md`, so `<slug>` is `walking-skeleton`. Take it as it is: the three questions of 2.3 do not run again, and the file is never edited. Its `## Components` list one `new` component for each layer the skeleton crosses, and `reconcile` classifies each one against the golden paths, of which none exists yet.
+
 ## Step 3 — RECONCILIATION
 
 Invoke `${CLAUDE_PLUGIN_ROOT}/skills/reconcile/SKILL.md` with:
@@ -251,6 +256,8 @@ All four items are required.
 | S2 | Artifact and consequence | the artifact is missing, the consequence is missing, or both |
 | S3 | Anchor in the code | no `file:line`, symbol, table or migration coming from the reconciliation |
 | S4 | Declared order | the subtask states neither its number in the sequence nor what it unblocks |
+
+In the walking skeleton, no code exists yet: the S3 anchor is the `file:line` of the ADR or of `.rastro/config.yml` that decides the slice.
 
 The summary format is required:
 
@@ -354,7 +361,7 @@ Write it from `${CLAUDE_PLUGIN_ROOT}/templates/work-item.md`, in `project.langua
 - **Context:** 2 to 4 lines on why the item exists. It points to the source and never repeats the design doc.
 - **Observer and assertion:** H1 and H2.
 - **Scope:** H4, plus the declared scope of the reconciliation, with the paths of its `exists` and `changes` items. `implement` filters the delta revalidation by this list.
-- **Sources:** the design doc reference, version and capture date, marked as the source of truth; the violated contract for a bug; the separate intents found in 2.1; the reconciliation stamp `<base_branch>@<sha7>` and its date.
+- **Sources:** the design doc reference, version and capture date, marked as the source of truth; the violated contract for a bug; the separate intents found in 2.1; the reconciliation stamp `<base_branch>@<sha7>` and its date; for the walking skeleton, each ADR it builds on, by path, none of them marked as the source of truth.
 - **`## Reconciliation`:** the five sections of `reconciliation.md`, as tables.
 
 The `## Reconciliation` section holds tables only, with no free paragraph and no cell above 200 characters. It carries findings and decisions, never design doc content. A huge description and an empty one are both extremes. The target is a short table with `file:line`. Cut a long cell down to its anchor; the full text stays in the workspace.

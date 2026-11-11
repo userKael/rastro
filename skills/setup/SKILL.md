@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Installs or updates rastro in a repository. It detects the git remote, the stack, the MCP servers and the existing agent instruction files, asks only what it could not detect, one question at a time, shows the full diff and stops for approval, then writes .rastro/config.yml, the rastro block of AGENTS.md, the AGENTS.md import in CLAUDE.md, the workspace entry in .gitignore and the git hooks. Running it again with the same answers changes nothing. "setup --doctor" reports the health of an installation. Use when adopting rastro, when changing the tracker, docs tool or code host, after upgrading rastro, or to check an installation. Do NOT use to start work on a request (design-doc, breakdown or implement), or to write the team's rules, profiles or adapters.
+description: Installs or updates rastro in a repository. It detects the git remote, the stack, the MCP servers and the existing agent instruction files, asks only what it could not detect, one question at a time, shows the full diff and stops for approval, then writes .rastro/config.yml, the rastro block of AGENTS.md, the AGENTS.md import in CLAUDE.md, the workspace entry in .gitignore and the git hooks. Running it again with the same answers changes nothing. "setup --doctor" reports the health of an installation. Use when adopting rastro, when changing the tracker, docs tool or code host, after upgrading rastro, or to check an installation. Do NOT use to start work on a request (design-doc, breakdown or implement), or to write the team's rules, profiles or adapters. In a directory with no source code yet, init runs first and calls setup with its answers.
 ---
 
 # setup
@@ -55,6 +55,8 @@ bash "${CLAUDE_PLUGIN_ROOT}/hooks/claude/doctor.sh"
 Show its output verbatim. Do not summarize it, rank it or soften it, and never call an installation fine when the output lists a problem or says it could not check something. Then stop: `--doctor` writes nothing.
 
 Without `--doctor`, check whether `.rastro/config.yml` exists. When it does, this is a re-run: its values count as answered, and the steps below ask only what is missing or what the human asked to change.
+
+When `init` invokes this skill, the answers it hands over count as answered, as the values of an existing config do on a re-run, and Step 2 asks only what is still open. In a repository with no source code, Step 1 finds no manifest and no CI workflow to propose from: that is expected, not a gap to report.
 
 ## Step 1 — Detect
 
@@ -215,6 +217,8 @@ Then print the closing report:
 
 Setup stops after the closing report. The state table in the new block says where work starts: an unshaped request goes to `design-doc`, a shaped one to `breakdown`.
 
+When `init` invoked this skill, return to `init` after the closing report: it writes the walking skeleton, the intent of the first item.
+
 ## What this skill does NOT do
 
 | Not this skill | Who does it |
@@ -225,3 +229,4 @@ Setup stops after the closing report. The state table in the new block says wher
 | Fix what the doctor reports | the human, then a re-run of setup |
 | Offer a key that turns off a gate, the reconciliation, the anchor or the human executor | nobody: doctrine is not configurable |
 | Start work on a request | `design-doc`, `breakdown`, `implement` |
+| Start a project in a directory with no source code | `init`, which calls this skill with its answers |
