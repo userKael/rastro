@@ -336,8 +336,7 @@ if [ "$k_tracker" = local ] && get tracker.local_dir; then
 fi
 
 gp_check() {
-  local file=$1 rel=$2 base key v s id type status vb inst path
-  local -a layers items
+  local file=$1 rel=$2 base key v s id type status vb inst path list
   base=${file##*/}
   base=${base%.md}
   checks=$((checks + 1))
@@ -377,27 +376,22 @@ gp_check() {
       *) problem "golden path $rel: verified_by is neither review nor automated: <command>" ;;
     esac
   fi
-  if [ -n "$type" ]; then
-    mapfile -t layers < <(rastro_config_list architecture.layers 2>/dev/null)
-    if [ "${#layers[@]}" -gt 0 ] && [ -n "${layers[*]}" ]; then
-      s=1
-      for v in "${layers[@]}"; do
-        [ "$v" != "$type" ] || s=0
-      done
-      [ "$s" -eq 0 ] || problem "golden path $rel: type $type is not in architecture.layers"
-    fi
+  if [ -n "$type" ] && [ -n "$gp_layers" ]; then
+    case $'\n'"$gp_layers" in
+      *$'\n'"$type"$'\n'*) ;;
+      *) problem "golden path $rel: type $type is not in architecture.layers" ;;
+    esac
   fi
-  mapfile -t items < <(rastro_frontmatter_list "$file" instances 2>/dev/null)
-  rastro_frontmatter_list "$file" instances >/dev/null 2>&1 && s=0 || s=$?
+  list=$(rastro_frontmatter_list "$file" instances 2>/dev/null) && s=0 || s=$?
   if [ "$s" -eq 3 ]; then
     problem "golden path $rel: instances is not an inline list"
     return
   fi
   [ "$s" -eq 0 ] || return 0
-  if [ "$status" = current ] && [ "${#items[@]}" -eq 0 ]; then
+  if [ "$status" = current ] && [ -z "$list" ]; then
     problem "golden path $rel: current with no instance"
   fi
-  for inst in "${items[@]}"; do
+  while IFS= read -r inst; do
     [ -n "$inst" ] || continue
     path=$inst
     case $path in
@@ -407,7 +401,7 @@ gp_check() {
         ;;
     esac
     [ -e "$root/$path" ] || problem "golden path $rel: instance $path does not exist"
-  done
+  done <<<"$list"
 }
 
 if get architecture.golden_paths; then
@@ -424,6 +418,8 @@ if get architecture.golden_paths; then
           checks=$((checks + 1))
           problem "could not check golden paths: $lib/frontmatter.sh not found"
         else
+          gp_layers=$(rastro_config_list architecture.layers 2>/dev/null) || gp_layers=""
+          [ -z "$gp_layers" ] || gp_layers=$gp_layers$'\n'
           for f in "$root/$gp_dir"*.md; do
             [ -f "$f" ] || continue
             [ "${f##*/}" != README.md ] || continue
