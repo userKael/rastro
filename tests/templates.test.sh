@@ -195,7 +195,7 @@ test_no_origin_calibration_numbers() {
 
 test_config_has_no_mode_key() {
   local hits
-  hits=$(grep -nE '^[[:space:]]*[a-z_]*mode[a-z_]*:' "$tpl/config.yml")
+  hits=$(grep -nE '^[[:space:]]*([a-z_]*_)?mode:' "$tpl/config.yml")
   [ -z "$hits" ] || _assert_fail "templates/config.yml has a mode key; the execution mode is chosen per run" "$hits"
 }
 

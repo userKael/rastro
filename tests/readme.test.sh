@@ -147,6 +147,8 @@ test_marketplace_manifest_is_exact() {
 test_execution_mode_is_documented() {
   [ -f "$readme" ] || return 0
   need_in_section 'The flow' 'stop at every gate, the default, or continuous'
+  need_in_section 'The flow' 'ask how their gates behave'
+  need_in_section 'Working without an issue tracker or a docs tool' 'in a continuous run, `deliver` opens the PR'
   need_in_section 'What is not configurable' 'chosen at the start of each run'
   need_in_section 'What is not configurable' 'never a config key'
 }

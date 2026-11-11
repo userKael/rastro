@@ -122,6 +122,7 @@ At the start of each run, the person chooses how the gates of that run behave: s
 - **The question.** **Execution mode for <top item>: stop at every gate or continuous?** Ask with the structured question tool. **Stop at every gate** comes first and is recommended: every gate waits for an answer. **Continuous**: the confirmation gates take the recommended option and the PR lists them, while the decision and team gates still stop. Without that tool, end the turn with the question.
 - **Where it lives.** `<workspace>/mode`, in three lines: `mode: stop` or `mode: continuous`, then `item: <top item id>`, then `date: <YYYY-MM-DD>`. A file for another top item, or written on an earlier day, does not count: ask again and overwrite it.
 - **When it ends.** The run ends when the person stops at a gate, when a skill stops and sends the request elsewhere, or when the continuity gate of `deliver` finds no next item. Delete `<workspace>/mode` then, so a forgotten continuous mode never reaches the next run.
+- **Reusing it.** When a skill reuses a recorded mode, it prints one line: `Execution mode: <stop at every gate | continuous>, chosen <date> for <top item>.`
 
 Every gate declares its mode next to its class. The mode says what a continuous run does at that gate.
 
@@ -133,7 +134,7 @@ Every gate declares its mode next to its class. The mode says what a continuous 
 
 At a confirmation gate, a continuous run still prints the title and the state, then one line, `Continuous run: took <option>.`, and appends `- Continuous run, <skill>: <gate title> Took: <option>.` to `rulings.md` in the workspace folder of the item. `deliver` turns those lines into rows of `## Agent rulings`. A confirmation whose recommended option needs the person's input, such as adjusting the slicing, stops.
 
-A decision gate with no open item counts as a confirmation: a reconciliation with no `D-n`, or a golden-path review with no decision row. A `D-n` with a human executor does not stop a continuous run: its `[HUMAN]` task stays open, the run goes on unless that task blocks a later one, and the step appears under `Pending human execution` in the PR.
+A decision gate with no open item counts as a confirmation: a reconciliation with no `D-n`, or a golden-path review with no decision row. The exception never applies to the golden-path review of a new golden path (version `1.0.0`): it always stops. An extension with no new or changed decision may pass. A `D-n` with a human executor does not stop a continuous run: its `[HUMAN]` task stays open, the run goes on unless that task blocks a later one, and the step appears under `Pending human execution` in the PR.
 
 A continuous run passes gates only. A question that gathers input, such as the interview of `breakdown` or the repositories that consume a contract, still waits for the answer.
 

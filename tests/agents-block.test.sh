@@ -224,6 +224,8 @@ test_execution_mode_section() {
   need "execution mode" 'counts as a confirmation' "$body"
   need "execution mode" 'Pending human execution' "$body"
   need "execution mode" 'A continuous run passes gates only.' "$body"
+  need "execution mode" 'golden-path review of a new golden path' "$body"
+  need "execution mode" 'Execution mode: <stop at every gate | continuous>, chosen <date> for <top item>.' "$body"
   need "gate anatomy" 'declares its class and its mode' "$(section "Gate anatomy")"
   need "flow section" 'in a continuous run, at the start' "$(section "Where you are in the flow")"
   grep -qF 'the execution mode chosen per run' "$block" ||

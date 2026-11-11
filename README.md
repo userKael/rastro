@@ -61,7 +61,7 @@ Every skill stops at a gate before the step that is hard to undo, and a gate sto
 2. A two-column state table.
 3. The decision. A fork between two to four paths goes through the structured question tool when the agent has one. A list of `D-n` or `DT-nn` items that each need an answer goes in a table, one item per row. Where there is no question tool, the gate ends the turn with the question. A subagent never asks the human.
 
-At the start of each run, `breakdown`, `implement` and `deliver` ask how its gates behave: stop at every gate, the default, or continuous. In a continuous run, a gate that only confirms what the agent prepared takes the recommended option, and the PR lists it among the agent's rulings. A gate whose answer changes the content, such as a `D-n` or a golden path, always stops, and so does publishing a design doc.
+At the start of each run, `breakdown`, `implement` and `deliver` ask how their gates behave: stop at every gate, the default, or continuous. In a continuous run, a gate that only confirms what the agent prepared takes the recommended option, and the PR lists it among the agent's rulings. A gate whose answer changes the content, such as a `D-n` or a golden path, always stops, and so does publishing a design doc.
 
 Work files live in the workspace, `.agent/` by default. It is gitignored. What has to outlive the branch goes in the PR description: the divergences from the design doc, the closed decisions, the agent's rulings and the plan.
 
@@ -208,7 +208,7 @@ Without superpowers, the skills fall back like this:
 | `implement`, the plan | `writing-plans` | `templates/plan.md` |
 | `implement`, the execution | `subagent-driven-development` when the skill's size criteria are met | inline, one task at a time, one commit per task |
 | `breakdown`, the bug branch | `systematic-debugging` | a short built-in protocol: reproduce, hypothesis, evidence, root cause with `file:line` |
-| `deliver`, opening the PR | `finishing-a-development-branch` | straight through the `code_host` port |
+| `deliver`, opening the PR | `finishing-a-development-branch`; in a continuous run, `deliver` opens the PR through the `code_host` port | straight through the `code_host` port |
 | `design-doc`, the craft | a general design-doc skill, when installed | `templates/design-doc.md` |
 
 ## Bring your own adapter
