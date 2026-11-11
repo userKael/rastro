@@ -23,3 +23,5 @@ Gate — setup of
 when `architecture.golden_paths` is empty, write the template's default and its new comment
 no key sets the execution mode
 write these files?** Class: fork. Mode: decision.
+Read the CI workflow files and the manifests
+A command that a CI workflow runs comes first

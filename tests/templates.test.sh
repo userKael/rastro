@@ -191,6 +191,25 @@ test_stack_detection() {
   done
 }
 
+test_stack_detection_reads_ci() {
+  local body needle
+  require_file stack-detection.md || return 0
+  require_all stack-detection.md 'CI workflow files and manifests'
+  body=$(section stack-detection.md "CI workflows")
+  if [ -z "$body" ]; then
+    _assert_fail "templates/stack-detection.md has no section for CI workflows"
+    return
+  fi
+  for needle in '.github/workflows/*.yml' '.gitlab-ci.yml' 'bitbucket-pipelines.yml' '.circleci/config.yml' 'azure-pipelines.yml' \
+    '`verify.lint`' '`verify.typecheck`' '`verify.unit`' '`verify.integration`' \
+    'propose the CI step' '`.rastro/git-hooks/`' 'a variable only CI sets' 'never come from CI'; do
+    case $body in
+      *"$needle"*) ;;
+      *) _assert_fail "templates/stack-detection.md section CI workflows lacks required text" "text: $needle" ;;
+    esac
+  done
+}
+
 test_no_origin_calibration_numbers() {
   local f hits
   for f in "$tpl"/*.md "$tpl"/ci/*; do
@@ -220,6 +239,7 @@ test_config_names_the_env_example_trap
 test_pr_description
 test_calibration
 test_stack_detection
+test_stack_detection_reads_ci
 test_no_origin_calibration_numbers
 test_config_has_no_mode_key
 finish
