@@ -28,8 +28,8 @@ rastro_frontmatter_get() {
   v=$(_rastro_fm_value "$1" "$2"); s=$?
   [ "$s" -eq 0 ] || return "$s"
   case $v in
-    \"?*\") v=${v#\"}; v=${v%\"} ;;
-    \'?*\') v=${v#\'}; v=${v%\'} ;;
+    \"*\") v=${v#\"}; v=${v%\"} ;;
+    \'*\') v=${v#\'}; v=${v%\'} ;;
   esac
   printf '%s\n' "$v"
 }
