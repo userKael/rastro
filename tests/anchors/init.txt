@@ -1,0 +1,43 @@
+${CLAUDE_PLUGIN_ROOT}/templates/adr.md
+${CLAUDE_PLUGIN_ROOT}/templates/stack-detection.md
+${CLAUDE_PLUGIN_ROOT}/skills/setup/SKILL.md
+${CLAUDE_PLUGIN_ROOT}/skills/breakdown/SKILL.md
+## Inviolable rules
+## Step 0 — Where init starts
+## Step 1 — Detect
+## Step 2 — Interview
+## Step 3 — Draft the ADRs
+## Step 4 — Gate
+## Step 5 — Write
+## Step 6 — Setup
+## Step 7 — Walking skeleton
+## Handoff
+One question at a time.
+Write nothing before the gate.
+Never commit and never push.
+Never write a golden path.
+An ADR with no human decision behind it is fabricated.
+<reason not given>
+This repository has source code
+`git rev-parse --show-toplevel`
+inside another repository
+When nothing is open, go to Step 7.
+`architecture.modules`
+"none yet"
+`architecture.layers`
+`architecture.boundary_types`
+`verify.source_globs`
+the next free number
+never overwrites
+**Gate — decisions of <project.name>: do these ADRs hold, and do I write them?** Class: deliberation. Mode: decision.
+| all hold as drafted | | | |
+`git init` runs only after the gate
+`git symbolic-ref --short HEAD`
+<workspace>/breakdown-walking-skeleton/intent.md
+origin: init, conversation with <person>
+## Components
+toolchain step
+When the intent already exists, keep it as it is.
+`git ls-tree --name-only <project.base_branch> -- .rastro/config.yml`
+before the first item
+init asks no execution mode

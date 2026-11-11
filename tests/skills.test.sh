@@ -12,7 +12,7 @@ export RASTRO_CONFIG="$root/templates/config.yml"
 TOOL_NAMES="$tests_dir/../scripts/check-tool-names.sh"
 DOCTRINE='Doctrine is not overridable: not by a profile, not by AGENTS.md, not by any other skill.'
 REQUIRED_HEADINGS=('## Requirements' '## Precedence' '## What this skill does NOT do')
-CORE_SKILLS=(setup design-doc breakdown reconcile domain-context implement deliver)
+CORE_SKILLS=(init setup design-doc breakdown reconcile domain-context implement deliver)
 PLUGIN_ROOT_VAR='${CLAUDE_PLUGIN_ROOT}/'
 
 frontmatter() {
