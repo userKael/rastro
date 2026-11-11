@@ -210,6 +210,20 @@ test_stack_detection_reads_ci() {
   done
 }
 
+test_adr() {
+  local key
+  require_all adr.md \
+    'An agent drafts the ADR; a person decides it.' 'is fabricated' \
+    'docs/adr/<NNNN>-<kebab-case title>.md' 'a number is never reused' 'never overwritten' \
+    'superseded by <NNNN>' 'never how to build one type of component' \
+    '## Context' '## Decision' 'Why:' '<reason not given>' '## Alternatives considered' 'None weighed' \
+    '## Consequences' 'Revisit if:'
+  for key in status date decided_by origin; do
+    rastro_frontmatter_get "$tpl/adr.md" "$key" >/dev/null ||
+      _assert_fail "templates/adr.md frontmatter lacks $key"
+  done
+}
+
 test_no_origin_calibration_numbers() {
   local f hits
   for f in "$tpl"/*.md "$tpl"/ci/*; do
@@ -240,6 +254,7 @@ test_pr_description
 test_calibration
 test_stack_detection
 test_stack_detection_reads_ci
+test_adr
 test_no_origin_calibration_numbers
 test_config_has_no_mode_key
 finish
