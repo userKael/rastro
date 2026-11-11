@@ -1,5 +1,6 @@
 tests_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 . "$tests_dir/lib/assert.sh"
+. "$tests_dir/../hooks/lib/frontmatter.sh"
 export LC_ALL=C.UTF-8
 root=$(cd "${1:-$tests_dir/..}" && pwd)
 tpl="$root/templates"
@@ -36,6 +37,20 @@ section() {
     /^## / { on = 0 }
     on
   ' "$tpl/$1"
+}
+
+test_golden_path() {
+  local key
+  require_all golden-path.md \
+    'version: 1.0.0' 'status: current' 'verified_by: review' 'instances: [' 'origin:' \
+    'superseded_by' 'under-review' 'retired' \
+    '## When to use' '## Decisions' 'Why:' 'Revisit if:' '## Checklist' '## Security' \
+    'none identified' '## Verification' '## Known debt' '## History' \
+    '| Version | Date | Item | Change |'
+  for key in id type version status verified_by instances origin; do
+    rastro_frontmatter_get "$tpl/golden-path.md" "$key" >/dev/null ||
+      _assert_fail "templates/golden-path.md frontmatter lacks $key"
+  done
 }
 
 test_markers_file() {
@@ -176,6 +191,7 @@ test_no_origin_calibration_numbers() {
   done
 }
 
+test_golden_path
 test_markers_file
 test_reconciliation
 test_reconciliation_has_five_sections
