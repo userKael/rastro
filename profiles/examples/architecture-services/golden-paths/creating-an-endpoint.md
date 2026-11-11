@@ -16,6 +16,8 @@ An endpoint is a handler. It receives a request, calls one service and turns the
 
 Rules in play, defined in `../rules.md`: `[module-public-api]` and `[no-sensitive-log]`. The service the handler calls follows `creating-a-service.md`.
 
+Not covered here: a read that goes straight from the handler to a repository, such as listing `catalog` titles. The `handler` layer calls one `service`, so that read gets a service first. Business rules do not belong in the handler either.
+
 ## Decisions
 
 - **The handler validates the input before it calls a service.** Why: a malformed body must never reach business code, and a 400 at the boundary is cheaper than a failure deeper in. Revisit if: the framework validates the request before the handler runs.

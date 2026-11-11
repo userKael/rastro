@@ -16,6 +16,8 @@ An external client wraps one system outside the process: an HTTP API, an SDK or 
 
 Rules in play, defined in `../rules.md`: `[module-public-api]` and `[no-sensitive-log]`.
 
+Not covered here: a call from `orders` to another module of the same process, such as `inventory`. That goes through the public API of the module (`[module-public-api]`) and needs no client. A read or write of the module's own persistence store belongs to a repository.
+
 ## Decisions
 
 - **One client wraps one external system, behind an interface the consuming module owns.** Why: external field names and shapes stop at the client, and no external type reaches a service signature. Revisit if: two modules need the same system with different interfaces.

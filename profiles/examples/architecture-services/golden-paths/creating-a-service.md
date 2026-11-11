@@ -16,6 +16,8 @@ A service performs one business operation. A handler calls it. It calls other se
 
 Rules in play, defined in `../rules.md`: `[module-public-api]`, `[no-service-cycle]`, `[pure-domain]` and `[no-sensitive-log]`.
 
+Not covered here: a pure computation on one entity, such as checking that an `orders` order has at least one line. That belongs in `domain` as a plain class and needs no service. A call to a system outside the process follows `creating-an-external-client.md`.
+
 ## Decisions
 
 - **A service performs one business operation and has one public method.** Why: a second operation is a second service, so each name says what the service does and each stays small. Revisit if: two operations always change together and share one transaction.

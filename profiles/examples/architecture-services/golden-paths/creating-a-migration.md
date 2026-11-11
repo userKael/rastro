@@ -16,6 +16,8 @@ A migration changes the schema and carries the way back. The migration tool writ
 
 Rule in play, defined in `../rules.md`: `[migration-via-tool]`.
 
+Not covered here: a data fix run once by hand on one `inventory` store, which leaves no migration file and has no reversal to review. A change to the model that does not alter the schema does not need a migration either.
+
 ## Decisions
 
 - **The migration tool writes the migration.** Why: a file written by hand has no command to cite and drifts from the model (`[migration-via-tool]`). Revisit if: the tool cannot express a change that the stack needs often.
