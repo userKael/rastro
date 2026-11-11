@@ -56,3 +56,9 @@ the gate stops even in a continuous run
 <workspace>/<first id>/rulings.md
 (recommended in a continuous run)
 A continuous run is that choice, made at the start.
+The confirmation lines taken before creation go to `<workspace>/breakdown-<slug>/rulings.md`.
+- **Stop**: nothing is created. The run ends, and `<workspace>/mode` is deleted.
+the PRs take days and involve other people. The run ends, and `<workspace>/mode` is deleted.
+With `tracker: local` and an item PR not merged yet, the recommended option is **Stop here** in both modes
+A failing check marked as a gate makes the recommended option of that gate "adjust", so the gate stops even in a continuous run.
+A failing gate check makes the recommended option adjust too.

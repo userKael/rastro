@@ -36,7 +36,7 @@ Doctrine is not overridable: not by a profile, not by AGENTS.md, not by any othe
 1. Never invent an intent section that does not exist. An absence is a finding under `Not sized`, never "not applicable".
 2. Never edit the intent file. It is a frozen copy with provenance. Every divergence goes to `reconciliation.md`.
 3. Every row of the first three tables carries a `file:line` anchor. A claim without evidence does not enter a table: it becomes a `D-n` question.
-4. Never skip the human gate. The reconciliation exists for the human to decide. Moving on without an explicit answer to each `D-n` invalidates everything after it.
+4. Never skip the human gate, except as the Step 5 rule below for a reconciliation with no open `D-n` says. The reconciliation exists for the human to decide. Moving on without an explicit answer to each `D-n` invalidates everything after it.
 5. Never execute a write against a database, a credential, a deployment or shared infrastructure. Draft it as a `D-n` with a human executor.
 6. Cite a rule by its ID, never by its position in the list.
 
@@ -188,7 +188,7 @@ Below the tables, add one note per claim that is `NOT VERIFIED`, and one note wh
 
 Proceed only on an explicit answer. Record it in the file under each `D-n`, as `Decided (<YYYY-MM-DD>): <answer, and who decided>`.
 
-Called by `breakdown` or `implement`, this skill follows the execution mode of their run, as `## Execution mode` in the AGENTS.md block says: in a continuous run, a reconciliation with no `D-n` counts as a confirmation, and its line goes to `<directory>/rulings.md`. Called on its own, it asks no mode, and both of its gates stop.
+Called by `breakdown` or `implement`, this skill follows the execution mode of their run, as `## Execution mode` in the AGENTS.md block says (template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`), for a project whose AGENTS.md block predates the section: in a continuous run, a reconciliation with no `D-n` counts as a confirmation, and its line goes to `<directory>/rulings.md`. Called on its own, it asks no mode, and both of its gates stop.
 
 A subagent never asks the human. When this skill runs inside a subagent, it writes the file, returns the gate text and the file path as its result, and ends. The session that dispatched it raises the gate, and records each answer in the file as `Decided (<YYYY-MM-DD>): <answer, and who decided>`.
 

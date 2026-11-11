@@ -23,7 +23,7 @@ Four stages, in order, never skipped: INTAKE → RECONCILIATION → PLAN → EXE
 - The `deliver` skill, at `${CLAUDE_PLUGIN_ROOT}/skills/deliver/SKILL.md`, which receives the handoff.
 - Plan template: `${CLAUDE_PLUGIN_ROOT}/templates/plan.md`.
 - The template `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md`, when the item creates a golden path.
-- Team profile, optional: `.rastro/profiles/implement.md`. Its `## Additional checks` section lists extra checks, each with the stage where it runs and whether it is a gate or an observation. Run each one at its stage. Environment preparation before integration tests, and title aliases of the team's older design docs, belong there.
+- Team profile, optional: `.rastro/profiles/implement.md`. Its `## Additional checks` section lists extra checks, each with the stage where it runs and whether it is a gate or an observation. Run each one at its stage. A check marked as a gate that fails makes the recommended option of its gate "adjust", so that gate stops even in a continuous run. Environment preparation before integration tests, and title aliases of the team's older design docs, belong there.
 - Writing rules, optional: when `.rastro/profiles/writing.md` exists, apply it to every text a person reads: reports, gates, the plan.
 - Optional skills, each with a built-in fallback:
   - `superpowers:writing-plans` writes the plan. Without it, fill `${CLAUDE_PLUGIN_ROOT}/templates/plan.md`.
@@ -64,7 +64,7 @@ The direction matters. Tracing from a design doc to its item is weak: a design d
 
 ### Steps
 
-1. Read the item with `read_item`: title, description, children, and the real parent. Read the parent with `read_item` too. Then read the execution mode, as `## Execution mode` in the AGENTS.md block says: the top item is the parent, or the item itself when it has no parent.
+1. Read the item with `read_item`: title, description, children, and the real parent. Read the parent with `read_item` too. Then read the execution mode, as `## Execution mode` in the AGENTS.md block says (template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`), for a project whose AGENTS.md block predates the section: the top item is the parent, or the item itself when it has no parent.
 2. Extract the acceptance criteria from the item. An item without them yields the first finding of the reconciliation.
 3. Find the design doc in `## Sources` of the parent when the item has one, otherwise of the item itself: the item that holds, or will hold, `## Reconciliation`. When the parent has no `## Sources`, fall back to the item's own. With `tracker: local`, the sources may sit in the `sources:` frontmatter field instead of a section. Otherwise look for a design doc link in the description. Otherwise stop and ask the human which design doc applies. When the human says there is none, the item description is the intent: materialize it in place of the design doc, at the same path and with the same header.
    - A bug with no design doc: its root cause is the intent. Skip the role mapping: `reconcile` runs in root-cause mode.
@@ -162,7 +162,7 @@ After the gate, write `## Reconciliation` where this stage looked for it, on the
 
 ## Stage 3 — PLAN
 
-With `superpowers:writing-plans`, follow that skill. Without it, fill `${CLAUDE_PLUGIN_ROOT}/templates/plan.md`. Either way, five bindings apply.
+With `superpowers:writing-plans`, follow that skill, except its execution handoff: this skill's plan gate replaces it. Without it, fill `${CLAUDE_PLUGIN_ROOT}/templates/plan.md`. Either way, five bindings apply.
 
 ### The Spec field
 
@@ -190,7 +190,7 @@ An inflated block dilutes the reviewer's attention. Leave out what this plan doe
 
 ### Test scenarios in each task
 
-Every task carries `### Expected test scenarios` before its steps, as Given/When/Then. The human writes them, or this stage writes them under human review. The agent derives the tests from the scenarios, and only then implements. A task without scenarios cannot execute and goes back to the plan gate.
+Every task carries `### Expected test scenarios` before its steps, as Given/When/Then. The human writes them, or this stage writes them, reviewed at the plan gate by the person or, in a continuous run, by the choice made at the start. The agent derives the tests from the scenarios, and only then implements. A task without scenarios cannot execute and goes back to the plan gate.
 
 The invariants role feeds the scenarios. Each task also keeps its **Files** block (paths with lines, and the test file), its **Interfaces** block (what it consumes and produces), and steps of 2 to 5 minutes in the cycle: write the test, see it fail, implement, see it pass, commit.
 
@@ -213,7 +213,7 @@ Read the six fields from the human-execution block of that `D-n` in the holder's
 
 ## Stage 4 — EXECUTION
 
-Execution starts only after the human approved the plan at the gate below.
+Execution starts only after the plan is approved at the gate below, by the person or, in a continuous run, by the choice made at the start.
 
 ### Inline or subagents
 
@@ -227,6 +227,8 @@ Use `superpowers:subagent-driven-development` when any of these holds:
 Otherwise, inline execution. Without superpowers, inline execution is the only option, whatever the criterion says.
 
 Announce inline or subagent execution and the criterion that set it. The human may override it at the gate.
+
+The handoff of this skill replaces the branch-finishing step of `superpowers:subagent-driven-development` and `superpowers:executing-plans`. In a continuous run, never enter `superpowers:finishing-a-development-branch`: invoke `deliver`.
 
 **Gate — plan for <id>: execute it as announced?** Class: fork. Mode: confirmation. State:
 

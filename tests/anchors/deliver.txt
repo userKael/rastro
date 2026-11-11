@@ -48,3 +48,14 @@ its option menu would stop the run at a confirmation
 (recommended in a continuous run)
 When no item is left under the parent, or the item has no parent, there is nothing to choose
 The run ends, and `<workspace>/mode` is deleted
+In a run that stops at every gate, when it is installed, it opens a new PR
+In a run that stops at every gate, with `superpowers:finishing-a-development-branch`, run this skill until every gate is green
+In a run that stops at every gate, if the finishing skill has already reached PR creation, stop it
+(template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`), for a project whose AGENTS.md block predates the section
+hand the PR to review as **Stop here** does
+a continuous run hands this PR to review, as **Stop here** does, before it starts the next item
+print the gate title without the "continue to" question
+A check marked as a gate that fails makes the recommended option of its gate "adjust", so that gate stops even in a continuous run.
+Identical `- Continuous run,` lines, such as the one a re-run of this skill appended again, become one row.
+When the branch is pushed and the PR URL is not known, the gate needs the person's input and stops even in a continuous run.
+A push with lease after a Step 3 rewrite stops at the gate below even in a continuous run

@@ -69,3 +69,10 @@ A `[HUMAN]` task that blocks a remaining task stops execution there
 Never overwrite the file: a continuous run may already have written its confirmations there.
 Leave each `- Continuous run,` line as it is
 In a continuous run, invoke it with the id.
+except its execution handoff: this skill's plan gate replaces it.
+The handoff of this skill replaces the branch-finishing step of `superpowers:subagent-driven-development` and `superpowers:executing-plans`.
+In a continuous run, never enter `superpowers:finishing-a-development-branch`: invoke `deliver`.
+Execution starts only after the plan is approved at the gate below, by the person or, in a continuous run, by the choice made at the start.
+reviewed at the plan gate by the person or, in a continuous run, by the choice made at the start
+A check marked as a gate that fails makes the recommended option of its gate "adjust", so that gate stops even in a continuous run.
+(template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`), for a project whose AGENTS.md block predates the section

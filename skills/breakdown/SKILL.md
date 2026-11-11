@@ -58,7 +58,7 @@ Read these before anything else. A violation means stop and report, never work a
 
 ## Step 0 — Execution mode
 
-Before triage, read the execution mode as `## Execution mode` in the rastro block of `AGENTS.md` says (template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`). No item exists yet, so the top item of this run is `breakdown-<slug>`, with `<slug>` derived here as Step 2 describes. Section 5.5 replaces it with the id of the top item.
+Before triage, read the execution mode as `## Execution mode` in the rastro block of `AGENTS.md` says (template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`). No item exists yet, so the top item of this run is `breakdown-<slug>`, with `<slug>` derived here as Step 2 describes. Section 5.5 replaces it with the id of the top item. The confirmation lines taken before creation go to `<workspace>/breakdown-<slug>/rulings.md`.
 
 ## Step 1 — TRIAGE
 
@@ -298,7 +298,7 @@ When the reconciliation found nothing for the portal, do not invent a doc subtas
 
 ### 4.6 Additional checks
 
-When `.rastro/profiles/breakdown.md` has a `## Additional checks` section, run each check at the step it names. A check marked as a gate stops at the next gate of this skill. A check marked as an observation becomes a note below the state table of that gate.
+When `.rastro/profiles/breakdown.md` has a `## Additional checks` section, run each check at the step it names. A check marked as a gate stops at the next gate of this skill. A check marked as an observation becomes a note below the state table of that gate. A failing check marked as a gate makes the recommended option of that gate "adjust", so the gate stops even in a continuous run.
 
 ### 4.7 Merge test
 
@@ -333,13 +333,13 @@ Stop. Nothing has been created yet. Print the title, then the state and the prop
 Nothing has been created yet.
 ```
 
-A failed rule item becomes one note below the state table, naming the item, such as `H4`, and what is missing. The recommended option then becomes adjust, not create. A type substitution and each gate check from `## Additional checks` also become notes.
+A failed rule item becomes one note below the state table, naming the item, such as `H4`, and what is missing. The recommended option then becomes adjust, not create. A type substitution and each gate check from `## Additional checks` also become notes. A failing gate check makes the recommended option adjust too.
 
 Then ask with the structured question tool, recommended option first, without repeating the options in the text above it:
 
 - **Create** (recommended when the story rule passes 5 of 5 or does not apply): creates the items; with `tracker: local`, it also pushes the item branch and opens the item PR. No implementation branch and no code.
 - **Adjust the slicing**: the human says what changes, and the gate runs again.
-- **Stop**: nothing is created.
+- **Stop**: nothing is created. The run ends, and `<workspace>/mode` is deleted.
 
 Without a structured question tool, end the turn with the question. Create items only after an explicit choice of **Create**, at the gate or, in a continuous run, at the start. When the recommended option is not **Create**, the gate stops even in a continuous run: only the human can say what changes.
 
@@ -424,8 +424,10 @@ With `tracker: local`, add a note below the table: the items exist for other clo
 
 Then ask with the structured question tool, recommended option first, without repeating the options in the text above it:
 
-- **Stop here** (recommended when the run stops at every gate): the items are ready; the PRs take days and involve other people. The run ends.
+- **Stop here** (recommended when the run stops at every gate): the items are ready; the PRs take days and involve other people. The run ends, and `<workspace>/mode` is deleted.
 - **Implement <id>, PR 1** (recommended in a continuous run): invokes `implement` on the subtask, never on the story. For a task or a bug with no subtasks, on the item itself.
+
+With `tracker: local` and an item PR not merged yet, the recommended option is **Stop here** in both modes: the person must merge the item PR first, because the items are on the base branch only after the merge, and `implement` could not read them before. The gate then stops even in a continuous run, and the run ends with `<workspace>/mode` deleted.
 
 Without a structured question tool, end the turn with the question.
 

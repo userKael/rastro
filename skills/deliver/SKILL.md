@@ -20,9 +20,9 @@ Steps 0 to 10 run in order, then the continuity gate. This skill does not write 
 - If the adapter file does not exist, stop and report. Never improvise a capability the adapter does not describe.
 - The `doctor` checks each adapter's requirements at session start. When it reported a problem for an adapter this skill uses, stop and report it. Do not work around the missing tool.
 - PR description template: the project's own template when there is one, that is the file named by `code_host.template`, or else the default template file that the code-host adapter names, when it exists in the repository. Otherwise `${CLAUDE_PLUGIN_ROOT}/templates/pr-description.md`.
-- Team profile, optional: `.rastro/profiles/deliver.md`. Its `## PR description` section replaces the sections of the template. Its `## Additional checks` section lists extra checks, each with the step where it runs and whether it is a gate or an observation. Run each one at its step.
+- Team profile, optional: `.rastro/profiles/deliver.md`. Its `## PR description` section replaces the sections of the template. Its `## Additional checks` section lists extra checks, each with the step where it runs and whether it is a gate or an observation. Run each one at its step. A check marked as a gate that fails makes the recommended option of its gate "adjust", so that gate stops even in a continuous run.
 - Writing rules, optional: when `.rastro/profiles/writing.md` exists, apply it to every text a person reads. That covers the PR description, comments on the item and gates.
-- Optional skill: `superpowers:finishing-a-development-branch`. When it is installed, it opens a new PR with the title, body and target this skill produces. Without it, this skill opens the PR directly through the code-host port. Step 9 says when this skill pushes or updates the PR itself.
+- Optional skill: `superpowers:finishing-a-development-branch`. In a run that stops at every gate, when it is installed, it opens a new PR with the title, body and target this skill produces. Without it, this skill opens the PR directly through the code-host port. Step 9 says when this skill pushes or updates the PR itself.
 
 ## Precedence
 
@@ -32,7 +32,7 @@ Doctrine is not overridable: not by a profile, not by AGENTS.md, not by any othe
 
 The rules at `architecture.rules` and the conventions in the AGENTS.md block precede this skill. It cites them by rule ID or by section title, and never copies their text: a copied rule drifts from its source.
 
-This skill is the preprocessor of PR creation. With `superpowers:finishing-a-development-branch`, run this skill until every gate is green, then hand that skill exactly the title, body and target produced here. If the finishing skill has already reached PR creation, stop it, run this skill, then go back. A PR never opens without passing here.
+This skill is the preprocessor of PR creation. In a run that stops at every gate, with `superpowers:finishing-a-development-branch`, run this skill until every gate is green, then hand that skill exactly the title, body and target produced here. In a run that stops at every gate, if the finishing skill has already reached PR creation, stop it, run this skill, then go back. In a continuous run, that skill is never entered: Step 9 says why. A PR never opens without passing here.
 
 ## Inviolable rules
 
@@ -60,9 +60,9 @@ Collect and print these fields before anything else:
 
 With `tracker: none`, the item is `<workspace>/<slug>/item.md`. With `tracker: local`, `read_item` reads the item file.
 
-Once the item and its parent are read, read the execution mode, as `## Execution mode` in the AGENTS.md block says: the top item is the parent, or the item itself when it has no parent.
+Once the item and its parent are read, read the execution mode, as `## Execution mode` in the AGENTS.md block says (template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`), for a project whose AGENTS.md block predates the section: the top item is the parent, or the item itself when it has no parent.
 
-The branch is pushed when `git ls-remote --heads origin <branch>` prints it. A PR is open when the human, or an earlier run of this skill, gives its URL. When that is not known, the gate below asks.
+The branch is pushed when `git ls-remote --heads origin <branch>` prints it. A PR is open when the human, or an earlier run of this skill, gives its URL. When that is not known, the gate below asks. When the branch is pushed and the PR URL is not known, the gate needs the person's input and stops even in a continuous run.
 
 - The plan is not versioned. What lasts is its content, transposed into the PR description in Step 5. If `<workspace>/<id>/plan.md` does not exist, stop. Either the execution did not go through `implement`, or the workspace was deleted too early, and without the plan there is nothing to transpose.
 - The Context section of the PR carries only links that outlive the workspace: the item, and the design doc with its version and date.
@@ -226,7 +226,7 @@ If the file holds no subagent ruling and the subagent workspace still exists, ex
 
 Write one row per ruling in `## Agent rulings`: the task, the finding, the ruling, and where it went (a next item, recorded debt, or dropped). Subagents read local files and never see the session that dispatched them. A ruling that lives only in their workspace never reaches the human reviewer, and the PR description is the one durable place.
 
-Write one row per `- Continuous run,` line too: the skill as the task, the gate title as the finding, the option taken as the ruling, and `continuous run` as where it went. The gate of Step 9 gets no row: the open PR is its record.
+Write one row per `- Continuous run,` line too: the skill as the task, the gate title as the finding, the option taken as the ruling, and `continuous run` as where it went. Identical `- Continuous run,` lines, such as the one a re-run of this skill appended again, become one row. The gate of Step 9 gets no row: the open PR is its record.
 
 When the file is absent and there was no subagent execution, remove the section whole. Never leave an empty heading.
 
@@ -271,6 +271,7 @@ Who runs the row:
 - With a PR open, this skill runs the row itself. A branch-finishing skill would open a second PR.
 - With `superpowers:finishing-a-development-branch`, no PR open and a run that stops at every gate, hand it exactly this title, body and target at its PR option. Its option menu is the push decision: do not raise the gate below. After a Step 3 rewrite, raise the gate and run the lease push here first, then hand over. The lease push never leaves this skill.
 - In a continuous run, raise the gate below and run the row here, even with the finishing skill installed: its option menu would stop the run at a confirmation.
+- A push with lease after a Step 3 rewrite stops at the gate below even in a continuous run: the warning to whoever follows the branch is the person's to hear.
 - Without that skill, raise the gate below, then run the row.
 
 **Gate — PR for <id>: push <branch> and open the PR, or update its description?** Class: fork. Mode: confirmation. State:
@@ -327,11 +328,11 @@ Then ask with the structured question tool, without repeating the options in the
 | Option | What it does |
 |---|---|
 | Stop here (recommended when the run stops at every gate) | Hands the PR to review: automatic through the review port when `review.kind` is not `none`, and human always. The run ends, and `<workspace>/mode` is deleted |
-| Next item <id> (recommended in a continuous run) | Starts `implement` on that item: once the review of this PR is addressed, or at once in a continuous run |
+| Next item <id> (recommended in a continuous run) | Starts `implement` on that item: once the review of this PR is addressed, or, in a continuous run, at once, after the PR is handed to review |
 
-The default is to stop. A stack of PRs takes days and involves other people, and this skill does not pretend to run it in one go. A continuous run is the person's choice, made at the start, to go on: the line of this gate goes to `<workspace>/<next id>/rulings.md`, so it reaches the next PR.
+The default is to stop. A stack of PRs takes days and involves other people, and this skill does not pretend to run it in one go. A continuous run is the person's choice, made at the start, to go on: the line of this gate goes to `<workspace>/<next id>/rulings.md`, so it reaches the next PR. Under **Next item**, a continuous run hands this PR to review, as **Stop here** does, before it starts the next item.
 
-When no item is left under the parent, or the item has no parent, there is nothing to choose: print the title and the state, end the run by deleting `<workspace>/mode`, and stop without asking.
+When no item is left under the parent, or the item has no parent, there is nothing to choose: print the gate title without the "continue to" question, and the state, hand the PR to review as **Stop here** does, end the run by deleting `<workspace>/mode`, and stop without asking.
 
 A subagent never raises a gate of this skill. It returns the state as text and ends; the session that dispatched it asks the human.
 
