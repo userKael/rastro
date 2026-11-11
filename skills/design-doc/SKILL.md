@@ -15,7 +15,7 @@ This skill carries the team's agreement, not the craft of writing design docs. W
 
 ## Requirements
 
-- `.rastro/config.yml`. Keys read: `docs.kind`, `docs.location`, `code_host.kind`, `project.languages.human`, `architecture.modules`, `architecture.layers`, `architecture.rules`, `architecture.golden_paths`, `architecture.contract_sources`, `domain.stateful_entities`, `review.rules`, `workspace`.
+- `.rastro/config.yml`. Keys read: `docs.kind`, `docs.location`, `code_host.kind`, `project.languages.human`, `architecture.modules`, `architecture.layers`, `architecture.rules`, `architecture.golden_paths`, `architecture.boundary_types`, `architecture.contract_sources`, `domain.stateful_entities`, `review.rules`, `workspace`.
 - The docs adapter, chosen by `docs.kind`. Read `.rastro/adapters/docs/<kind>.md` when it exists, otherwise `${CLAUDE_PLUGIN_ROOT}/adapters/docs/<kind>.md`, before `collapse`, `publish` and `update`. If the adapter file does not exist, stop and report.
 - With `docs: repo`, the code-host adapter, chosen by `code_host.kind`, because publishing opens a change request through the code-host port. Read `.rastro/adapters/code-host/<kind>.md` when it exists, otherwise `${CLAUDE_PLUGIN_ROOT}/adapters/code-host/<kind>.md`, before `open_change_request`. If the adapter file does not exist, stop and report.
 - The `domain-context` skill, `${CLAUDE_PLUGIN_ROOT}/skills/domain-context/SKILL.md`, for grounding. It reaches the `domain_state` port. This skill never reads the database itself. `domain-context` stops on a missing domain-state adapter, and this skill stops with it.
@@ -188,6 +188,8 @@ Ground, do not derive. The code says what exists, and reuse is vocabulary. Choos
 
 A `new` component whose type has no golden path in the `architecture.golden_paths` folder is the first instance of that type. Record it as a `DT-nn`: the type, and the decisions this first instance fixes for every later one. The golden path itself is written with the code, by `implement`. A type outside `architecture.layers` is a `DT-nn` too: it adds the layer, and its first instance defines the golden path.
 
+When that type is in `architecture.boundary_types`, it crosses a trust boundary: its `DT-nn` also lists the threats considered, drawn from the public reference that `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md` names, the control for each and how each control is verified. "None identified" does not serve a boundary type. A `DT-nn` that adds a layer also says whether the new type crosses a trust boundary; when it does, the type joins `architecture.boundary_types`.
+
 One `###` per entry point: a request, a job, a webhook. A sad path goes in an `alt` block or in its own `###`.
 
 ## Step 3 — Validation
@@ -202,6 +204,7 @@ Before the gate, check every item:
 - [ ] Candidate slicing carries the draft notice.
 - [ ] No estimate in days, points or phases with an owner.
 - [ ] No proposal contradicts an ADR or a golden path without saying so.
+- [ ] Every `DT-nn` of a first instance whose type is in `architecture.boundary_types` lists its threats, the control for each and how each is verified.
 - [ ] Every `DT-nn` opens with its record and collapses its deliberation.
 - [ ] Every `DT-nn` has `Why (b) lost` filled with the argument, never a pointer.
 - [ ] Every section passed the question "If this is wrong, what changes?" and sits on the right side.
