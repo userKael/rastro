@@ -31,7 +31,7 @@ Only the golden paths this plan uses.
 
 From the `no golden path`, `extends` and decided `contradicts` rows of the reconciliation. The task of the instance writes the golden path.
 
-- `<id>`: <created | extended to <version> | changed to <version>>, in Task <n>
+- `<id>`: <created | extended to <version> | changed to <version>>, in Task <n>, verified by <review | the command>; for a type in `architecture.boundary_types`, the task also writes `## Security` from the reference and a real-system scenario
 
 ### Relevant state machines
 

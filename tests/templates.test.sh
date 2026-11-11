@@ -150,7 +150,8 @@ test_plan() {
   require_all plan.md \
     '**Goal:**' '**Spec:**' '## Global Constraints' '## Expected test scenarios' \
     '**Given**' '**When**' '**Then**' '[HUMAN]' '**Executor:** human' '**Blocks:** Task' \
-    '**Rollback:**' '### Golden paths this item creates or evolves'
+    '**Rollback:**' '### Golden paths this item creates or evolves' \
+    'verified by <review | the command>'
 }
 
 test_config_names_the_env_example_trap() {

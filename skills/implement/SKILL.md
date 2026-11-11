@@ -181,7 +181,7 @@ The `## Global Constraints` block reaches the reviewer of each task verbatim. Wh
 - **Rules by ID.** Each rule ID from `architecture.rules` that this plan touches, with why. One line gives the resolved location of `architecture.rules`, such as `AGENTS.md#non-negotiable-rules`, so the reviewer can open the text there. The rule text is never copied.
 - **Delivery conventions.** The branch format and the commit format, repeated here for the reviewer.
 - **Applicable golden paths.** Only the golden paths of the `architecture.golden_paths` folder this plan uses, each with why.
-- **Golden paths this item creates or evolves.** Each `no golden path`, `extends` and decided `contradicts` row of the reconciliation: the golden path, the change (created, extended or changed) and the task that writes it. That task is the task of the instance, never a task of its own.
+- **Golden paths this item creates or evolves.** Each `no golden path`, `extends` and decided `contradicts` row of the reconciliation: the golden path, the change (created, extended or changed), the task that writes it, and how it is verified, `review` or the command. That task is the task of the instance, never a task of its own. For a type in `architecture.boundary_types`, the line adds that the task writes `## Security` from the reference the template names and a real-system scenario in `## Verification`.
 - **Relevant state machines.** Each entity of `domain.stateful_entities` the plan touches: states, allowed transitions, and the `file:line` that defines them.
 - **Code-flow boundaries.** Only the `new` and `changes` items of the code flow that survived the reconciliation.
 - **Decisions of this item.** Each `D-n` and each `DT-nn` that still binds the plan.
@@ -278,10 +278,12 @@ The task that delivers the first instance of a type writes its golden path. The 
 - Copy `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md` to a file named `<type>.md` in the `architecture.golden_paths` folder, `docs/golden-paths/` when the key is absent or empty. Create the folder when it is absent.
 - When the design doc recorded a `DT-nn` for this first instance, the draft starts from that `DT-nn`'s decisions. Fill the rest from the code just written. `instances` holds the `file:line` of the instance and never a copy of its code. Every decision carries its `Why:` and its `Revisit if:`. A decision with no reason is a circumstance of the first instance, not a decision: leave it out.
 - Set `status: current`, `version: 1.0.0` and `verified_by: review`. An automated check written against one instance freezes its accidents. It comes when a later instance confirms the golden path.
-- Fill `## Security` for every type: the threats considered, the control for each and how it is verified, or "none identified" with the reason.
-- When the type is not yet in `architecture.layers`, the same commit adds it to `.rastro/config.yml`, as the decided `DT-nn` says.
+- Fill `## Security` for every type: the threats considered, the control for each and how it is verified, or "none identified" with the reason. A type in `architecture.boundary_types` crosses a trust boundary, and "none identified" does not serve it: draw its threats from the public reference that `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md` names, one line per threat with its control and how the control is verified, and give `## Verification` at least one scenario against the real system, without mocks, in the shape the template gives.
+- When the type is not yet in `architecture.layers`, the same commit adds it to `.rastro/config.yml`, as the decided `DT-nn` says, and to `architecture.boundary_types` when that `DT-nn` says the type crosses a trust boundary.
 
 An `extends` raises the minor version, adds the instance to `instances` and a row to `## History`. A `contradicts` decided for the golden path raises the major version, moves every instance that no longer follows it to `## Known debt`, and adds a row to `## History`. A `follows` adds the instance to `instances` when it is absent, in the same commit as the instance, with no version change and no review gate.
+
+A golden path moves from `verified_by: review` to `automated: <command>` only in a task that writes the check, never in the task of its first instance. Before the change, run the command twice and paste both outputs in the task report: on the branch, where it exits 0, and with one instance edited to break one decision, where it exits non-zero and prints what the template's `## Verification` asks. Undo that edit. The same commit raises the minor version, adds a row to `## History`, and makes `verify.lint` run the command, directly or through a script, so CI runs it too. This change adds no decision, so it raises no review gate.
 
 The person implementing the task defines the golden path with the agent, at the golden-path review gate:
 
@@ -291,6 +293,7 @@ The person implementing the task defines the golden path with the agent, at the 
 |---|---|
 | Golden path | `<id>` <version>, new or extended |
 | Instance | `<file:line>` |
+| Boundary type | <no, or yes: <n> threats, <n> real-system scenarios> |
 
 Then the deliberation table, one row per decision the draft adds or changes, plus the quick-exit row:
 
@@ -299,7 +302,14 @@ Then the deliberation table, one row per decision the draft adds or changes, plu
 | <decision> | <the reason> | <the condition> | `<file:line>` |
 | all hold as drafted | | | |
 
-The person confirms, rewrites or drops each decision, and the file keeps only what the person confirmed or rewrote. The sequence depends on inline or subagent execution:
+For a type in `architecture.boundary_types`, a second deliberation table follows, one row per threat the draft adds or changes in `## Security`, plus its own quick-exit row:
+
+| Threat | Control | Verified by |
+|---|---|---|
+| <threat, with its item in the reference> | <the control> | <the check, the test or the real-system scenario> |
+| all hold as drafted | | |
+
+The person confirms, rewrites or drops each decision and each threat, and may add a threat the draft missed. The file keeps only what the person confirmed, rewrote or added. A boundary type keeps at least one threat. The sequence depends on inline or subagent execution:
 
 - Inline: draft the golden path, raise the review gate, then commit the instance and the confirmed golden path together.
 - With subagents: the subagent commits the instance with the drafted golden path and returns the review-gate rows as text, and never raises the gate, so the main session raises the review gate before it dispatches the next task. The person's answers land in one more commit of the same task that touches only the golden path.
@@ -350,7 +360,7 @@ Run the configured commands and paste their output literally: `verify.lint`, `ve
 
 The coverage figure comes from the output of `verify.unit` when it prints one. Every number that reaches the PR description, a review note or a commit is the same number, taken on the same revision. A number copied from an earlier run drifts between those three places.
 
-Coverage is not evidence of behavior. A mock that returns a complete fixture hides code that wipes a field. A guard written on the wrong field passes a full suite. When the change touches an integration with an external system, say in the report that a manual test is missing and what it must exercise.
+Coverage is not evidence of behavior. A mock that returns a complete fixture hides code that wipes a field. A guard written on the wrong field passes a full suite. When the change touches an integration with an external system, say in the report that a manual test is missing and what it must exercise. For a component whose type is in `architecture.boundary_types`, what the manual test must exercise starts with the real-system scenarios of its golden path's `## Verification`.
 
 ### Preserve the rulings
 

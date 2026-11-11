@@ -76,3 +76,14 @@ Execution starts only after the plan is approved at the gate below, by the perso
 reviewed at the plan gate by the person or, in a continuous run, by the choice made at the start
 A check marked as a gate that fails makes the recommended option of its gate "adjust", so that gate stops even in a continuous run.
 (template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`), for a project whose AGENTS.md block predates the section
+how it is verified, `review` or the command
+writes `## Security` from the reference the template names and a real-system scenario in `## Verification`
+"none identified" does not serve it
+at least one scenario against the real system, without mocks
+when that `DT-nn` says the type crosses a trust boundary
+only in a task that writes the check, never in the task of its first instance
+This change adds no decision, so it raises no review gate.
+| Boundary type |
+| Threat | Control | Verified by |
+A boundary type keeps at least one threat.
+starts with the real-system scenarios of its golden path
