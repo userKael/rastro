@@ -326,7 +326,7 @@ Then ask with the structured question tool, without repeating the options in the
 
 | Option | What it does |
 |---|---|
-| Stop here (recommended when the run stops at every gate) | Hands the PR to review: automatic through the review port when `review.kind` is not `none`, and human always. The run ends |
+| Stop here (recommended when the run stops at every gate) | Hands the PR to review: automatic through the review port when `review.kind` is not `none`, and human always. The run ends, and `<workspace>/mode` is deleted |
 | Next item <id> (recommended in a continuous run) | Starts `implement` on that item: once the review of this PR is addressed, or at once in a continuous run |
 
 The default is to stop. A stack of PRs takes days and involves other people, and this skill does not pretend to run it in one go. A continuous run is the person's choice, made at the start, to go on: the line of this gate goes to `<workspace>/<next id>/rulings.md`, so it reaches the next PR.

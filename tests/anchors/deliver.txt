@@ -47,3 +47,4 @@ The gate of Step 9 gets no row: the open PR is its record.
 its option menu would stop the run at a confirmation
 (recommended in a continuous run)
 When no item is left under the parent, or the item has no parent, there is nothing to choose
+The run ends, and `<workspace>/mode` is deleted
