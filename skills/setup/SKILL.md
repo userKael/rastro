@@ -95,7 +95,7 @@ A detected value the human has no reason to doubt is not asked: it shows in the 
 9. `architecture.modules`, confirming the proposal.
 10. `architecture.sensitive_data`: the classes of data never logged and never committed, such as customer addresses.
 11. `docs.public_portal`, when the repository publishes documentation for other teams.
-12. Whether to write the CI file from `${CLAUDE_PLUGIN_ROOT}/templates/ci/`. Offer it only when a template exists whose file name starts with `code_host.kind`, and only when its destination does not exist. The first line of the template says where the file goes.
+12. Whether to write the CI file from `${CLAUDE_PLUGIN_ROOT}/templates/ci/`. Offer it only when a template exists whose file name starts with `code_host.kind`, and only when its destination does not exist. The first line of the template says where the file goes. Under `init`, never offer it and never write it: the skeleton has no manifest yet, so a CI run would fail on the first change request. The walking skeleton writes the CI file with its own toolchain step.
 13. Whether to write `.rastro/CALIBRATION.md` from `${CLAUDE_PLUGIN_ROOT}/templates/CALIBRATION.md`, where the team records its own measurements. Offer it only when that file does not exist.
 
 An optional file whose destination exists is never offered and never written. Leave it as it is, and say so at the gate: the team may have filled its toolchain step or recorded its measurements there. When the first line of the CI template says to merge its job into a file that already exists, show the job to merge in the closing report, and never overwrite that file.
@@ -212,7 +212,7 @@ Then print the closing report:
 
 - The files to commit, each by its explicit path. Hooks are staged with `git add --chmod=+x .rastro/git-hooks/<file>`, so the executable bit survives on systems that do not record it.
 - When this run set `core.hooksPath`: each clone runs `git config core.hooksPath .rastro/git-hooks` once.
-- When the CI file was written: the team fills in its toolchain step, the `toolchain:` comment in the file, before the first pipeline runs; under `init`, the walking skeleton fills it. When the job must be merged by hand: the job, ready to merge.
+- When the CI file was written: the team fills in its toolchain step, the `toolchain:` comment in the file, before the first pipeline runs. When the job must be merged by hand: the job, ready to merge.
 - When the block is new: the team replaces the example rule in `## Non-negotiable rules` with its own rules, each by ID. Setup keeps that section on every re-run once it differs from the example.
 - For an agent other than Claude Code: export `RASTRO_ROOT` with the rastro installation directory on each machine that runs it.
 - When the stack detection names a stack profile, point to it in the closing report, by the path the detection gives; the profile is read where it is and never copied. The detection names it as `${CLAUDE_PLUGIN_ROOT}/profiles/stacks/<name>/`, or under `RASTRO_ROOT` for an agent other than Claude Code.

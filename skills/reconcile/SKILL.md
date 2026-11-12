@@ -84,7 +84,7 @@ The code-flow section of a design doc (`## Code flows` in `${CLAUDE_PLUGIN_ROOT}
 - **`rect` blocks.** The owner named in a transaction block can open one transaction that covers every write listed inside it. When the code has no mechanism for that, it goes to `Not sized`.
 - **Renaming a `new` component is not a divergence.** A change of type, module, module crossing, transaction owner or async boundary is.
 
-The walking skeleton intent that `init` writes, whose header says `origin: init`, lists its components under `## Components`, tagged as the next subsection says. Contest them the same way. Every component of the skeleton is `new`, so each type with no golden path gets its `no golden path` row, and the task of its first instance writes the golden path.
+The walking skeleton intent that `init` writes, whose header says `origin: init`, lists its components under `## Components`, tagged as the next subsection says. Contest them the same way. Every component of the skeleton is `new`, so each type with no golden path gets its `no golden path` row, and the task of its first instance writes the golden path. The CI file of the skeleton is infrastructure: it has no layer type and no golden path, so it is neither a divergence nor classified.
 
 ### Golden-path classification: every intent
 

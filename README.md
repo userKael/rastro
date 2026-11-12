@@ -124,7 +124,7 @@ On approval, it writes:
 | `CLAUDE.md` | the line `@AGENTS.md`, created or added, because Claude Code reads `AGENTS.md` only when no `CLAUDE.md` exists |
 | `.gitignore` | the workspace |
 | `.rastro/git-hooks/`, `.rastro/lib/` | the git hooks, wired through `core.hooksPath` or through the hook manager already in place |
-| CI file, `.rastro/CALIBRATION.md` | only when you say yes |
+| CI file, `.rastro/CALIBRATION.md` | only when you say yes; under `rastro:init`, the CI file comes with the walking skeleton instead |
 
 `setup` is idempotent: a second run with the same answers changes nothing. `/rastro:setup --doctor` prints the health of the installation and writes nothing.
 

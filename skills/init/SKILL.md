@@ -147,11 +147,11 @@ captured_on: <YYYY-MM-DD>
 
 ## What changes
 
-A walking skeleton: <the entry point>, end to end through <the layers, in order>, with <the verify commands> green on a developer's machine and in CI. When setup wrote the CI file, the skeleton also fills its toolchain step, so CI can run the verify commands. It holds nothing beyond what the entry point needs to answer.
+A walking skeleton: <the entry point>, end to end through <the layers, in order>, with <the verify commands> green on a developer's machine and in CI. The skeleton also writes the CI file with its toolchain step, as one of its own components, so the first CI run has something to verify. It holds nothing beyond what the entry point needs to answer.
 
 ## Who observes
 
-<The CI, when the repository has a CI file; otherwise the developer who runs the verify commands>: every verify command runs and passes on the change request of the skeleton.
+<The CI, when the skeleton writes the CI file or the repository has one; otherwise the developer who runs the verify commands>: every verify command runs and passes on the change request of the skeleton.
 
 ## Current contract
 
@@ -162,6 +162,7 @@ None: the repository has no source code. The decisions are in <the path of each 
 New (`new`): <count>
 
 - `<ComponentName>`: module `<a module, or none yet>`, type `<a layer from architecture.layers>`, <responsibility>; why: `<ADR file:line>`
+- `<the CI file path>`: the CI file, from the CI template of `code_host.kind` in `${CLAUDE_PLUGIN_ROOT}/templates/ci/`, with its toolchain step filled together with the toolchain of the stack; infrastructure, no layer type. Listed only when that template exists and the destination does not.
 ```
 
 ## Handoff
@@ -172,6 +173,7 @@ When `git ls-tree --name-only <project.base_branch> -- .rastro/config.yml` print
 - commit on the base branch before the first item, because the reconciliation stamps that branch;
 - with `code_host.kind` other than `none`, add the remote and push the base branch, because `breakdown` and `deliver` need them;
 - then run `init` again, or `breakdown` with the path of the intent;
+- the CI file comes with the walking skeleton, not with `setup`: it is a component of the skeleton, written with the toolchain step, so the first CI run has something to verify;
 - When the stack detection names a stack profile, point to it in the closing report, by the path the detection gives; the profile is read where it is and never copied. The detection names it as `${CLAUDE_PLUGIN_ROOT}/profiles/stacks/<name>/`, or under `RASTRO_ROOT` for an agent other than Claude Code.
 
 When breakdown already ran on the skeleton intent, that is, an item for it exists, stop and follow the next row of the state table instead of invoking breakdown: "No source code yet" stays true until the first PR of the skeleton merges.

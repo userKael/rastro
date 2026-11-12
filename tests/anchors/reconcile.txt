@@ -61,3 +61,4 @@ When `verify.source_globs` is empty, the exception does not apply
 empty by construction: no source code
 ### Golden-path classification: every intent
 When the intent has no code-flow section and no `## Components` (an interview or a root-cause intent), there is no component list to read.
+The CI file of the skeleton is infrastructure: it has no layer type and no golden path

@@ -36,7 +36,7 @@ never overwrites
 <workspace>/breakdown-walking-skeleton/intent.md
 origin: init, conversation with <person>
 ## Components
-toolchain step
+The skeleton also writes the CI file with its toolchain step, as one of its own components
 When the intent already exists, keep it as it is.
 `git ls-tree --name-only <project.base_branch> -- .rastro/config.yml`
 before the first item
@@ -53,3 +53,4 @@ drafts at most three ADRs (stack, structure, verification)
 When the stack detection names a stack profile, point to it in the closing report, by the path the detection gives; the profile is read where it is and never copied.
 and note the stack profile when the detection section names one
 The detection names it as `${CLAUDE_PLUGIN_ROOT}/profiles/stacks/<name>/`, or under `RASTRO_ROOT` for an agent other than Claude Code.
+the CI file comes with the walking skeleton, not with `setup`
