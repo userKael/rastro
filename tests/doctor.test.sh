@@ -773,6 +773,7 @@ test_doctor_reads_every_shipped_adapter() {
       domain-state) printf 'domain_state:\n  kind: %s\n  server: acme-db\n' "$kind" >>"$repo/.rastro/config.yml" ;;
       review) printf 'review:\n  kind: %s\n' "$kind" >>"$repo/.rastro/config.yml" ;;
     esac
+    [ "$rel" != tracker/github-projects.md ] || edit_config "$repo" 's/^  key: W/  key: W\n  project: 7/'
     DOCTOR_ROOT=$real run_doctor "$repo"
     assert_status 0 "shipped $rel: status"
     assert_not_contains "$OUT" "missing adapter" "shipped $rel: found"
