@@ -7,7 +7,7 @@ description: Starts rastro in an empty directory or a repository with no source 
 
 **Input:** an empty directory, or a repository with no source code, at its root.
 
-**Output:** after the gate, the ADRs in `docs/adr/`, from `${CLAUDE_PLUGIN_ROOT}/templates/adr.md`, and `git init` when the directory was not a repository. Then, through the gate of `setup`, the files that `setup` writes. Last, `<workspace>/breakdown-walking-skeleton/intent.md`. Nothing is committed.
+**Output:** after the gate, the ADRs in `docs/adr/`, from `${CLAUDE_PLUGIN_ROOT}/templates/adr.md`, and `git init` when the directory has no repository of its own, or a new one is wanted inside another. Then, through the gate of `setup`, the files that `setup` writes. Last, `<workspace>/breakdown-walking-skeleton/intent.md`. Nothing is committed.
 
 ## Requirements
 
@@ -31,7 +31,7 @@ Configuration belongs to `setup`. Init hands over answers and never writes `.ras
 2. One question at a time.
 3. **The person decides, the agent drafts.** An ADR with no human decision behind it is fabricated. An ADR records the person's answer. The agent never supplies a decision, a reason or an alternative. A reason the person did not give appears as `<reason not given>`.
 4. Never write a golden path. Golden paths are born from code: each component type of the skeleton writes its own through `implement`, like every first instance.
-5. Write nothing before the gate. That includes the ADRs. `git init` runs only after the gate, and only when the directory is not a repository.
+5. Write nothing before the gate. That includes the ADRs. `git init` runs only after the gate, and only when the directory has no repository of its own, or when the person chose a new repository inside another one.
 6. Never commit and never push.
 7. init asks no execution mode. Its gate is a decision and always stops. `breakdown` asks the mode, for the first item.
 
@@ -40,14 +40,14 @@ Configuration belongs to `setup`. Init hands over answers and never writes `.ras
 Check three things before asking anything.
 
 - **Source code.** Apply rule 1. When it finds source code, say that This repository has source code, point to `${CLAUDE_PLUGIN_ROOT}/skills/setup/SKILL.md`, and stop.
-- **Another repository.** Run `git rev-parse --show-toplevel`. When it prints a directory other than the current one, the current directory is inside another repository. Say so, and ask: start a new repository here, with `git init` after the gate, or stop, because the project belongs to the outer repository, where `setup` runs at the root. This is a question, not a gate.
+- **Another repository.** Run `git rev-parse --show-toplevel`, and `git rev-parse --show-prefix`. A non-empty prefix means the current directory is inside another repository; never compare the printed path with the current directory as strings, because git prints forward slashes and the shell may not. Say so, and ask: start a new repository here, with `git init` after the gate, or stop, because the project belongs to the outer repository, where `setup` runs at the root. This is a question, not a gate.
 - **What is already answered.** The values of `.rastro/config.yml`, when it exists, and the accepted ADRs in `docs/adr/` whose `origin` names `init`. Steps 2 to 6 ask, draft, write and hand to `setup` only what is still open. A value read from the config is not drafted again as an ADR. When nothing is open, go to Step 7.
 
 ## Step 1 — Detect
 
 Print one report, a two-column table, with no decision in it:
 
-- whether the directory is a repository, and the current branch, from `git symbolic-ref --short HEAD`;
+- whether the directory is a repository of its own, and the current branch, from `git symbolic-ref --short HEAD`. Inside another repository, these rows and the remote row describe the outer repository: do not read them until after `git init`, and ignore them before;
 - the output of `git remote -v`;
 - the files present, and why none of them is source code;
 - the CI files and manifests, read as the `## CI workflows` section and the manifest sections of `${CLAUDE_PLUGIN_ROOT}/templates/stack-detection.md` describe, with the proposals for the verify commands;
@@ -114,7 +114,7 @@ Write only after an explicit answer to each row. A subagent never raises this ga
 
 After the person chose to write:
 
-1. When Step 0 found that the directory is not a repository, run `git init`, now and not before.
+1. When the directory has no repository of its own, or the person chose a new repository inside another one, run `git init`, now and not before. In the nested case, `git rev-parse --show-toplevel` succeeds before this step, and skipping `git init` would let `setup` write into the outer repository.
 2. Copy the confirmed and rewritten ADRs into `docs/adr/`.
 3. Read the branch with `git symbolic-ref --short HEAD`. It is the answer for `project.base_branch`.
 
@@ -162,7 +162,7 @@ New (`new`): <count>
 
 ## Handoff
 
-When `git ls-tree --name-only <project.base_branch> -- .rastro/config.yml` prints nothing, print the closing report and stop:
+When `git ls-tree --name-only <project.base_branch> -- .rastro/config.yml` prints nothing or fails (an unborn branch right after `git init` fails: an error counts as nothing committed), print the closing report and stop:
 
 - the files to commit, each by its explicit path: the list of `setup` plus each ADR;
 - commit on the base branch before the first item, because the reconciliation stamps that branch;
