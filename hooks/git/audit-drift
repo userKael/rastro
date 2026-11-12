@@ -169,11 +169,11 @@ gp_audit() {
             else
               n=$(git log --format=%h "$sha..HEAD" -- "$path" 2>/dev/null | grep -c . || true)
               if [ "$n" -gt 0 ]; then
-                detail="$n commits touched it since the version of $rel last changed (${sha:0:7})"
-                [ "$n" -ne 1 ] || detail="1 commit touched it since the version of $rel last changed (${sha:0:7})"
+                detail="$n commits touched it since its baseline ${sha:0:7}, the later of the last version change of $rel and the commit that listed it"
+                [ "$n" -ne 1 ] || detail="1 commit touched it since its baseline ${sha:0:7}, the later of the last version change of $rel and the commit that listed it"
                 row instances-changed "$rel:$path" review "$detail"
               else
-                row instances-changed "$rel:$path" ok "no commit touched it since the version of $rel last changed (${sha:0:7})"
+                row instances-changed "$rel:$path" ok "no commit touched it since its baseline ${sha:0:7}, the later of the last version change of $rel and the commit that listed it"
               fi
             fi
           fi
