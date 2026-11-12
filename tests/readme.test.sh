@@ -48,17 +48,26 @@ test_readme_has_every_section() {
 test_agent_support_is_honest() {
   [ -f "$readme" ] || return 0
   need_in_section 'Agent support' 'Claude Code'
-  need_in_section 'Agent support' 'Other agents that read AGENTS.md and SKILL.md: compatible by design, verified only by the tests of the shim'
+  need_in_section 'Agent support' 'Other agents that read AGENTS.md and SKILL.md: compatible by design, not tested.'
+  need_in_section 'Agent support' 'Codex CLI and Cursor: compatible by design, verified only by the tests of the shim that translates their hook protocol.'
   need_in_section 'Agent support' 'RASTRO_ROOT'
   need_in_section 'Agent support' 'has not been run end to end in Codex CLI or Cursor yet'
   # Outside the Agent support section, a line that names Codex must say it is not tested.
   local line
   while IFS= read -r line; do
     case $line in
-      *'not tested'* | *'(see Agent support)'*) ;;
+      *'not tested'*) ;;
       *) _assert_fail "README.md names Codex without saying it is not tested" "line: $line" ;;
     esac
   done < <(grep -F -e 'Codex' "$readme" | grep -vxF -f <(section_body 'Agent support'))
+  # Inside the section, a line that names Codex or Cursor and claims a level of
+  # verification must carry a qualifier.
+  while IFS= read -r line; do
+    case $line in
+      *'NOT VERIFIED'* | *'not tested'* | *'verified only by the tests of the shim'* | *'has not been run'*) ;;
+      *) _assert_fail "README.md Agent support claims verification for Codex or Cursor without a qualifier" "line: $line" ;;
+    esac
+  done < <(section_body 'Agent support' | grep -iE 'Codex|Cursor' | grep -iE 'verified|tested|end to end')
 }
 
 test_install_and_configure_name_the_real_commands() {
@@ -205,7 +214,7 @@ test_readme_adapter_table_lists_new_adapters() {
   section_body 'Bring your own adapter' | grep -qF '`jira`, `github`, `github-projects`' ||
     _assert_fail "README.md adapter table lacks github-projects on the tracker row"
   section_body 'Bring your own adapter' | grep -qF '`notion`, `repo`, `claude-docs`' ||
-    _assert_fail "README.md adapter table lacks claude on the docs row"
+    _assert_fail "README.md adapter table lacks claude-docs on the docs row"
 }
 
 test_readme_agent_support_says_what_ports() {
