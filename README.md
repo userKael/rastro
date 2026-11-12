@@ -33,7 +33,7 @@ What ships in the repository:
 
 rastro does not ship an automated review engine. It defines the format of a review rule, and the `none` review adapter. It does not measure the impact of a change across repositories.
 
-Status: version 0.1.0. The tool commands in the shipped adapters were not verified against live tools. Agents other than Claude Code are untested (see Agent support).
+Status: version 0.2.0. The tool commands in the shipped adapters were not verified against live tools. Agents other than Claude Code are untested (see Agent support).
 
 ## The flow
 
