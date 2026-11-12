@@ -9,7 +9,7 @@ rules="$arch/rules.md"
 paths="$arch/golden-paths"
 writing="$ex/writing.md"
 stack="$root/profiles/stacks/node-nestjs-typescript"
-STACK_FILES=(README verification)
+STACK_FILES=(README verification testing security-questions)
 STACK_SENTENCE_1='This file teaches how to verify in this stack.'
 STACK_SENTENCE_2="It imposes no pattern: which patterns the project uses is the team's decision."
 RULE_IDS=(module-public-api no-service-cycle pure-domain no-sensitive-log migration-via-tool)
@@ -245,6 +245,28 @@ test_stack_profile_verification_recipe() {
   done
 }
 
+test_stack_profile_testing_scenarios() {
+  local needle f="$stack/testing.md"
+  require_file "$f" || return 0
+  for needle in 'Test.createTestingModule' 'overrideProvider' 'createNestApplication' 'supertest' '.e2e-spec' \
+    '`test:e2e`' '`verify.unit`' '`verify.integration`' '### Scenario:' '- Context:' '- Steps:' '- Success:' \
+    '- When blocked:' 'real system' 'never production' 'placeholder'; do
+    grep -qF -e "$needle" "$f" || _assert_fail "stack profile testing.md lacks required text" "text: $needle"
+  done
+}
+
+test_stack_profile_security_questions() {
+  local needle f="$stack/security-questions.md" questions
+  require_file "$f" || return 0
+  for needle in 'These are questions, not rules.' '`ValidationPipe`' 'whitelist' 'forbidNonWhitelisted' 'class-validator' \
+    'APP_GUARD' '@nestjs/throttler' '@nestjs/config' 'timeout' '@nestjs/axios' 'retries' 'helmet' 'logging' \
+    'rate limiting' 'headers' '## Not verified'; do
+    grep -qF -e "$needle" "$f" || _assert_fail "stack profile security-questions.md lacks required text" "text: $needle"
+  done
+  questions=$(grep -c '?$' "$f")
+  [ "$questions" -ge 14 ] || _assert_fail "security-questions.md has $questions questions, expected at least 14"
+}
+
 test_rules_file
 test_rules_layers
 test_rules_cycle_is_advisory
@@ -261,4 +283,6 @@ test_stack_profile_teaches_verification_only
 test_stack_profile_english_and_lf
 test_stack_profile_readme
 test_stack_profile_verification_recipe
+test_stack_profile_testing_scenarios
+test_stack_profile_security_questions
 finish
