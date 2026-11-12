@@ -130,6 +130,7 @@ test_audit_templates() {
     _assert_fail "audit-github.yml does not start with the copy instruction"
   assert_toolchain_before_verify "$audit_github" '.rastro/git-hooks/audit-drift'
   assert_no_tabs "$audit_github"
+  assert_called_scripts_ship "$audit_github"
 
   need "$audit_gitlab" '$CI_PIPELINE_SOURCE == "schedule"'
   need "$audit_gitlab" 'GIT_DEPTH: "0"'
@@ -138,6 +139,7 @@ test_audit_templates() {
   need "$audit_gitlab" 'artifacts:'
   assert_toolchain_before_verify "$audit_gitlab" '.rastro/git-hooks/audit-drift'
   assert_no_tabs "$audit_gitlab"
+  assert_called_scripts_ship "$audit_gitlab"
 }
 
 test_github

@@ -104,3 +104,7 @@ review:
   kind: none
   # Markdown file holding the review rules, in the same rule format as architecture.rules.
   rules: .review-rules.md
+
+audit:
+  # Days a golden path may stay under-review before the audit reports it as drift. Empty: the audit lists the age and sets no limit; rastro ships no number.
+  under_review_days:
