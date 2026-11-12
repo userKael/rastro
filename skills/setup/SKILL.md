@@ -86,17 +86,20 @@ A detected value the human has no reason to doubt is not asked: it shows in the 
 
 1. `tracker.kind`: `local`, `none`, a shipped adapter, or the name of the team's own adapter.
 2. `tracker.key`, unless the kind is `none`. Propose `W` for `local`. When the tracker adapter fixes the key, propose that key: `GH` for the shipped adapter whose item ids are `GH-<n>`. Read the key from the adapter file, never from memory.
-3. `tracker.local_dir`, only for `local`, with `work/` proposed.
-4. `docs.kind`, with `repo` proposed, then `docs.location` when the kind is not `repo`.
-5. `code_host.kind`, then `code_host.merge`, with `squash` proposed, then `code_host.template` when Step 1 found a PR template.
-6. `domain_state.kind`: `none`, `schema-files` with `domain_state.schema_files`, or `db-mcp` with `domain_state.server` among the detected MCP servers.
-7. `project.languages.human`.
-8. The verify commands the stack did not propose, then `verify.integration` and `verify.integration_when`, which have no portable proposal.
-9. `architecture.modules`, confirming the proposal.
-10. `architecture.sensitive_data`: the classes of data never logged and never committed, such as customer addresses.
-11. `docs.public_portal`, when the repository publishes documentation for other teams.
-12. Whether to write the CI file from `${CLAUDE_PLUGIN_ROOT}/templates/ci/`. Offer it only when a template exists whose file name starts with `code_host.kind`, and only when its destination does not exist. The first line of the template says where the file goes. Under `init`, never offer it and never write it: the skeleton has no manifest yet, so a CI run would fail on the first change request. The walking skeleton writes the CI file with its own toolchain step.
-13. Whether to write `.rastro/CALIBRATION.md` from `${CLAUDE_PLUGIN_ROOT}/templates/CALIBRATION.md`, where the team records its own measurements. Offer it only when that file does not exist.
+3. The other keys that the tracker adapter's required keys name, as the `## Requirements` section of its file lists them. Read them from the adapter file, never from memory. When the adapter names a project number and a project owner (`tracker.project` and `tracker.project_owner`), ask `tracker.project` with no value proposed, because the person types the number, then `tracker.project_owner` with an empty value proposed, which means the owner of the repository. The shipped adapter that mirrors item status in a project board is the one that names them.
+4. `tracker.local_dir`, only for `local`, with `work/` proposed.
+5. `docs.kind`, with `repo` proposed, then `docs.location` when the kind is not `repo`.
+6. `code_host.kind`, then `code_host.merge`, with `squash` proposed, then `code_host.template` when Step 1 found a PR template.
+7. `domain_state.kind`: `none`, `schema-files` with `domain_state.schema_files`, or `db-mcp` with `domain_state.server` among the detected MCP servers.
+8. `project.languages.human`.
+9. The verify commands the stack did not propose, then `verify.integration` and `verify.integration_when`, which have no portable proposal.
+10. `architecture.modules`, confirming the proposal.
+11. `architecture.layers`, one question, with nothing proposed: the component types, in the order a request crosses them. Golden-path types are layers, so this answer names the types the golden paths are written for. Empty is an answer. No anticipated architecture is proposed: proposing nothing is the point.
+12. `architecture.boundary_types`, one question, with nothing proposed: the layers that cross a trust boundary. A name outside the layers is refused, and the question comes back. The security section of a golden path depends on this key. Empty is an answer.
+13. `architecture.sensitive_data`: the classes of data never logged and never committed, such as customer addresses.
+14. `docs.public_portal`, when the repository publishes documentation for other teams.
+15. Whether to write the CI file from `${CLAUDE_PLUGIN_ROOT}/templates/ci/`. Offer it only when a template exists whose file name starts with `code_host.kind`, and only when its destination does not exist. The first line of the template says where the file goes. Under `init`, never offer it and never write it: the skeleton has no manifest yet, so a CI run would fail on the first change request. The walking skeleton writes the CI file with its own toolchain step.
+16. Whether to write `.rastro/CALIBRATION.md` from `${CLAUDE_PLUGIN_ROOT}/templates/CALIBRATION.md`, where the team records its own measurements. Offer it only when that file does not exist.
 
 An optional file whose destination exists is never offered and never written. Leave it as it is, and say so at the gate: the team may have filled its toolchain step or recorded its measurements there. When the first line of the CI template says to merge its job into a file that already exists, show the job to merge in the closing report, and never overwrite that file.
 

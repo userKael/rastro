@@ -111,6 +111,14 @@ test_github_projects_adapter_text() {
   done
 }
 
+test_github_projects_detection_is_not_circular() {
+  local rel=adapters/tracker/github-projects.md
+  need_text "$rel" 'setup` asks `tracker.project`'
+  if grep -qF 'and `tracker.project` is set' "$root/$rel"; then
+    _assert_fail "$rel Detection requires tracker.project to be set before it can suggest the kind"
+  fi
+}
+
 test_github_projects_config_keys_exist() {
   grep -q '^  project:' "$root/templates/config.yml" || _assert_fail "templates/config.yml lacks tracker.project"
   grep -q '^  project_owner:' "$root/templates/config.yml" || _assert_fail "templates/config.yml lacks tracker.project_owner"
@@ -129,6 +137,7 @@ test_docs_adapters_render_collapsed_mark
 test_docs_claude_adapter_text
 test_optional_reading_phrase_is_one_phrase
 test_github_projects_adapter_text
+test_github_projects_detection_is_not_circular
 test_github_projects_config_keys_exist
 test_callers_push_before_the_code_host_opens
 test_local_tracker_names_work_item_fields

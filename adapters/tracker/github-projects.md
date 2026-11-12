@@ -10,8 +10,8 @@ REQUIRED CLI: gh, git
 
 ## Detection
 
-- The `origin` remote URL contains `github.com`, and `tracker.project` is set.
-- Without a Project number, `setup` proposes `github` instead.
+- The `origin` remote URL contains `github.com`. This suggests the kind. The Project itself cannot be detected from the repository.
+- `setup` asks `tracker.project` (the Project number, with no value proposed) and `tracker.project_owner` (empty proposed, which means the owner of the repository) once the kind is `github-projects`.
 
 ## Capabilities
 
