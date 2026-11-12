@@ -15,7 +15,7 @@ Identifiers are not translated either: `D-n`, `DT-nn`, rule IDs, domain names.
 | `## Context` | `domain-context` → `reconcile` |
 | `Decided (<YYYY-MM-DD>):` | deliberation gate → `implement` |
 | `- Continuous run,` | a confirmation gate in a continuous run → `deliver` |
-| `origin: init` | `init`, in the walking skeleton intent → `breakdown`, `reconcile` |
+| `origin: init, conversation with` | `init`, in the walking skeleton intent → `breakdown`, `reconcile` |
 | `D-n`, `DT-nn` | decision identifiers; stable once cited |
 | `new` | `design-doc` or `init` → `reconcile`, `implement` |
 | `changes` | `design-doc` → `reconcile`, `implement` |

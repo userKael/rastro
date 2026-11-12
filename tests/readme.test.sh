@@ -171,7 +171,7 @@ test_init_is_documented() {
   need_in_section 'What rastro is' 'rastro is eight skills'
   need_in_section 'What rastro is' '| `init` |'
   need_in_section 'What rastro is' 'the eight skills'
-  need_in_section 'The flow' '| No source code yet | `init` |'
+  need_in_section 'The flow' '| No source code yet, and no item for the walking skeleton | `init` |'
   need_in_section 'The flow' 'empty by construction'
   need_in_section 'Install' '/rastro:init'
   need_in_section 'Configure' 'the CI workflow files'

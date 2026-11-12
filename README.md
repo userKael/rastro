@@ -52,7 +52,7 @@ No skill drives the flow. The position follows from the artifacts: read the trac
 
 | What you observe | Next step |
 |---|---|
-| No source code yet | `init` |
+| No source code yet, and no item for the walking skeleton | `init` |
 | No work item exists | `breakdown` |
 | An item exists, without `## Reconciliation` | `implement`, which calls `reconcile` |
 | An item with `## Reconciliation`, no branch | `implement` |
@@ -152,7 +152,7 @@ The default pattern `.env*` also refuses `.env.example`. Negation is not support
 
 ### Starting from an empty directory
 
-In an empty directory, or a repository with no source code yet, run `/rastro:init`. It asks one question at a time: the purpose of the project, the stack, the modules ("none yet" is an answer), the component types in `architecture.layers`, which of them cross a trust boundary in `architecture.boundary_types`, the verify commands, the tracker, the docs tool, the code host and the languages. It drafts an ADR for each decision in `docs/adr/`, from `templates/adr.md`, and you confirm, rewrite or drop each one at its gate: an ADR the agent wrote without your decision would be fabricated. It writes nothing before that gate, runs `git init` only after it when the directory is not a repository, and never commits. Then it runs `setup` with your answers, and `setup` asks only the rest. Last, it writes the walking skeleton as the intent of the first item: one entry point end to end through the layers you chose, with the verify commands green. Commit the files it lists, then run `/rastro:init` again or `/rastro:breakdown`. `init` writes no golden path: each component type of the skeleton writes its own from its code, as any first instance does.
+In an empty directory, or a repository with no source code yet, run `/rastro:init`. It asks one question at a time: the purpose of the project, the stack, the modules ("none yet" is an answer), the component types in `architecture.layers`, which of them cross a trust boundary in `architecture.boundary_types`, the verify commands, the tracker, the docs tool, the code host and the languages. It drafts at most three ADRs (stack, structure, verification) in `docs/adr/`, from `templates/adr.md`, and you confirm, rewrite or drop each one at its gate: an ADR the agent wrote without your decision would be fabricated. It writes nothing before that gate, runs `git init` only after it, when the directory has no repository of its own, or you chose a new one inside another, and never commits. Then it runs `setup` with your answers, and `setup` asks only the rest. Last, it writes the walking skeleton as the intent of the first item: one entry point end to end through the layers you chose, with the verify commands green. Commit the files it lists, then run `/rastro:init` again or `/rastro:breakdown`. `init` writes no golden path: each component type of the skeleton writes its own from its code, as any first instance does.
 
 ### Profiles
 

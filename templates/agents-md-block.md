@@ -13,7 +13,7 @@ No skill drives the flow. The position follows from the artifacts: read the trac
 
 | What you observe | Next step |
 |---|---|
-| No source code yet | `init` |
+| No source code yet, and no item for the walking skeleton | `init` |
 {{state_table_first_row}}
 | A {{tracker_item}} exists, without `## Reconciliation` in its description | `implement`, which calls `reconcile` |
 | A {{tracker_item}} with `## Reconciliation`, no branch | `implement` |

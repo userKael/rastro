@@ -66,7 +66,7 @@ Five branches. Choose by observation, not by an open question.
 
 | Signal in the input | Branch | Go to |
 |---|---|---|
-| An intent file whose header says `origin: init`: the walking skeleton | walking skeleton | 2.4 |
+| An intent file whose header says `origin: init, conversation with`: the walking skeleton | walking skeleton | 2.4 |
 | A reference to a published design doc | design doc | 2.1 |
 | Observed behavior contradicts a pre-existing contract: a test, a design doc, an ADR, a golden path, a doc | bug | 2.2 |
 | A nameable request, with a clear object and a clear contract | interview | 2.3 |
