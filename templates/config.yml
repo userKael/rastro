@@ -14,7 +14,7 @@ project:
     human:
 
 tracker:
-  # Where work items live: local, none, jira, github, or the name of your own adapter. (required)
+  # Where work items live: local, none, jira, github, github-projects, or the name of your own adapter. (required)
   kind:
   # Item id prefix, as in KEY-123; required unless kind is none. The setup skill proposes W for local.
   key:
@@ -22,6 +22,10 @@ tracker:
   hierarchy: [story, subtask]
   # Folder holding item files when kind is local.
   local_dir: work/
+  # GitHub Projects: the number of the Project that mirrors item status (kind github-projects).
+  project:
+  # GitHub Projects: login that owns the Project; empty means the owner of the repository.
+  project_owner:
 
 docs:
   # Where design docs are published: repo, notion, or the name of your own adapter.

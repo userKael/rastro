@@ -99,8 +99,27 @@ test_callers_push_before_the_code_host_opens() {
   done
 }
 
+test_github_projects_adapter_text() {
+  local rel=adapters/tracker/github-projects.md needle
+  for needle in 'REQUIRED CLI: gh, git' '`tracker.project`' '`tracker.project_owner`' \
+    'gh issue create --parent' 'gh issue edit' '--add-sub-issue' '--json parent,subIssues' \
+    'gh project item-add' 'gh project item-edit' '--field Status' '--value "Todo"' '--value "In review"' \
+    'gh project field-list' 'gh auth refresh -s project' \
+    'The Status field is a mirror and is never read as a source.' \
+    'built-in workflow' 'textual hierarchy' 'Refs #<n>' 'NOT VERIFIED' '`addSubIssue`'; do
+    need_text "$rel" "$needle"
+  done
+}
+
+test_github_projects_config_keys_exist() {
+  grep -q '^  project:' "$root/templates/config.yml" || _assert_fail "templates/config.yml lacks tracker.project"
+  grep -q '^  project_owner:' "$root/templates/config.yml" || _assert_fail "templates/config.yml lacks tracker.project_owner"
+}
+
 test_docs_adapters_render_collapsed_mark
 test_optional_reading_phrase_is_one_phrase
+test_github_projects_adapter_text
+test_github_projects_config_keys_exist
 test_callers_push_before_the_code_host_opens
 test_local_tracker_names_work_item_fields
 test_jira_item_url

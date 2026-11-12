@@ -198,6 +198,12 @@ test_readme_describes_drift_audit() {
   done
 }
 
+test_readme_adapter_table_lists_new_adapters() {
+  [ -f "$readme" ] || return 0
+  section_body 'Bring your own adapter' | grep -qF '`jira`, `github`, `github-projects`' ||
+    _assert_fail "README.md adapter table lacks github-projects on the tracker row"
+}
+
 test_readme_has_every_section
 test_agent_support_is_honest
 test_install_and_configure_name_the_real_commands
@@ -214,4 +220,5 @@ test_golden_path_checks_are_documented
 test_init_is_documented
 test_readme_describes_stack_profiles
 test_readme_describes_drift_audit
+test_readme_adapter_table_lists_new_adapters
 finish

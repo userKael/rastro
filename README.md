@@ -238,7 +238,7 @@ Adapters ship for these tools:
 
 | Port | Config key | Shipped adapters |
 |---|---|---|
-| `tracker` | `tracker.kind` | `jira`, `github`, `local`, `none` |
+| `tracker` | `tracker.kind` | `jira`, `github`, `github-projects`, `local`, `none` |
 | `docs` | `docs.kind` | `notion`, `repo` |
 | `code-host` | `code_host.kind` | `github`, `gitlab`, `none` |
 | `domain-state` | `domain_state.kind` | `db-mcp`, `schema-files`, `none` |
