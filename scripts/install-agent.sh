@@ -117,7 +117,7 @@ EOF
 # them inside the rastro directory.
 skills_dir=$project/.agents/skills
 real_root=$(cd "$R" && pwd -P)
-for probe in "$project" "$skills_dir"; do
+for probe in "$project" "$project/.agents" "$skills_dir"; do
   [ -d "$probe" ] || continue
   real_probe=$(cd "$probe" && pwd -P)
   case $real_probe in
@@ -163,6 +163,9 @@ install_skills() {
       fi
     fi
     [ "$linked" -eq 1 ] || cp -R "${dir%/}" "$dest"
+    # Listed as soon as it is in place, so a run that stops midway does not
+    # leave rastro copies that the next run would refuse as foreign.
+    printf '%s\n' "$name" >>"$manifest"
   done
   printf '%s' "$installed" >"$manifest"
 }
