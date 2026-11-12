@@ -499,6 +499,7 @@ if get architecture.golden_paths; then
   else
     # Without the lib the folder cannot be resolved the shared way; the
     # problem below says so once the folder turns out to exist.
+    # This inline fallback mirrors rastro_gp_folder in hooks/lib/goldenpath.sh.
     gp_dir=${val:-docs/golden-paths/}
     case $gp_dir in '['*) s=2 ;; *) s=0 ;; esac
     case $gp_dir in */) ;; *) gp_dir=$gp_dir/ ;; esac

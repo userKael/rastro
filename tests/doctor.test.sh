@@ -229,6 +229,19 @@ test_doctor_golden_path_lib_missing_never_blocks() {
   assert_contains "$OUT" "- PROBLEM: could not check golden paths: $lib/frontmatter.sh not found" "gp lib missing: reported"
   assert_closing 1 "gp lib missing"
 }
+test_doctor_golden_path_shared_lib_missing_never_blocks() {
+  local repo lib
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  lib="$RASTRO_TEST_TMP/lib-no-goldenpath"
+  mkdir -p "$lib"
+  cp "$RASTRO_TESTS_DIR/../hooks/lib/"*.sh "$lib/"
+  rm -f "$lib/goldenpath.sh"
+  run_cmd env CLAUDE_PROJECT_DIR="$repo" RASTRO_ROOT="$FIXTURE_ROOT" RASTRO_LIB="$lib" HOME="$EMPTY_HOME" bash "$DOCTOR"
+  assert_status 0 "goldenpath lib missing: status"
+  assert_contains "$OUT" "- PROBLEM: could not check golden paths: $lib/goldenpath.sh not found" "goldenpath lib missing: reported"
+  assert_closing 1 "goldenpath lib missing"
+}
 test_doctor_golden_path_type_in_layers() {
   local repo
   repo=$(new_repo doctor-ok)
@@ -1017,6 +1030,7 @@ test_doctor_golden_path_crlf
 test_doctor_golden_path_without_frontmatter
 test_doctor_golden_path_instances_not_a_list
 test_doctor_golden_path_lib_missing_never_blocks
+test_doctor_golden_path_shared_lib_missing_never_blocks
 test_doctor_golden_path_type_in_layers
 test_doctor_golden_path_duplicate_type
 test_doctor_golden_path_duplicate_type_retired_ignored
