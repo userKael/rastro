@@ -28,9 +28,9 @@ tracker:
   project_owner:
 
 docs:
-  # Where design docs are published: repo, notion, or the name of your own adapter.
+  # Where design docs are published: repo, notion, claude-docs, or the name of your own adapter.
   kind: repo
-  # Folder ending in a slash when kind is repo; the parent database or page when kind is notion.
+  # Folder ending in a slash when kind is repo; the parent database or page when kind is notion; for claude-docs, read adapters/docs/claude-docs.md for the container the adapter uses.
   location: docs/design/
   # Location of the public documentation portal; when set, breakdown adds a doc subtask.
   public_portal:

@@ -4,7 +4,7 @@
 
 REQUIRED MCP: claude-docs
 
-The adapter uses these tools of the Claude Docs connector: `batch` to create a document from blocks and markdown, `read` to read it, `update` to edit the content of a tab, `export` to get markdown, PDF, Word or Google Docs, `query`, and the comment threads on blocks. `docs.location` is the container where documents are created, as the connector references it. When it is empty, the connector's default is used.
+The adapter uses these tools of the Claude Docs connector: `batch` to create a document from blocks and markdown, `read` to read it, `update` to edit the content of a tab, `export` to get markdown, PDF, Word or Google Docs, and the comment threads on blocks. `docs.location` is the container where documents are created, as the connector references it. When it is empty, the connector's default is used.
 
 The server name `claude-docs` in the marker line is an assumption (NOT VERIFIED). The note of the doctor about opaque connector ids applies: a connector can be registered under an id that is not its name.
 
@@ -51,4 +51,4 @@ Not supported until the connector proves otherwise (NOT VERIFIED). A heading tha
 - There is no change request. The discussion happens in the comment threads of the connector.
 - The approval is a line of text, not an access control. Anyone who can edit the document can change it.
 - The version may not be returned. Then `fetch` writes `version: not returned`.
-- These names are unverified against the live tool — verify before relying on it: the tools `batch`, `read`, `update`, `export` and `query`, and the server name `claude-docs`.
+- These names are unverified against the live tool — verify before relying on it: the tools `batch`, `read`, `update`, and `export`, and the server name `claude-docs`.
