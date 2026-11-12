@@ -6,6 +6,7 @@ lib=${RASTRO_LIB:-$(dirname "$0")/../lib}
 . "$lib/config.sh"
 . "$lib/frontmatter.sh"
 . "$lib/goldenpath.sh"
+. "$lib/metrics.sh"
 
 previous=""
 fail_on_drift=0
@@ -59,6 +60,48 @@ esac
 boundary=$(rastro_config_list architecture.boundary_types 2>/dev/null) || boundary=""
 seen=""
 found=0
+gp_metrics=""
+item_events=""
+
+# History rows of a golden path as "version<TAB>item": lines with 4 columns whose
+# first column is X.Y.Z. Anything else is ignored.
+gp_history() {
+  tr -d '\r' <"$1" | awk '
+    /^## / { on = ($0 == "## History"); next }
+    on && /^\|/ {
+      sub(/[ \t]+$/, "")
+      n = split($0, c, "|")
+      if (n != 6) next
+      for (i = 2; i <= 5; i++) gsub(/^[ \t]+|[ \t]+$/, "", c[i])
+      if (c[2] !~ /^[0-9]+\.[0-9]+\.[0-9]+$/) next
+      printf "%s\t%s\n", c[2], c[4]
+    }
+  '
+}
+
+# gp_lifecycle FILE REL: records versions, contradictions and commits for one golden path.
+gp_lifecycle() {
+  local file=$1 rel=$2 v it versions=0 contra=0 commits name
+  while IFS=$'\t' read -r v it; do
+    [ -n "$v" ] || continue
+    versions=$((versions + 1))
+    if [ "$v" = 1.0.0 ]; then
+      [ -z "$it" ] || item_events=$item_events$it$'\t'created$'\n'
+    else
+      [ -z "$it" ] || item_events=$item_events$it$'\t'evolved$'\n'
+    fi
+    if [[ $v =~ ^([0-9]+)\.0\.0$ ]] && [ "$((10#${BASH_REMATCH[1]}))" -gt 1 ]; then
+      contra=$((contra + 1))
+    fi
+  done <<<"$(gp_history "$file")"
+  if [ "$shallow" = true ]; then
+    commits=-
+  else
+    commits=$(git log --oneline -- "$rel" 2>/dev/null | grep -c . || true)
+  fi
+  name=${rel##*/}
+  gp_metrics=$gp_metrics"| ${name%.md} | $versions | $contra | $commits |"$'\n'
+}
 
 gp_audit() {
   local file=$1 rel=$2 dump key value type="" status="" instances="" has_instances=0
@@ -72,6 +115,7 @@ gp_audit() {
     esac
   done <<<"$dump"
   found=1
+  gp_lifecycle "$file" "$rel"
 
   if [ "$status" != retired ]; then
     sha=$(git log -1 --format=%H -- "$rel" 2>/dev/null) || sha=""
@@ -174,6 +218,33 @@ else
   printf '%s' "$rows"
 fi
 printf '\n'
+
+printf '## Metrics\n\n'
+ws=$(rastro_workspace 2>/dev/null) || ws=.agent/
+ws=${ws%/}
+rastro_metrics_lint_summary "$root/${ws:-.agent}/metrics/lint.log" | sed 's/^/- /'
+printf '\n'
+if [ "$found" -eq 0 ]; then
+  printf 'No golden paths.\n'
+else
+  printf '| Golden path | Versions | Contradictions | Commits |\n'
+  printf '|---|---|---|---|\n'
+  printf '%s' "$gp_metrics"
+  printf '\n'
+  if [ -n "$item_events" ]; then
+    printf '| Item | Golden paths created | Golden paths evolved |\n'
+    printf '|---|---|---|\n'
+    printf '%s' "$item_events" | awk -F'\t' '
+      !($1 in seen) { seen[$1] = 1; order[++n] = $1 }
+      $2 == "created" { c[$1]++ }
+      $2 == "evolved" { e[$1]++ }
+      END { for (i = 1; i <= n; i++) printf "| %s | %d | %d |\n", order[i], c[order[i]], e[order[i]] }
+    '
+  else
+    printf 'No History entries.\n'
+  fi
+fi
+printf '\nContradictions counts golden path changes decided as incompatible (a major version). A contradiction settled by changing the code leaves no trace in the repository and is not counted.\n\n'
 
 # Rows of a report as "check subject<TAB>verdict<TAB>detail".
 report_rows() {

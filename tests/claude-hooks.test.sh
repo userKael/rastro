@@ -251,6 +251,44 @@ test_lint_hook_red() {
   assert_contains "$ERR" "BAD found" "red file: lint output reaches stderr"
   assert_contains "$ERR" "src/a.ts" "red file: names the repo-relative path"
 }
+metrics_log() {
+  printf '%s\n' "$(cat "$1/.agent/metrics/lint.log" 2>/dev/null)"
+}
+test_lint_hook_records_pass_and_fail() {
+  local repo log
+  repo=$(new_repo)
+  put "$repo" src/a.ts "const a = 1"
+  put "$repo" src/b.ts "BAD"
+  run_hook "$repo" lint-edited-file.sh "$(file_input "$repo/src/a.ts")"
+  run_hook "$repo" lint-edited-file.sh "$(file_input "$repo/src/b.ts")"
+  log=$(metrics_log "$repo")
+  assert_eq 2 "$(printf '%s\n' "$log" | grep -c .)" "lint log: one line per verdict"
+  assert_contains "$(printf '%s\n' "$log" | sed -n 1p)" $'\tsrc/a.ts\tpass' "lint log: pass recorded"
+  assert_contains "$(printf '%s\n' "$log" | sed -n 2p)" $'\tsrc/b.ts\tfail' "lint log: fail recorded"
+}
+test_lint_hook_does_not_record_when_lint_did_not_run() {
+  local repo
+  repo=$(new_repo)
+  write_config "$repo" $'verify:\n  lint_file: "rastro-no-such-linter {file}"\n  source_globs: [src/**/*.ts]\nworkspace: .agent/'
+  put "$repo" src/a.ts "const a = 1"
+  run_hook "$repo" lint-edited-file.sh "$(file_input "$repo/src/a.ts")"
+  assert_status 2 "lint did not run: status"
+  assert_eq "no" "$([ -e "$repo/.agent/metrics/lint.log" ] && echo yes || echo no)" "lint did not run: no log"
+}
+test_lint_hook_survives_unwritable_metrics() {
+  local repo
+  repo=$(new_repo)
+  printf 'not a folder\n' >"$repo/.agent"
+  put "$repo" src/a.ts "const a = 1"
+  put "$repo" src/b.ts "BAD"
+  run_hook "$repo" lint-edited-file.sh "$(file_input "$repo/src/a.ts")"
+  assert_status 0 "unwritable metrics, pass: status"
+  assert_eq "" "$OUT$ERR" "unwritable metrics, pass: silent"
+  run_hook "$repo" lint-edited-file.sh "$(file_input "$repo/src/b.ts")"
+  assert_status 2 "unwritable metrics, fail: status"
+  assert_contains "$ERR" "verify.lint_file failed on src/b.ts" "unwritable metrics, fail: message"
+  assert_contains "$ERR" "BAD found" "unwritable metrics, fail: lint output"
+}
 test_lint_hook_ignores_non_source() {
   local repo
   repo=$(new_repo)
@@ -528,7 +566,9 @@ test_guard_powershell_denies; test_guard_powershell_allows; test_guard_powershel
 test_guard_workspace_path_forms; test_guard_reason_names_rule_and_fix
 test_guard_default_workspace_when_absent; test_guard_readme_shortest_config_is_safe; test_guard_hooks_path
 test_guard_fails_closed_on_bad_config; test_guard_ignores_other_input
-test_lint_hook_clean; test_lint_hook_red; test_lint_hook_ignores_non_source; test_lint_hook_path_with_space
+test_lint_hook_records_pass_and_fail; test_lint_hook_does_not_record_when_lint_did_not_run
+test_lint_hook_survives_unwritable_metrics
+test_lint_hook_clean; test_lint_hook_red;test_lint_hook_ignores_non_source; test_lint_hook_path_with_space
 test_lint_hook_path_with_shell_characters; test_lint_hook_windows_path_forms; test_lint_hook_outside_project
 test_lint_hook_without_lint_command; test_lint_hook_missing_linter_reaches_claude
 test_lint_hook_missing_file_and_empty_payload; test_lint_hook_unsupported_list_fails_closed

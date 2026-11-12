@@ -244,6 +244,78 @@ test_audit_compare_previous() {
   assert_contains "$OUT" "- unchanged: 0 drift(s)" "compare: unchanged count"
 }
 
+put_history() {
+  local repo=$1
+  shift
+  { printf '\n## History\n\n| Version | Date | Item | Change |\n|---|---|---|---|\n'; printf '%s\n' "$@"; } >>"$repo/$GP"
+}
+test_metrics_summary() {
+  local log out
+  . "$RASTRO_TESTS_DIR/../hooks/lib/metrics.sh"
+  log=$(make_tmp_repo)/lint.log
+  printf '1\ts1\ta\tfail\n2\ts1\ta\tpass\n3\ts1\tb\tpass\n4\ts1\tc\tfail\n5\ts2\ta\tpass\n' >"$log"
+  out=$(rastro_metrics_lint_summary "$log")
+  assert_eq $'first-pass: 2 of 4 files (50%)\nself-heal: 1 of 2 files (50%)' "$out" "summary: first-pass and self-heal"
+  out=$(rastro_metrics_lint_summary "$log.missing")
+  assert_eq $'first-pass: no data\nself-heal: no data' "$out" "summary: missing file"
+  printf '1\ts1\ta\tpass\n' >"$log"
+  out=$(rastro_metrics_lint_summary "$log")
+  assert_eq $'first-pass: 1 of 1 files (100%)\nself-heal: no data' "$out" "summary: nothing failed first"
+}
+test_audit_metrics_without_data() {
+  local repo
+  repo=$(new_repo)
+  put_gp "$repo"
+  commit_all "$repo" "init"
+  run_audit "$repo"
+  assert_status 0 "no data: status"
+  assert_contains "$OUT" "- first-pass: no data" "no data: first-pass"
+  assert_contains "$OUT" "- self-heal: no data" "no data: self-heal"
+  assert_not_contains "$OUT" "%" "no data: no percentage"
+}
+test_audit_metrics_golden_path_lifecycle() {
+  local repo
+  repo=$(new_repo)
+  put_gp "$repo"
+  put_history "$repo" "| 1.0.0 | 2026-01-01 | W-001 | Created |" "| 1.1.0 | 2026-02-01 | W-004 | Added a field |" "| 2.0.0 | 2026-03-01 | W-009 | Incompatible change |"
+  commit_all "$repo" "init"
+  printf '\nMore.\n' >>"$repo/$GP"
+  commit_all "$repo" "touch the golden path"
+  run_audit "$repo"
+  assert_status 0 "lifecycle: status"
+  assert_contains "$OUT" "| Golden path | Versions | Contradictions | Commits |" "lifecycle: table header"
+  assert_contains "$OUT" "| processor | 3 | 1 | 2 |" "lifecycle: processor row"
+  assert_contains "$OUT" "| Item | Golden paths created | Golden paths evolved |" "lifecycle: item header"
+  assert_contains "$OUT" "| W-001 | 1 | 0 |" "lifecycle: W-001"
+  assert_contains "$OUT" "| W-004 | 0 | 1 |" "lifecycle: W-004"
+  assert_contains "$OUT" "| W-009 | 0 | 1 |" "lifecycle: W-009"
+  assert_contains "$OUT" "Contradictions counts golden path changes decided as incompatible (a major version). A contradiction settled by changing the code leaves no trace in the repository and is not counted." "lifecycle: note"
+}
+test_audit_metrics_ignores_malformed_history() {
+  local repo
+  repo=$(new_repo)
+  put_gp "$repo"
+  put_history "$repo" "| 1.0.0 | 2026-01-01 | W-001 |" "| v2 | 2026-02-01 | W-004 | Bad version |" "| 1.1.0 | 2026-03-01 | W-005 | Valid |"
+  commit_all "$repo" "init"
+  run_audit "$repo"
+  assert_status 0 "malformed history: status"
+  assert_contains "$OUT" "| processor | 1 | 0 | 1 |" "malformed history: only the valid line counts"
+  assert_contains "$OUT" "| W-005 | 0 | 1 |" "malformed history: valid item"
+  assert_not_contains "$OUT" "| W-004 |" "malformed history: bad version ignored"
+  assert_not_contains "$OUT" "| W-001 |" "malformed history: short line ignored"
+}
+test_audit_metrics_section_position() {
+  local repo mech metrics changes
+  repo=$(new_repo)
+  put_gp "$repo"
+  commit_all "$repo" "init"
+  run_audit "$repo"
+  mech=$(printf '%s\n' "$OUT" | grep -n '^## Mechanical checks$' | cut -d: -f1)
+  metrics=$(printf '%s\n' "$OUT" | grep -n '^## Metrics$' | cut -d: -f1)
+  changes=$(printf '%s\n' "$OUT" | grep -n '^## Changes since the previous audit' | cut -d: -f1)
+  assert_eq yes "$([ -n "$metrics" ] && [ "$mech" -lt "$metrics" ] && [ "$metrics" -lt "$changes" ] && echo yes || echo no)" "section order: mechanical, metrics, changes"
+}
+
 test_audit_without_config
 test_audit_bad_option
 test_audit_no_golden_paths
@@ -261,4 +333,9 @@ test_audit_shallow_clone
 test_audit_fail_on_drift
 test_audit_first_run_has_no_previous
 test_audit_compare_previous
+test_metrics_summary
+test_audit_metrics_without_data
+test_audit_metrics_golden_path_lifecycle
+test_audit_metrics_ignores_malformed_history
+test_audit_metrics_section_position
 finish
