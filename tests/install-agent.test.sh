@@ -32,6 +32,8 @@ test_install_codex_writes_skills_and_hooks() {
   assert_contains "$OUT" "RASTRO_ROOT" "documents RASTRO_ROOT"
   assert_contains "$OUT" "open /hooks in Codex" "says Codex asks to trust the hooks"
   assert_contains "$OUT" "do not commit" "warns about the absolute path"
+  assert_contains "$OUT" "Add this line to .gitignore: .codex/hooks.json" "prints the gitignore line for the hook file"
+  [ ! -e "$proj/.gitignore" ] || _assert_fail "the installer never writes .gitignore"
 }
 test_codex_hooks_map_each_event_to_a_shim_hook() {
   local proj body pair

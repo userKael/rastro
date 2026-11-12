@@ -208,4 +208,5 @@ if [ "$agent" = cursor ] && [ "$link" -eq 1 ]; then
   printf 'NOT VERIFIED: Cursor documents no symlink support for .agents/skills/; if it does not list the skills, run this script again without --link.\n'
 fi
 printf 'The hook file holds an absolute path to this machine, so do not commit it; run this script again in each clone.\n'
+printf 'Add this line to .gitignore: %s\n' "${hooks_file#"$project"/}"
 exit "$status"
