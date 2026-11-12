@@ -9,7 +9,7 @@ Identifiers are not translated either: `D-n`, `DT-nn`, rule IDs, domain names.
 | `## Reconciliation` | `breakdown` or `implement` → state table, `implement` |
 | `## Acceptance criteria` | `breakdown` → `implement`, through `read_item` of the tracker adapter |
 | `reconciliation.md` | `reconcile` → `breakdown`, `implement`, `deliver` |
-| `NOT VERIFIED` | `domain-context` → every skill |
+| `NOT VERIFIED` | `domain-context`, `audit` (the skill and its script) → every skill |
 | `[HUMAN]` | `implement` (task) → `deliver` |
 | `[no PR]` | `breakdown` → rulers |
 | `## Context` | `domain-context` → `reconcile` |

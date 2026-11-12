@@ -193,7 +193,7 @@ test_init_is_documented() {
 test_readme_describes_drift_audit() {
   local needle
   [ -f "$readme" ] || return 0
-  for needle in '### Drift audit' '.rastro/git-hooks/audit-drift' 'audit.under_review_days' 'audit-github.yml' '<workspace>/audit/<YYYY-MM-DD>.md' 'before/after probe'; do
+  for needle in '### Drift audit' '.rastro/git-hooks/audit-drift' 'audit.under_review_days' 'audit-github.yml' '<workspace>/audit/<YYYY-MM-DD>.md' 'before/after probe' '| `audit` | the golden paths and the code |' 'a `review` row' 'cumulative since the log began'; do
     grep -qF -e "$needle" "$readme" || _assert_fail "README.md lacks required text" "text: $needle"
   done
 }

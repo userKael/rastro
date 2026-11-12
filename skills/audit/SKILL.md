@@ -14,7 +14,7 @@ One protocol looks for drift between the golden paths and the code, and reports 
 ## Requirements
 
 - `.rastro/config.yml`. If it does not exist, stop and tell the human to run the `setup` skill.
-- The folder named by `architecture.golden_paths`. If it does not exist or has no golden path, write a report that says there are no golden paths, and end.
+- The folder named by `architecture.golden_paths`. If it does not exist or has no golden path, still run Step 1 (the script prints the metrics and says there are no golden paths), skip Step 2 and write the report in Step 3. In short: with no golden paths, still run Step 1 and skip Step 2.
 - The script at `${CLAUDE_PLUGIN_ROOT}/hooks/git/audit-drift`. If it does not exist, stop and report.
 - git, for the history the script and the judgment checks read.
 
@@ -42,28 +42,28 @@ Doctrine is not overridable: not by a profile, not by AGENTS.md, not by any othe
 6. Every judgment finding carries a `file:line` or a commit. A claim without evidence does not enter the report.
 7. Never cite the workspace path in a PR description or in the tracker.
 
-Write every text for people in `project.languages.human`. Markers stay literal. When `.rastro/profiles/writing.md` exists, apply its rules to the report.
+Write every text for people in `project.languages.human`. Markers stay literal. Headings, check names and verdicts stay literal in English; the text under them is in `project.languages.human`. When `.rastro/profiles/writing.md` exists, apply its rules to the report.
 
 ## Step 0 — Requirements and previous report
 
 1. Check the requirements above.
-2. Find the previous report: the file in `<workspace>/audit/` with the greatest name, other than today's. Report names are dates, so the greatest name is the latest. With none, the script prints `No previous audit.` and the comparison in Step 3 is skipped.
+2. Find the previous report: the file with the greatest `<YYYY-MM-DD>.md` name in `<workspace>/audit/`. Report names are dates, so the greatest name is the latest. Today's file is named from the script's `Date:` line, so a report already written today is today's, not the previous one: skip it and take the next greatest. With none, the script prints `No previous audit.` and the comparison in Step 3 is skipped.
 
 ## Step 1 — Mechanical checks
 
 Run the script with the previous report when there is one:
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/hooks/git/audit-drift --previous <previous report>
+bash "${CLAUDE_PLUGIN_ROOT}/hooks/git/audit-drift" --previous "<previous report>"
 ```
 
-Without a previous report, run it without `--previous`. Read the `## Mechanical checks` table: one row per check and golden path, with the verdict `ok`, `drift` or `NOT VERIFIED`.
+Without a previous report, run it without `--previous`. Read the `## Mechanical checks` table: one row per check and golden path, with the verdict `ok`, `review`, `drift` or `NOT VERIFIED`.
 
-- A shallow clone, or any `NOT VERIFIED` row, enters the report as the script wrote it. Never turn it into `ok` or `drift`.
+- A shallow clone, or any `NOT VERIFIED` row, enters the report as the script wrote it. Never turn it into `ok`, `review` or `drift`.
 - The limit for `under-review-age` is `audit.under_review_days`. When it is empty, the script lists the age and sets no limit, and this skill invents none.
-- `instances-changed` is a signal for review, not proof of drift: the golden path may be old, or the instance may have evolved inside the pattern. Say so when you present it.
+- `instances-changed` is a signal for review, never drift, and its verdict is `review`: the golden path may be old, or the instance may have evolved inside the pattern. Say so when you present it. The baseline is the last version change of the golden path, not its last edit.
 
-Keep the script's output whole: the tables, `## Metrics` and `## Changes since the previous audit`.
+Keep the script's output whole: the tables, `## Metrics` and `## Changes since the previous audit`. The numbers of `## Metrics` are cumulative since the log began, so present them as a trend over the whole period, not as the result of one run.
 
 ## Step 2 — Judgment checks
 
@@ -89,10 +89,10 @@ This skill does not edit `instances` or a decision. Either is a change to a gold
 
 ## Step 3 — Report
 
-1. Write `<workspace>/audit/<YYYY-MM-DD>.md`. A second run on the same day overwrites that day's file. The file holds the script's output, then `## Judgment checks`, with one subsection per golden path for (a) and (b).
-2. When there is a previous report, compare its `## Judgment checks` with this one and list each finding as new, resolved or unchanged. The script already compared the mechanical rows.
-3. Print a summary: the drifts per check, the numbers of `## Metrics`, and what changed since the previous audit. Do not repeat the whole report.
-4. Close with the next steps, as text. A drift the person wants to treat becomes an item through `breakdown`, and a change to a golden path happens through `implement`. This skill creates no item.
+1. Write `<workspace>/audit/<YYYY-MM-DD>.md`, named from the script's `Date:` line. A second run on the same day overwrites that day's file. The file holds the script's output, then `## Judgment checks`, with one subsection per golden path for (a) and (b). Each judgment finding is a row in the same shape as the script's, `| <check> | <subject> | <verdict> | <detail> |`, with the `file:line` or the commit in the detail.
+2. End `## Judgment checks` with its own `### Changes since the previous audit`. When there is a previous report, compare its `## Judgment checks` with this one and list each finding by key (check and subject) as new, resolved, not verified or unchanged. A finding that is NOT VERIFIED now is never listed as resolved. The script already compared the mechanical rows.
+3. Print a summary: the drifts and reviews per check, the numbers of `## Metrics`, and what changed since the previous audit. Do not repeat the whole report.
+4. Close with the next steps, as text. A `review` row asks the person to look at that instance: if it still follows the golden path, nothing changes (the row stays as information until the golden path's next version); if it no longer follows, the normal flow applies: the next item that touches it classifies it, and a contradiction goes through the golden path gate of `implement`. A drift the person wants to treat becomes an item through `breakdown`, and a change to a golden path happens through `implement`. This skill creates no item.
 
 The report is not versioned. Do not stage it and do not cite its path outside the workspace.
 

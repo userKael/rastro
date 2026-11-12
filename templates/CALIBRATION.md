@@ -54,7 +54,7 @@ How to measure, by hand; nothing automates it:
 1. Pick one task that is typical for the project, already merged, with a known starting commit and a written description.
 2. Make two clean checkouts of that starting commit: one without rastro (no `.rastro/`, no hooks, no rastro block in `AGENTS.md`) and one with it.
 3. Give both the same prompt and the same model, and run each once, with no hint beyond the task description.
-4. Record, for each run: the result of the `verify.*` commands at the end, the findings a reviewer raises, the size of the diff and the time taken. For first-pass, read `<workspace>/metrics/lint.log` in the run with rastro; in the other run, run `verify.lint_file` once over each changed file at the end and count how many pass.
+4. Record, for each run: the result of the `verify.*` commands at the end, the findings a reviewer raises, the size of the diff and the time taken. The two runs give different measures, so label them and do not subtract one from the other. With rastro, record first-pass (first lint of each file, with rastro), read from `<workspace>/metrics/lint.log`. Without rastro, record the end-of-run lint pass (without rastro): run `verify.lint_file` once over each changed file at the end and count how many pass.
 5. Compare the two and write the numbers here.
 
 - Result: <both runs, side by side, or "not measured">

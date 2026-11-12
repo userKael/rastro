@@ -65,7 +65,7 @@ test_markers_file() {
     '`## Reconciliation`' '`reconciliation.md`' '`NOT VERIFIED`' '`[HUMAN]`' '`[no PR]`' \
     '`## Context`' '`Decided (<YYYY-MM-DD>):`' '`D-n`' '`DT-nn`' \
     '| `follows` | `reconcile` → `implement` |' '| `new` |' '| `changes` |' '| `exists` |' '| `## Acceptance criteria` |' \
-    '`- Continuous run,`'
+    '`- Continuous run,`' '| `NOT VERIFIED` | `domain-context`, `audit` (the skill and its script) → every skill |'
 }
 
 test_reconciliation() {
@@ -174,6 +174,7 @@ test_calibration() {
     'What do the footprint buckets mean in this project?' \
     'Which tier does each footprint get, and which model runs each tier?' \
     'Before/after probe' \
+    'first-pass (first lint of each file, with rastro)' 'end-of-run lint pass (without rastro)' \
     'measure' 'not measured'
 }
 
