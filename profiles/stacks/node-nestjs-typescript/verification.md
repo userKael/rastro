@@ -10,7 +10,7 @@ How to move a golden path from `verified_by: review` to `verified_by: automated:
 
 Tool: dependency-cruiser. It reads the whole import graph, finds cycles, and runs as a single command, which fits `verified_by: automated:`.
 
-1. Install it as a development dependency, then run `dependency-cruiser --init`. It asks a few questions and creates `.dependency-cruiser.js` in the current folder.
+1. Install it as a development dependency, then run `npx dependency-cruiser --init`. It asks a few questions and writes its config file in the current folder; the default name is `.dependency-cruiser.js`, so check the file `--init` created.
 2. Add one rule to the `forbidden` list for the boundary that a decision of the golden path forbids. The shape, with placeholders:
 
 ```js
@@ -28,19 +28,21 @@ Tool: dependency-cruiser. It reads the whole import graph, finds cycles, and run
 3. Run the command:
 
 ```text
-depcruise <source folder> --config .dependency-cruiser.js
+npx depcruise <source folder> --config .dependency-cruiser.js
 ```
 
-It exits non-zero when a rule of severity `error` is violated, and prints the violating dependencies. Rules of severity `warn` or `info` do not change the exit code.
+The first word of the command must resolve on PATH, because the doctor checks it: `npx` does, but a local devDependency alone does not.
 
-4. Add the same command to `verify.lint` in the project config, so CI runs the same check.
+It exits non-zero when a rule of severity `error` is violated, and prints the violating dependencies. Rules of severity `warn` or `info` do not change the exit code: that follows from the documented exit code, which counts the `error` violations.
+
+4. Chain the same command after the existing lint command in `verify.lint`, for example `npm run lint && npx depcruise <source folder> --config .dependency-cruiser.js`, or call it from inside the lint script, so CI runs both.
 
 ## Module boundary check: alternative
 
 Tool: eslint-plugin-boundaries. Choose it when the boundary must show in `verify.lint_file`, per file, on every edit, because it runs inside the lint.
 
 - Declare the elements first, in the lint settings: `boundaries/elements`, a list of entries with `type` and `pattern`.
-- Then enforce the policies with the `boundaries/dependencies` rule. Older versions of the plugin call the rule `boundaries/element-types`: check the one installed.
+- Then enforce the policies with the `boundaries/dependencies` rule. Older versions of the plugin may call the rule `boundaries/element-types`: check the one installed.
 - A policy entry accepts a `message`, which is where the violation line goes.
 
 The cost is the up-front declaration of elements; in return the feedback arrives while the file is being edited.
@@ -80,5 +82,6 @@ The consulted documentation did not confirm the following. Check each before rel
 - The name of the policy rule of eslint-plugin-boundaries in the installed version (the current documentation shows `boundaries/dependencies`; `boundaries/element-types` is the older name, not confirmed here).
 - The ESLint versions the plugin supports.
 - The `message` placeholders available in a policy beyond the one the documentation shows.
+- The default config name of `--init`: the default is `.dependency-cruiser.js`; check the file `--init` created.
 
-Confirmed in the documentation: the `.dependency-cruiser.js` file created by `--init`; the rule fields `name`, `severity`, `comment`, `from` and `to`, with `path` as a regular expression; the `err` and `err-long` reporters, with an exit code equal to the number of `error` violations; `boundaries/elements` with `type` and `pattern`; the `message` option on policies.
+Confirmed in the documentation: the rule fields `name`, `severity`, `comment`, `from` and `to`, with `path` as a regular expression; the `err` and `err-long` reporters, with an exit code equal to the number of `error` violations; `boundaries/elements` with `type` and `pattern`; the `message` option on policies.

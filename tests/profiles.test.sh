@@ -240,9 +240,13 @@ test_stack_profile_verification_recipe() {
   require_file "$f" || return 0
   for needle in 'dependency-cruiser' 'eslint-plugin-boundaries' '.dependency-cruiser.js' 'depcruise' \
     'verified_by: automated:' '`verify.lint`' 'exits non-zero' 'Breaks' 'Fix:' \
-    'plant' 'undo' 'a check that never fails' '## Not verified'; do
+    'plant' 'undo' 'a check that never fails' '## Not verified' \
+    'npx dependency-cruiser --init' 'npx depcruise <source folder> --config .dependency-cruiser.js' \
+    'must resolve on PATH' '`npm run lint && npx depcruise' 'may call the rule `boundaries/element-types`' \
+    'follows from the documented exit code'; do
     grep -qF -e "$needle" "$f" || _assert_fail "stack profile verification.md lacks required text" "text: $needle"
   done
+  ! grep -qF -e 'and creates `.dependency-cruiser.js`' "$f" || _assert_fail "stack profile verification.md states outside ## Not verified that --init creates .dependency-cruiser.js"
 }
 
 test_stack_profile_testing_scenarios() {
