@@ -32,7 +32,7 @@ return to `init` after the closing report
 init runs first and calls setup with its answers
 Run on its own, setup stops after the closing report.
 Under `init`, never offer it and never write it
-run `init` instead
+run `rastro:init` instead
 When the stack detection names a stack profile, point to it in the closing report, by the path the detection gives; the profile is read where it is and never copied.
 and note the stack profile when the detection section names one
 The detection names it as `${CLAUDE_PLUGIN_ROOT}/profiles/stacks/<name>/`, or under `RASTRO_ROOT` for an agent other than Claude Code.

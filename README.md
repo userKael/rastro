@@ -37,7 +37,7 @@ Status: version 0.2.0. The tool commands in the shipped adapters were not verifi
 
 ## The flow
 
-A repository with no source code yet starts with `init`. It interviews you about the first decisions, drafts them as ADRs for you to approve, runs `setup` with your answers, and writes the walking skeleton, one entry point end to end with the verify commands green, as the intent of the first item. The skeleton then goes through the stages below like any change, and each component type it creates writes its first golden path from its code.
+A repository with no source code yet starts with `rastro:init`. It interviews you about the first decisions, drafts them as ADRs for you to approve, runs `setup` with your answers, and writes the walking skeleton, one entry point end to end with the verify commands green, as the intent of the first item. The skeleton then goes through the stages below like any change, and each component type it creates writes its first golden path from its code.
 
 Five stages, in this order:
 
@@ -53,7 +53,7 @@ No skill drives the flow. The position follows from the artifacts: read the trac
 
 | What you observe | Next step |
 |---|---|
-| No source code yet, and no item for the walking skeleton | `init` |
+| No source code yet, and no item for the walking skeleton | `rastro:init` (not the built-in `/init`) |
 | No work item exists | `breakdown` |
 | An item exists, without `## Reconciliation` | `implement`, which calls `reconcile` |
 | An item with `## Reconciliation`, no branch | `implement` |
@@ -263,7 +263,7 @@ Until your adapter exists, set the port to its tool-free kind: `local` or `none`
 Four limits:
 
 - With `code_host.merge` set to `squash`, the default, CI validates the PR title, because the title becomes the commit on the base branch. The individual commit messages are then checked by the local `commit-msg` hook, not by CI, because they never reach the base branch. With any other merge mode, `check-commits` validates every commit message of the branch in CI, so a commit made in a clone without the hook is caught there.
-- Layer 3 starts once `setup` has written `.rastro/config.yml`. Until then, `guard-git.sh` and the lint hooks exit without checking anything, and the doctor says to run `setup`. Installing the plugin is not enough.
+- Layer 3 starts once `setup` has written `.rastro/config.yml`. Until then, `guard-git.sh` and the lint hooks exit without checking anything, and the doctor says to run `setup`, or `rastro:init` in a directory with no source code. Installing the plugin is not enough.
 - Git has no hook for `git add`, so only layer 3 denies the wildcard forms. A file that a wildcard drags in is still refused by layer 1.
 - `guard-git.sh` reads the command text of each shell call. It is a guard against slips, not a sandbox: a command that a script assembles at run time is not seen.
 

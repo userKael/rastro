@@ -172,7 +172,7 @@ When `git ls-tree --name-only <project.base_branch> -- .rastro/config.yml` print
 - the files to commit, each by its explicit path: the list of `setup` plus each ADR, with one commit header that passes the default commit-msg format with empty modules, such as `chore(infra): <subject>`;
 - commit on the base branch before the first item, because the reconciliation stamps that branch;
 - with `code_host.kind` other than `none`, add the remote and push the base branch, because `breakdown` and `deliver` need them;
-- then run `init` again, or `breakdown` with the path of the intent;
+- then run `rastro:init` again, or `breakdown` with the path of the intent;
 - the CI file comes with the walking skeleton, not with `setup`: it is a component of the skeleton, written with the toolchain step, so the first CI run has something to verify;
 - When the stack detection names a stack profile, point to it in the closing report, by the path the detection gives; the profile is read where it is and never copied. The detection names it as `${CLAUDE_PLUGIN_ROOT}/profiles/stacks/<name>/`, or under `RASTRO_ROOT` for an agent other than Claude Code.
 

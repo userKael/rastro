@@ -56,7 +56,7 @@ Show its output verbatim. Do not summarize it, rank it or soften it, and never c
 
 Without `--doctor`, check whether `.rastro/config.yml` exists.
 
-When it does not, and `init` did not invoke this skill, check that the directory has source code, as rule 1 of `${CLAUDE_PLUGIN_ROOT}/skills/init/SKILL.md` defines it. In a directory with no source code, run `init` instead, and stop: `init` interviews first and calls this skill with its answers.
+When it does not, and `init` did not invoke this skill, check that the directory has source code, as rule 1 of `${CLAUDE_PLUGIN_ROOT}/skills/init/SKILL.md` defines it. In a directory with no source code, run `rastro:init` instead, and stop: `init` interviews first and calls this skill with its answers.
 
 When `.rastro/config.yml` exists, this is a re-run: its values count as answered, and the steps below ask only what is missing or what the human asked to change.
 

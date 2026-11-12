@@ -13,7 +13,7 @@ No skill drives the flow. The position follows from the artifacts: read the trac
 
 | What you observe | Next step |
 |---|---|
-| No source code yet, and no item for the walking skeleton | `init` |
+| No source code yet, and no item for the walking skeleton | `rastro:init` (not the built-in `/init`) |
 {{state_table_first_row}}
 | A {{tracker_item}} exists, without `## Reconciliation` in its description | `implement`, which calls `reconcile` |
 | A {{tracker_item}} with `## Reconciliation`, no branch | `implement` |
@@ -22,7 +22,7 @@ No skill drives the flow. The position follows from the artifacts: read the trac
 
 A request with no shape ("I want to rethink how stock reservation works") does not enter here. It goes to `design-doc`, which writes the design doc and publishes it. Publishing is not approving: the design doc goes back to the team for discussion, and then it enters through `breakdown`.
 
-A repository with no source code yet starts at `init`. It records the first decisions as ADRs with the person, runs `setup`, and writes the walking skeleton as the intent of the first item, which `breakdown` takes. No golden path is written ahead of that code. In such a repository, the reconciliation's search for code behavior the intent does not mention is empty by construction: the gate says so, instead of treating the empty result as suspect.
+A repository with no source code yet starts at `rastro:init`. It records the first decisions as ADRs with the person, runs `setup`, and writes the walking skeleton as the intent of the first item, which `breakdown` takes. No golden path is written ahead of that code. In such a repository, the reconciliation's search for code behavior the intent does not mention is empty by construction: the gate says so, instead of treating the empty result as suspect.
 
 Every gate stops by default. No skill moves to the next stage without an explicit choice: at the gate, or, in a continuous run, at the start, as `## Execution mode` says.
 

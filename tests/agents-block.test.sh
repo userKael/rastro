@@ -85,7 +85,7 @@ test_state_table() {
   need "state table" '`deliver`' "$rows"
   need "state table" 'no PR' "$rows"
   need "state table" 'review.kind' "$rows"
-  need "state table" '| No source code yet, and no item for the walking skeleton | `init` |' "$rows"
+  need "state table" '| No source code yet, and no item for the walking skeleton | `rastro:init` (not the built-in `/init`) |' "$rows"
   first_row_line=$(grep -nxF '{{state_table_first_row}}' "$block" | head -n 1 | cut -d: -f1)
   first_item_line=$(grep -n '^|.*{{tracker_item}}' "$block" | head -n 1 | cut -d: -f1)
   if [ -z "$first_row_line" ] || [ -z "$first_item_line" ]; then
@@ -93,7 +93,7 @@ test_state_table() {
   elif [ "$first_row_line" -ge "$first_item_line" ]; then
     _assert_fail "{{state_table_first_row}} must come before the first row that uses {{tracker_item}}"
   fi
-  init_row_line=$(grep -nxF '| No source code yet, and no item for the walking skeleton | `init` |' "$block" | head -n 1 | cut -d: -f1)
+  init_row_line=$(grep -nxF '| No source code yet, and no item for the walking skeleton | `rastro:init` (not the built-in `/init`) |' "$block" | head -n 1 | cut -d: -f1)
   if [ -z "$init_row_line" ] || [ -z "$first_row_line" ] || [ "$init_row_line" -ge "$first_row_line" ]; then
     _assert_fail "the init row must come before {{state_table_first_row}}, so every tracker keeps it"
   fi
@@ -106,7 +106,7 @@ test_flow_section() {
   need "flow section" 'Publishing is not approving' "$body"
   need "flow section" 'Every gate stops by default' "$body"
   need "flow section" 'and then it enters through `breakdown`.' "$body"
-  need "flow section" 'A repository with no source code yet starts at `init`.' "$body"
+  need "flow section" 'A repository with no source code yet starts at `rastro:init`.' "$body"
   need "flow section" 'No golden path is written ahead of that code.' "$body"
   need "flow section" 'empty by construction' "$body"
 }
