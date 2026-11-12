@@ -59,3 +59,5 @@ this direction is empty by construction
 `git ls-tree -r --name-only <sha7>`
 When `verify.source_globs` is empty, the exception does not apply
 empty by construction: no source code
+### Golden-path classification: every intent
+When the intent has no code-flow section and no `## Components` (an interview or a root-cause intent), there is no component list to read.

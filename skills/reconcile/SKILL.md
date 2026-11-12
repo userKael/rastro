@@ -80,17 +80,24 @@ The code-flow section of a design doc (`## Code flows` in `${CLAUDE_PLUGIN_ROOT}
 
 - **`exists` and `changes`.** The component exists under that name, and its path points to one real file. When it does not exist, or the path matches more than one file, it is a divergence. Their paths go into the declared scope of the header.
 - **`new`.** Its type is a name from `architecture.layers`; any other type is a divergence, unless a decided `DT-nn` adds the layer. Its type and module respect the rules of `architecture.rules`. Check each rule by ID. A violation is a divergence that cites the rule ID and the `file:line` where the rule lives.
-- **Golden paths.** Classify each `new` and `changes` component against the golden path whose `type` is the component's type in the `architecture.golden_paths` folder, with one of four tags:
-  - `follows`: the component fits the current golden path. No row.
-  - `extends`: the component needs something the golden path neither covers nor forbids. A row in `Not sized`: the task of the component raises the golden path's minor version.
-  - `contradicts`: the component breaks a decision or a checklist item of a `current` golden path. A row in `Divergences: intent vs code`, with the golden path's `file:line` as evidence, and a `D-n` with two options: the golden path evolves to a new major version, or the intent changes to follow it. Neither wins silently.
-  - `no golden path`: no golden path has this type, and its evidence is the `architecture.golden_paths` folder, which has no golden path of that type. A row in `Not sized`: the task that delivers this first instance also writes the golden path, from `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md`.
-
-  A golden path with status `retired` is not a contract: classify against its `superseded_by`.
+- **Golden paths.** Classify each `new` and `changes` component as the next subsection says.
 - **`rect` blocks.** The owner named in a transaction block can open one transaction that covers every write listed inside it. When the code has no mechanism for that, it goes to `Not sized`.
 - **Renaming a `new` component is not a divergence.** A change of type, module, module crossing, transaction owner or async boundary is.
 
-The walking skeleton intent that `init` writes, whose header says `origin: init`, lists its components under `## Components`, tagged as above. Contest them the same way. Every component of the skeleton is `new`, so each type with no golden path gets its `no golden path` row, and the task of its first instance writes the golden path.
+The walking skeleton intent that `init` writes, whose header says `origin: init`, lists its components under `## Components`, tagged as the next subsection says. Contest them the same way. Every component of the skeleton is `new`, so each type with no golden path gets its `no golden path` row, and the task of its first instance writes the golden path.
+
+### Golden-path classification: every intent
+
+This subsection applies to every intent, whatever produced it: a design doc, the walking skeleton, an interview or a root cause. Classify each `new` and `changes` component against the golden path whose `type` is the component's type in the `architecture.golden_paths` folder, with one of four tags:
+
+- `follows`: the component fits the current golden path. No row.
+- `extends`: the component needs something the golden path neither covers nor forbids. A row in `Not sized`: the task of the component raises the golden path's minor version.
+- `contradicts`: the component breaks a decision or a checklist item of a `current` golden path. A row in `Divergences: intent vs code`, with the golden path's `file:line` as evidence, and a `D-n` with two options: the golden path evolves to a new major version, or the intent changes to follow it. Neither wins silently.
+- `no golden path`: no golden path has this type, and its evidence is the `architecture.golden_paths` folder, which has no golden path of that type. A row in `Not sized`: the task that delivers this first instance also writes the golden path, from `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md`.
+
+A golden path with status `retired` is not a contract: classify against its `superseded_by`.
+
+When the intent has no code-flow section and no `## Components` (an interview or a root-cause intent), there is no component list to read. Build one: list the components the change adds or changes, each with its type from `architecture.layers`, taken from the declared scope and from the evidence of Steps 2 and 3, and tag each one the same way.
 
 ### Bug mode
 
