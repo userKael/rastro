@@ -127,7 +127,7 @@ test_github_projects_config_keys_exist() {
 test_docs_claude_adapter_text() {
   local rel=adapters/docs/claude-docs.md needle
   for needle in 'REQUIRED MCP: claude-docs' 'Status: draft' 'Status: approved by <person> on <date>' \
-    'only when the person says so' 'batch' 'export' 'markdown' 'never delete discussion' \
+    'No skill gates on it.' 'only when the person says so' 'batch' 'export' 'markdown' 'never delete discussion' \
     'comment threads' 'sharing with the team is a human step' 'durability' 'NOT VERIFIED'; do
     need_text "$rel" "$needle"
   done

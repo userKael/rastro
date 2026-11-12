@@ -26,9 +26,9 @@ What ships in the repository:
 |---|---|
 | `skills/` | the nine skills |
 | `adapters/` | one markdown file per tool, grouped by port, and the contract they follow |
-| `templates/` | the config, the `AGENTS.md` block, the ADR, the work item, the design doc, the plan, the PR description, CI files |
+| `templates/` | the config, the `AGENTS.md` block, the ADR, the work item, the design doc, the plan, the PR description, the reconciliation file, the golden path, the stack detection, `CALIBRATION.md`, the marker list, CI files |
 | `hooks/` | the git hooks, the Claude Code hooks and the shim for Codex CLI and Cursor (not tested) |
-| `profiles/examples/` | an example architecture profile and an example set of writing rules |
+| `profiles/` | `examples/`: an example architecture profile and an example set of writing rules. `stacks/`: stack profiles, which teach how to verify in a stack and impose no pattern |
 | `scripts/` | the agent installer and the checks the repository runs on itself |
 
 rastro does not ship an automated review engine. It defines the format of a review rule, and the `none` review adapter. It does not measure the impact of a change across repositories.

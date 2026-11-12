@@ -18,7 +18,7 @@ The server name `claude-docs` in the marker line is an assumption (NOT VERIFIED)
 
 Call `read` with the document reference. Expand every collapsed block and put its content in the text as if it were open. Collapsing tells a human what to read first. It never tells the agent what it may skip.
 
-Return the markdown with its provenance on the first lines: the document reference, the version or the last-edited time as the tool returns it, and the date of the fetch. If the tool returns no version, write `version: not returned`. The status line is at the top of the text, and the caller reads it to know whether the document is approved. Other agents read the document through the same connector.
+Return the markdown with its provenance on the first lines: the document reference, the version or the last-edited time as the tool returns it, and the date of the fetch. If the tool returns no version, write `version: not returned`. The status line is at the top of the text, for the people who read the document. No skill gates on it. Other agents read the document through the same connector.
 
 ### publish
 
