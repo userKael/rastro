@@ -43,7 +43,7 @@ before the first item
 init asks no execution mode
 Once `.rastro/config.yml` exists, only Step 7 is open.
 including answers read back from accepted ADRs
-only after this run's `git init`
+after this run's `git init` when there was one
 When no ADR is drafted and no `git init` is needed, skip the gate.
 verify commands, and the CI that runs them when a CI file already exists
 When the intent already exists, skip the question.

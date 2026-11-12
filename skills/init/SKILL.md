@@ -118,13 +118,13 @@ After the person chose to write:
 
 1. When the directory has no repository of its own, or the person chose a new repository inside another one, run `git init`, now and not before. In the nested case, `git rev-parse --show-toplevel` succeeds before this step, and skipping `git init` would let `setup` write into the outer repository.
 2. Copy the confirmed and rewritten ADRs into `docs/adr/`.
-3. Read the branch with `git symbolic-ref --short HEAD` only after this run's `git init`. It is the answer for `project.base_branch`. Without a `git init` in this run, leave `project.base_branch` to `setup`, which detects it from `origin/HEAD`.
+3. Read the branch with `git symbolic-ref --short HEAD`, after this run's `git init` when there was one. The directory is a repository of its own by now, so the command answers in both cases: a person who ran `git init` before invoking init gets the branch they already have, not the template default. It is the answer for `project.base_branch`, and it goes to `setup`.
 
 Nothing else is written.
 
 ## Step 6 — Setup
 
-Invoke `${CLAUDE_PLUGIN_ROOT}/skills/setup/SKILL.md` with every answer that `.rastro/config.yml` does not hold yet, one per key, whether it came from this run or from an accepted ADR: `project.name`, `project.base_branch` (only when Step 5 read it), `project.languages.human`, `tracker.kind`, `docs.kind`, `code_host.kind`, `architecture.modules`, `architecture.layers`, `architecture.boundary_types`, and the verify keys of question 6.
+Invoke `${CLAUDE_PLUGIN_ROOT}/skills/setup/SKILL.md` with every answer that `.rastro/config.yml` does not hold yet, one per key, whether it came from this run or from an accepted ADR: `project.name`, `project.base_branch` (the branch Step 5 read), `project.languages.human`, `tracker.kind`, `docs.kind`, `code_host.kind`, `architecture.modules`, `architecture.layers`, `architecture.boundary_types`, and the verify keys of question 6.
 
 `setup` asks only what is missing, raises its own gate, writes, prints its closing report and hands the turn back. When the person stops at the gate of `setup`, init stops too. The ADRs stay, and the next `init` starts again at Step 0.
 
