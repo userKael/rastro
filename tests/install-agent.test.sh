@@ -152,6 +152,12 @@ test_install_refuses_project_inside_rastro() {
   run_cmd env HOME="$FAKE_HOME" RASTRO_ROOT="$fake" bash "$INSTALL" codex "$proj"
   assert_status 2 "a skills folder under the rastro directory is refused"
   assert_eq "demo" "$(<"$fake/skills/demo/SKILL.md")" "rastro skill intact"
+  proj="$fake/fresh"
+  mkdir -p "$proj"
+  run_cmd env HOME="$FAKE_HOME" RASTRO_ROOT="$fake" bash "$INSTALL" codex "$proj"
+  assert_status 2 "a project under the rastro directory is refused before any skills folder exists"
+  assert_contains "$ERR" "install into a project outside it" "says why"
+  [ ! -e "$proj/.agents" ] || _assert_fail "wrote .agents inside the rastro directory"
 }
 test_install_link_makes_symlinks_or_says_it_could_not() {
   local proj

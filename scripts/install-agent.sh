@@ -112,19 +112,21 @@ cursor_hooks() {
 EOF
 }
 
-# A skills folder that resolves into the rastro directory would make the
-# replacement below delete rastro's own skills.
+# A project or skills folder that resolves into the rastro directory would
+# make the replacement below delete rastro's own skills, or write copies of
+# them inside the rastro directory.
 skills_dir=$project/.agents/skills
-if [ -d "$skills_dir" ]; then
-  real_skills=$(cd "$skills_dir" && pwd -P)
-  real_root=$(cd "$R" && pwd -P)
-  case $real_skills in
+real_root=$(cd "$R" && pwd -P)
+for probe in "$project" "$skills_dir"; do
+  [ -d "$probe" ] || continue
+  real_probe=$(cd "$probe" && pwd -P)
+  case $real_probe in
     "$real_root" | "$real_root"/*)
-      printf 'rastro: %s resolves into the rastro directory %s; refusing to replace rastro skills with themselves\n' "$skills_dir" "$R" >&2
+      printf 'rastro: %s resolves into the rastro directory %s; install into a project outside it\n' "$probe" "$R" >&2
       exit 2
       ;;
   esac
-fi
+done
 
 manifest=$skills_dir/.rastro-installed
 skills_status=0
