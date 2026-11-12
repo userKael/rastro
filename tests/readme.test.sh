@@ -48,15 +48,17 @@ test_readme_has_every_section() {
 test_agent_support_is_honest() {
   [ -f "$readme" ] || return 0
   need_in_section 'Agent support' 'Claude Code'
-  need_in_section 'Agent support' 'Other agents that read AGENTS.md and SKILL.md: compatible by design, not tested.'
+  need_in_section 'Agent support' 'Other agents that read AGENTS.md and SKILL.md: compatible by design, verified only by the tests of the shim'
   need_in_section 'Agent support' 'RASTRO_ROOT'
+  need_in_section 'Agent support' 'has not been run end to end in Codex CLI or Cursor yet'
+  # Outside the Agent support section, a line that names Codex must say it is not tested.
   local line
   while IFS= read -r line; do
     case $line in
-      *'not tested'*) ;;
+      *'not tested'* | *'(see Agent support)'*) ;;
       *) _assert_fail "README.md names Codex without saying it is not tested" "line: $line" ;;
     esac
-  done < <(grep -F -e 'Codex' "$readme")
+  done < <(grep -F -e 'Codex' "$readme" | grep -vxF -f <(section_body 'Agent support'))
 }
 
 test_install_and_configure_name_the_real_commands() {
@@ -206,8 +208,18 @@ test_readme_adapter_table_lists_new_adapters() {
     _assert_fail "README.md adapter table lacks claude on the docs row"
 }
 
+test_readme_agent_support_says_what_ports() {
+  [ -f "$readme" ] || return 0
+  local needle
+  for needle in 'scripts/install-agent.sh' '.agents/skills/' 'codex' 'cursor' 'RASTRO_ROOT' 'NOT VERIFIED' \
+    'structured question tool' '/rastro:' 'commands' 'verified only by the tests of the shim'; do
+    need_in_section 'Agent support' "$needle"
+  done
+}
+
 test_readme_has_every_section
 test_agent_support_is_honest
+test_readme_agent_support_says_what_ports
 test_install_and_configure_name_the_real_commands
 test_modes_without_a_tool_are_tabled
 test_doctrine_is_listed_and_not_configurable

@@ -258,7 +258,7 @@ Until your adapter exists, set the port to its tool-free kind: `local` or `none`
 |---|---|---|
 | 1. Git hooks | `pre-commit` refuses a staged file that matches `conventions.forbidden_paths`. `commit-msg` validates the message against `conventions.commit`. It requires the `[id]` only when the branch name carries an id, and a design doc branch does not | Any agent, and people |
 | 2. CI | `check-changed-paths` fails when a forbidden path is in the change set. `check-pr-title` validates the PR title as a commit message when `code_host.merge` is `squash`. `check-commits` validates the message of every commit of the branch when it is not. `run-verify` runs the `verify.*` commands, and fails when none is configured. Templates ship for GitHub and GitLab in `templates/ci/`, and `setup` offers to write one | Any agent, and people |
-| 3. Agent harness | `guard-git.sh` denies `git add -A`, `git add .`, `git add --all`, `git commit -a` and `--no-verify`, also behind `git -C <dir>`. It also denies any `core.hooksPath` other than `.rastro/git-hooks`, set with `git config` or `git -c`. After each file edit, the hook runs `verify.lint_file` on that file, and tells the agent when the linter is missing. It also records each lint verdict in the workspace, for the audit's metrics. When the agent tries to stop, the hook lints the changed files that match `verify.source_globs` and blocks while the result is red, and lists the `verify.typecheck`, `verify.unit` and `verify.integration` commands that still need to run. At session start, the hook runs the doctor | Claude Code only |
+| 3. Agent harness | `guard-git.sh` denies `git add -A`, `git add .`, `git add --all`, `git commit -a` and `--no-verify`, also behind `git -C <dir>`. It also denies any `core.hooksPath` other than `.rastro/git-hooks`, set with `git config` or `git -c`. After each file edit, the hook runs `verify.lint_file` on that file, and tells the agent when the linter is missing. It also records each lint verdict in the workspace, for the audit's metrics. When the agent tries to stop, the hook lints the changed files that match `verify.source_globs` and blocks while the result is red, and lists the `verify.typecheck`, `verify.unit` and `verify.integration` commands that still need to run. At session start, the hook runs the doctor | Claude Code, and Codex CLI and Cursor through `scripts/install-agent.sh` (see Agent support) |
 
 Four limits:
 
@@ -273,15 +273,43 @@ The git hooks, the CI scripts and the Claude Code hooks need bash and git, and n
 
 ## Agent support
 
-Claude Code is the reference. The plugin, the `/rastro:<skill>` commands and layer 3 of the hooks exist only there. Layers 1 and 2 work with any agent and for people.
+Claude Code is the reference. The plugin, the `/rastro:<skill>` commands and layer 3 of the hooks were built for it. Layers 1 and 2 work with any agent and for people. Codex CLI and Cursor get the skills and the layer 3 hooks through an installer.
 
-Other agents that read AGENTS.md and SKILL.md: compatible by design, not tested.
+Other agents that read AGENTS.md and SKILL.md: compatible by design, verified only by the tests of the shim that translates their hook protocol. The flow has not been run end to end in Codex CLI or Cursor yet; that run is a human acceptance step, and until it happens treat the support below as not tested.
 
-To try rastro in such an agent:
+What works per agent:
 
-- Export `RASTRO_ROOT` with the path of the rastro directory. The skills cite their files as `${CLAUDE_PLUGIN_ROOT}/...`, which Claude Code replaces by itself. Another agent reads the same directory from `RASTRO_ROOT`.
-- Copy or link the skills where that agent discovers skills. Keep `adapters/`, `templates/` and `profiles/` in the rastro directory: each file exists once, and the skills reach it through `RASTRO_ROOT`.
-- Run `setup` for the repository. Its gates end the turn with the question when the agent has no structured question tool.
+| What | Claude Code | Codex CLI | Cursor | How it is wired |
+|---|---|---|---|---|
+| Skills | yes | yes | yes | Claude Code: the plugin. Codex CLI and Cursor: `.agents/skills/` in the project |
+| Git hooks and CI (layers 1 and 2) | yes | yes | yes | `.rastro/git-hooks/` and the CI scripts, no agent involved |
+| Agent hooks (layer 3): git guard, lint per edited file, check on stop, doctor at session start | yes | yes | yes | Claude Code: the plugin's `hooks/hooks.json`. Codex CLI: `.codex/hooks.json`. Cursor: `.cursor/hooks.json` |
+
+To install rastro for one agent in one project:
+
+```
+bash scripts/install-agent.sh codex <project dir>
+bash scripts/install-agent.sh cursor <project dir>
+```
+
+The script copies each skill to `<project dir>/.agents/skills/<skill>/` (`--link` makes symlinks instead) and writes the hook file for that agent, pointing at `hooks/agents/adapt.sh`, a shim that translates the agent's hook protocol to the Claude Code hooks, so the hook logic exists once. It is safe to run again. It never merges or overwrites a hook file it did not write: when the file exists and differs, it prints the block to add and exits with 3.
+
+Then export the path of the rastro directory in the shell that starts the agent:
+
+```
+export RASTRO_ROOT=<path to the rastro directory>
+```
+
+The skills cite their files as `${CLAUDE_PLUGIN_ROOT}/...`, which Claude Code replaces by itself. Another agent reads the same directory from `RASTRO_ROOT`. Run `setup` for the repository as usual.
+
+Two warnings. Codex runs a project hook only after you trust the `.codex/` layer of the project and review the hooks in `/hooks`; until then they do not run. And the hook file holds an absolute path to the rastro directory on your machine, so do not commit it: run the installer again in each clone.
+
+What does not port:
+
+- The structured question tool. Without it, a gate ends the turn with the question, and the answer comes in the next message.
+- The plugin and its `/rastro:<skill>` commands. An agent invokes a skill by its own mechanism, for example `$<skill>` or `/skills` in Codex CLI.
+- Layer 3 messages that need the agent to read a hook's output. NOT VERIFIED in Cursor: whether the agent sees the lint failure of `afterFileEdit`, and the informational stop message, which the shim drops. NOT VERIFIED in Codex CLI: whether the `systemMessage` of the stop hook is accepted, and whether `timeout` is read from `.codex/hooks.json`. NOT VERIFIED in Cursor: whether `.agents/skills/` accepts symlinks, so `--link` is for Codex CLI.
+- `PowerShell` tool calls: the Codex matcher for the git guard covers `Bash` only.
 
 ## License
 
