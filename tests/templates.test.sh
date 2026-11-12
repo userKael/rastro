@@ -1,5 +1,6 @@
 tests_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 . "$tests_dir/lib/assert.sh"
+. "$tests_dir/../hooks/lib/frontmatter.sh"
 export LC_ALL=C.UTF-8
 root=$(cd "${1:-$tests_dir/..}" && pwd)
 tpl="$root/templates"
@@ -38,11 +39,33 @@ section() {
   ' "$tpl/$1"
 }
 
+test_golden_path() {
+  local key
+  require_all golden-path.md \
+    'version: 1.0.0' 'status: current' 'verified_by: review' 'instances: [' 'origin:' \
+    'superseded_by' 'under-review' 'retired' 'origin: <item id>, <branch>, <YYYY-MM-DD>' \
+    'stay literal in English' 'then `"automated: <command>"`, quoted' \
+    '## When to use' '## Decisions' 'Why:' 'Revisit if:' '## Checklist' '## Security' \
+    'none identified' '## Verification' '## Known debt' '## History' \
+    '| Version | Date | Item | Change |' \
+    'architecture.boundary_types' '"none identified" does not serve it' \
+    'OWASP Application Security Verification Standard (ASVS)' 'OWASP API Security Top 10' \
+    'never copying its text' 'A rule of the project adds a threat by its ID.' \
+    'Control: <the control>. Verified by:' 'exits non-zero' 'Breaks processor, decision' 'Fix:' \
+    'Make `verify.lint` run the same command, so CI runs it too.' 'without mocks' \
+    '### Scenario: <what it proves>' '- Context:' '- Steps:' '- Success:' '- When blocked:'
+  for key in id type version status verified_by instances origin; do
+    rastro_frontmatter_get "$tpl/golden-path.md" "$key" >/dev/null ||
+      _assert_fail "templates/golden-path.md frontmatter lacks $key"
+  done
+}
+
 test_markers_file() {
   require_all MARKERS.md \
     '`## Reconciliation`' '`reconciliation.md`' '`NOT VERIFIED`' '`[HUMAN]`' '`[no PR]`' \
     '`## Context`' '`Decided (<YYYY-MM-DD>):`' '`D-n`' '`DT-nn`' \
-    '| `new` |' '| `changes` |' '| `exists` |' '| `## Acceptance criteria` |'
+    '| `follows` | `reconcile` → `implement` |' '| `new` |' '| `changes` |' '| `exists` |' '| `## Acceptance criteria` |' \
+    '`- Continuous run,`' '| `NOT VERIFIED` | `domain-context`, `audit` (the skill and its script) → every skill |'
 }
 
 test_reconciliation() {
@@ -127,7 +150,9 @@ test_plan() {
   require_all plan.md \
     '**Goal:**' '**Spec:**' '## Global Constraints' '## Expected test scenarios' \
     '**Given**' '**When**' '**Then**' '[HUMAN]' '**Executor:** human' '**Blocks:** Task' \
-    '**Rollback:**'
+    '**Rollback:**' '### Golden paths this item creates or evolves' \
+    'verified by <review | the command>' \
+    '**Footprint:**' '**Tier:**' '**Actual:**'
 }
 
 test_config_names_the_env_example_trap() {
@@ -138,7 +163,7 @@ test_pr_description() {
   require_all pr-description.md \
     '## Context' '## What this PR delivers' '## Closed decisions' '## Risks and rollback' \
     '## Verification' '## Next PRs' '## Divergences from the design doc' '## Recorded debt' \
-    '## Agent rulings' '## Pending human execution' '<details>'
+    '## Agent rulings' '## Pending human execution' '<details>' '## Golden paths created or evolved'
 }
 
 test_calibration() {
@@ -146,6 +171,10 @@ test_calibration() {
     'How many stories have no subtask?' \
     'What is the cancellation rate among those stories?' \
     'What subtask summary format does the team already use?' \
+    'What do the footprint buckets mean in this project?' \
+    'Which tier does each footprint get, and which model runs each tier?' \
+    'Before/after probe' \
+    'first-pass (first lint of each file, with rastro)' 'end-of-run lint pass (without rastro)' \
     'measure' 'not measured'
 }
 
@@ -167,6 +196,60 @@ test_stack_detection() {
   done
 }
 
+test_stack_detection_reads_ci() {
+  local body needle
+  require_file stack-detection.md || return 0
+  require_all stack-detection.md 'CI workflow files and manifests'
+  body=$(section stack-detection.md "CI workflows")
+  if [ -z "$body" ]; then
+    _assert_fail "templates/stack-detection.md has no section for CI workflows"
+    return
+  fi
+  for needle in '.github/workflows/*.yml' '.gitlab-ci.yml' 'bitbucket-pipelines.yml' '.circleci/config.yml' 'azure-pipelines.yml' \
+    '`verify.lint`' '`verify.typecheck`' '`verify.unit`' '`verify.integration`' \
+    'propose the CI step' '`.rastro/git-hooks/`' 'a variable only CI sets' 'never come from CI'; do
+    case $body in
+      *"$needle"*) ;;
+      *) _assert_fail "templates/stack-detection.md section CI workflows lacks required text" "text: $needle" ;;
+    esac
+  done
+}
+
+test_stack_detection_names_nestjs() {
+  local body needle
+  require_file stack-detection.md || return 0
+  body=$(section stack-detection.md "NestJS")
+  if [ -z "$body" ]; then
+    _assert_fail "templates/stack-detection.md has no section for NestJS"
+    return
+  fi
+  for needle in '`@nestjs/core`' '`nest-cli.json`' '`test:e2e`' '`verify.integration`' \
+    '`verify.integration_when` is still asked' 'profiles/stacks/node-nestjs-typescript/' '"monorepo": true' \
+    '["apps/**/*.ts", "libs/**/*.ts"]' '`${CLAUDE_PLUGIN_ROOT}/profiles/stacks/node-nestjs-typescript/`' \
+    'or under `RASTRO_ROOT` for an agent other than Claude Code'; do
+    case $body in
+      *"$needle"*) ;;
+      *) _assert_fail "templates/stack-detection.md section NestJS lacks required text" "text: $needle" ;;
+    esac
+  done
+  [ -d "$tpl/../profiles/stacks/node-nestjs-typescript" ] ||
+    _assert_fail "templates/stack-detection.md names a stack profile folder that does not exist"
+}
+
+test_adr() {
+  local key
+  require_all adr.md \
+    'An agent drafts the ADR; a person decides it.' 'is fabricated' \
+    'docs/adr/<NNNN>-<kebab-case title>.md' 'a number is never reused' 'never overwritten' \
+    'superseded by <NNNN>' 'never how to build one type of component' \
+    '## Context' '## Decision' 'Why:' '<reason not given>' '## Alternatives considered' 'None weighed' \
+    '## Consequences' 'Revisit if:'
+  for key in status date decided_by origin; do
+    rastro_frontmatter_get "$tpl/adr.md" "$key" >/dev/null ||
+      _assert_fail "templates/adr.md frontmatter lacks $key"
+  done
+}
+
 test_no_origin_calibration_numbers() {
   local f hits
   for f in "$tpl"/*.md "$tpl"/ci/*; do
@@ -176,6 +259,13 @@ test_no_origin_calibration_numbers() {
   done
 }
 
+test_config_has_no_mode_key() {
+  local hits
+  hits=$(grep -nE '^[[:space:]]*([a-z_]*_)?mode:' "$tpl/config.yml")
+  [ -z "$hits" ] || _assert_fail "templates/config.yml has a mode key; the execution mode is chosen per run" "$hits"
+}
+
+test_golden_path
 test_markers_file
 test_reconciliation
 test_reconciliation_has_five_sections
@@ -189,5 +279,9 @@ test_config_names_the_env_example_trap
 test_pr_description
 test_calibration
 test_stack_detection
+test_stack_detection_reads_ci
+test_stack_detection_names_nestjs
+test_adr
 test_no_origin_calibration_numbers
+test_config_has_no_mode_key
 finish

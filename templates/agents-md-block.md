@@ -5,7 +5,7 @@ The rastro `setup` skill manages this block. `## Non-negotiable rules` belongs t
 
 In rastro skills, `${CLAUDE_PLUGIN_ROOT}` means the rastro installation directory. Claude Code substitutes it; other agents read it from the environment variable `RASTRO_ROOT`. Project settings live in `.rastro/config.yml`.
 
-Doctrine is not overridable: not by a profile, not by team text elsewhere in this file, not by any other skill. Doctrine is the stage sequence, the state table, reconciling before slicing, the `file:line` anchor, a human executor for work the agent cannot run, stable `D-n` and `DT-nn`, gates that stop by default, the verdict before editing a failing test, unversioned agent artifacts, and the source precedence below.
+Doctrine is not overridable: not by a profile, not by team text elsewhere in this file, not by any other skill. Doctrine is the stage sequence, the state table, reconciling before slicing, the `file:line` anchor, a human executor for work the agent cannot run, stable `D-n` and `DT-nn`, gates that stop by default, the execution mode chosen per run, the verdict before editing a failing test, unversioned agent artifacts, the golden-path checkpoint, and the source precedence below.
 
 ## Where you are in the flow
 
@@ -13,15 +13,18 @@ No skill drives the flow. The position follows from the artifacts: read the trac
 
 | What you observe | Next step |
 |---|---|
+| No source code yet, and no item for the walking skeleton | `rastro:init` (not the built-in `/init`) |
 {{state_table_first_row}}
 | A {{tracker_item}} exists, without `## Reconciliation` in its description | `implement`, which calls `reconcile` |
 | A {{tracker_item}} with `## Reconciliation`, no branch | `implement` |
 | A branch with verified commits, no PR | `deliver` |
 | A PR is open | Review: automatic when `review.kind` is not `none`; human always |
 
-A request with no shape ("I want to rethink how stock reservation works") does not enter here. It goes to `design-doc`, which writes the design doc and publishes it. Publishing is not approving: the design doc goes back to the team for discussion, and then it enters through the first row.
+A request with no shape ("I want to rethink how stock reservation works") does not enter here. It goes to `design-doc`, which writes the design doc and publishes it. Publishing is not approving: the design doc goes back to the team for discussion, and then it enters through `breakdown`.
 
-Every gate stops by default. No skill moves to the next stage without an explicit choice.
+A repository with no source code yet starts at `rastro:init`. It records the first decisions as ADRs with the person, runs `setup`, and writes the walking skeleton as the intent of the first item, which `breakdown` takes. No golden path is written ahead of that code. In such a repository, the reconciliation's search for code behavior the intent does not mention is empty by construction: the gate says so, instead of treating the empty result as suspect.
+
+Every gate stops by default. No skill moves to the next stage without an explicit choice: at the gate, or, in a continuous run, at the start, as `## Execution mode` says.
 
 ## Non-negotiable rules
 
@@ -74,6 +77,10 @@ The default is no comment. Write one only when the why is not obvious from the c
 
 Never reference the task, the ticket or the caller in a comment (`// used by the order-cancel flow`, `// added for <item id>`). That belongs in the PR description. In code it rots when the code changes owner or the task is forgotten.
 
+## Golden paths
+
+A golden path is how this project builds one type of component, in the `architecture.golden_paths` folder, `docs/golden-paths/` by default and when the key is empty. Nobody writes one ahead of the code: the first instance of a type writes its golden path, in the same change, with the person implementing it. During the reconciliation, every later item classifies each component it adds or changes as `follows`, `extends`, `contradicts` or `no golden path`. A contradiction is a decision, never a block and never silent.
+
 ## Source precedence
 
 When sources conflict, the one higher in this list wins.
@@ -84,6 +91,8 @@ When sources conflict, the one higher in this list wins.
 4. Golden paths and patterns: how to build.
 5. Current plan: the plan of the item in progress.
 6. Design doc: the source of the why, never of how the code is today.
+
+Precedence settles what the code is. When code contradicts a `current` golden path, the golden-path gate settles what it should be: the golden path evolves to a new version, or the code changes. Neither wins silently.
 
 ## Gate anatomy
 
@@ -104,9 +113,33 @@ Three prohibitions:
 - **Never exceed the cell budget, and never nest an explanatory parenthesis in a cell.** A generous slot gets filled with prose. The budget applies to prose: a value that must stay verbatim, such as a PR title, a `file:line` or a URL, is exempt, because truncating an identifier is worse than overflowing the cell.
 - **Never print the same question twice.** A menu in the text plus a question widget is one decision in two formats.
 
-Every gate declares its class. The skill that prints the gate is its authority.
+Every gate declares its class and its mode on its title line, as in `Class: fork. Mode: confirmation.`, and `## Execution mode` defines the modes. The skill that prints the gate is its authority.
 
 A subagent never asks the human. A subagent that meets a constraint returns the finding as text and ends its task; the session that dispatched it raises the gate. If there is no structured question tool, end the turn with the question.
+
+## Execution mode
+
+At the start of each run, the person chooses how the gates of that run behave: stop at every gate, the default, or continuous. The choice holds for that run only and is never a config key.
+
+- **Who asks.** `breakdown`, `implement` and `deliver`, before their first gate, when no mode is recorded for the top item of the work: the parent of the item, or the item itself when it has no parent. `design-doc`, `init`, `setup`, and `reconcile` called on its own never ask, and their gates stop.
+- **The question.** **Execution mode for <top item>: stop at every gate or continuous?** Ask with the structured question tool. **Stop at every gate** comes first and is recommended: every gate waits for an answer. **Continuous**: the confirmation gates take the recommended option and the PR lists them, while the decision and team gates still stop. Without that tool, end the turn with the question.
+- **Where it lives.** `<workspace>/mode`, in three lines: `mode: stop` or `mode: continuous`, then `item: <top item id>`, then `date: <YYYY-MM-DD>`. A file for another top item, or written on an earlier day, does not count: ask again and overwrite it.
+- **When it ends.** The run ends when the person stops at a gate, when a skill stops and sends the request elsewhere, or when the continuity gate of `deliver` finds no next item. Delete `<workspace>/mode` then, so a forgotten continuous mode never reaches the next run.
+- **Reusing it.** When a skill reuses a recorded mode, it prints one line: `Execution mode: <stop at every gate | continuous>, chosen <date> for <top item>.`
+
+Every gate declares its mode next to its class. The mode says what a continuous run does at that gate.
+
+| Mode | The answer | In a continuous run |
+|---|---|---|
+| `confirmation` | confirms what the agent prepared | takes the recommended option |
+| `decision` | changes the content: a `D-n`, a revalidation, a discovered constraint, a golden path | stops |
+| `team` | belongs to the team, such as publishing a design doc | stops |
+
+At a confirmation gate, a continuous run still prints the title and the state, then one line, `Continuous run: took <option>.`, and appends `- Continuous run, <skill>: <gate title> Took: <option>.` to `rulings.md` in the workspace folder of the item. `deliver` turns those lines into rows of `## Agent rulings`. A confirmation whose recommended option needs the person's input, such as adjusting the slicing, stops.
+
+A decision gate with no open item counts as a confirmation: a reconciliation with no `D-n`, or a golden-path review with no decision row. The exception never applies to the golden-path review of a new golden path (version `1.0.0`): it always stops. An extension with no new or changed decision may pass. A `D-n` with a human executor does not stop a continuous run: its `[HUMAN]` task stays open, the run goes on unless that task blocks a later one, and the step appears under `Pending human execution` in the PR.
+
+A continuous run passes gates only. A question that gathers input, such as the interview of `breakdown` or the repositories that consume a contract, still waits for the answer.
 
 ## Failing tests
 

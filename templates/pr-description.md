@@ -56,6 +56,14 @@ Include only with `tracker: none`, where the PR description holds the reconcilia
 
 - <What is left on purpose, and where it is anchored (`file:line`).>
 
+## Golden paths created or evolved
+
+Include only when this branch created a golden path or changed its version.
+
+| Golden path | Change | Version | Instance |
+|---|---|---|---|
+| `<id>` | <created, extended or changed> | <old> → <new> | `<file:line>` |
+
 ## Rule self-check
 
 Include only when a rule is flagged ⚠.

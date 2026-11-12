@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Installs or updates rastro in a repository. It detects the git remote, the stack, the MCP servers and the existing agent instruction files, asks only what it could not detect, one question at a time, shows the full diff and stops for approval, then writes .rastro/config.yml, the rastro block of AGENTS.md, the AGENTS.md import in CLAUDE.md, the workspace entry in .gitignore and the git hooks. Running it again with the same answers changes nothing. "setup --doctor" reports the health of an installation. Use when adopting rastro, when changing the tracker, docs tool or code host, after upgrading rastro, or to check an installation. Do NOT use to start work on a request (design-doc, breakdown or implement), or to write the team's rules, profiles or adapters.
+description: Installs or updates rastro in a repository. It detects the git remote, the stack, the MCP servers and the existing agent instruction files, asks only what it could not detect, one question at a time, shows the full diff and stops for approval, then writes .rastro/config.yml, the rastro block of AGENTS.md, the AGENTS.md import in CLAUDE.md, the workspace entry in .gitignore and the git hooks. Running it again with the same answers changes nothing. "setup --doctor" reports the health of an installation. Use when adopting rastro, when changing the tracker, docs tool or code host, after upgrading rastro, or to check an installation. Do NOT use to start work on a request (design-doc, breakdown or implement), or to write the team's rules, profiles or adapters. In a directory with no source code yet, init runs first and calls setup with its answers.
 ---
 
 # setup
@@ -29,7 +29,7 @@ With `--doctor`, the output is the doctor's report, verbatim.
 
 Setup writes configuration. It does not decide doctrine.
 
-Doctrine is not overridable: not by a profile, not by AGENTS.md, not by any other skill. No key of `.rastro/config.yml` turns off a gate, the reconciliation, the `file:line` anchor or the human executor. Setup never offers such a key and never writes one.
+Doctrine is not overridable: not by a profile, not by AGENTS.md, not by any other skill. No key of `.rastro/config.yml` turns off a gate, the reconciliation, the `file:line` anchor or the human executor, and no key sets the execution mode, which the person chooses at the start of each run. Setup never offers such a key and never writes one.
 
 The text of `AGENTS.md` outside the markers belongs to the team. Setup never edits it.
 
@@ -54,7 +54,13 @@ bash "${CLAUDE_PLUGIN_ROOT}/hooks/claude/doctor.sh"
 
 Show its output verbatim. Do not summarize it, rank it or soften it, and never call an installation fine when the output lists a problem or says it could not check something. Then stop: `--doctor` writes nothing.
 
-Without `--doctor`, check whether `.rastro/config.yml` exists. When it does, this is a re-run: its values count as answered, and the steps below ask only what is missing or what the human asked to change.
+Without `--doctor`, check whether `.rastro/config.yml` exists.
+
+When it does not, and `init` did not invoke this skill, check that the directory has source code, as rule 1 of `${CLAUDE_PLUGIN_ROOT}/skills/init/SKILL.md` defines it. In a directory with no source code, run `rastro:init` instead, and stop: `init` interviews first and calls this skill with its answers.
+
+When `.rastro/config.yml` exists, this is a re-run: its values count as answered, and the steps below ask only what is missing or what the human asked to change.
+
+When `init` invokes this skill, the answers it hands over count as answered, as the values of an existing config do on a re-run, and Step 2 asks only what is still open. In a repository with no source code, Step 1 finds no manifest and no CI workflow to propose from: that is expected, not a gap to report.
 
 ## Step 1 — Detect
 
@@ -62,8 +68,8 @@ Detect before asking. Run every detection below, then print one report: a two-co
 
 - **Adapters.** List the adapter files of each port, in `.rastro/adapters/<dir>/` first and then in `${CLAUDE_PLUGIN_ROOT}/adapters/<dir>/`, for `tracker`, `docs`, `code-host`, `domain-state` and `review`. An adopter file overrides a shipped file of the same kind. Read the `## Detection` section of each, and check each signal against the repository. A signal proposes a kind; it never selects one.
 - **Git remote.** Run `git remote -v` and check each URL against the remote signals of the code-host and tracker adapters.
-- **Base branch.** `git symbolic-ref --short refs/remotes/origin/HEAD` proposes `project.base_branch`, without the remote prefix.
-- **Stack.** Read the manifests as `${CLAUDE_PLUGIN_ROOT}/templates/stack-detection.md` describes, and take its proposals for the verify commands, `verify.lint_file` and `verify.source_globs`. When no manifest gives a proposal, the key stays empty: a command that cannot fail reports success without checking anything.
+- **Base branch.** `git symbolic-ref --short refs/remotes/origin/HEAD` proposes `project.base_branch`, without the remote prefix. Without `origin/HEAD` (a repository with no remote, or one that was never fetched), `git symbolic-ref --short HEAD` proposes the current branch instead. The proposal shows in the gate diff like any other value, so a branch that is not the base branch is corrected there, and the template default `main` never lands unseen.
+- **Stack.** Read the CI workflow files and the manifests as `${CLAUDE_PLUGIN_ROOT}/templates/stack-detection.md` describes, and take its proposals for the verify commands, `verify.lint_file` and `verify.source_globs`, and note the stack profile when the detection section names one. A command that a CI workflow runs comes first, because it is the one that really runs. When neither gives a proposal, the key stays empty: a command that cannot fail reports success without checking anything.
 - **MCP servers.** Take only the server names from `.mcp.json` and `~/.claude.json`: the keys of their `mcpServers` objects. Never print `~/.claude.json` and never read it whole: it may hold tokens. Check each MCP signal of the adapters with a command that prints nothing but the result, such as `grep -qE '"<name>"[[:space:]]*:' ~/.claude.json`. A server that exists only in `~/.claude.json` is personal: other clones do not have it. Say so. Moving it to `.mcp.json` is a decision for whoever manages the credentials, not for setup.
 - **Instruction files.** Whether `AGENTS.md` exists, and whether it already has the rastro markers. Whether `CLAUDE.md` exists, and whether it has the line `@AGENTS.md`. An `AGENTS.md` with one marker and not the other is broken: stop and report it, and do not guess where the block ends.
 - **Existing linters.** A lint configuration feeds the stack proposals. A commit-message linter configuration runs next to the rastro `commit-msg` hook, so both validate every commit: report it, because two different formats reject every commit.
@@ -80,24 +86,27 @@ A detected value the human has no reason to doubt is not asked: it shows in the 
 
 1. `tracker.kind`: `local`, `none`, a shipped adapter, or the name of the team's own adapter.
 2. `tracker.key`, unless the kind is `none`. Propose `W` for `local`. When the tracker adapter fixes the key, propose that key: `GH` for the shipped adapter whose item ids are `GH-<n>`. Read the key from the adapter file, never from memory.
-3. `tracker.local_dir`, only for `local`, with `work/` proposed.
-4. `docs.kind`, with `repo` proposed, then `docs.location` when the kind is not `repo`.
-5. `code_host.kind`, then `code_host.merge`, with `squash` proposed, then `code_host.template` when Step 1 found a PR template.
-6. `domain_state.kind`: `none`, `schema-files` with `domain_state.schema_files`, or `db-mcp` with `domain_state.server` among the detected MCP servers.
-7. `project.languages.human`.
-8. The verify commands the stack did not propose, then `verify.integration` and `verify.integration_when`, which have no portable proposal.
-9. `architecture.modules`, confirming the proposal.
-10. `architecture.sensitive_data`: the classes of data never logged and never committed, such as customer addresses.
-11. `docs.public_portal`, when the repository publishes documentation for other teams.
-12. Whether to write the CI file from `${CLAUDE_PLUGIN_ROOT}/templates/ci/`. Offer it only when a template exists whose file name starts with `code_host.kind`, and only when its destination does not exist. The first line of the template says where the file goes.
-13. Whether to write `.rastro/CALIBRATION.md` from `${CLAUDE_PLUGIN_ROOT}/templates/CALIBRATION.md`, where the team records its own measurements. Offer it only when that file does not exist.
+3. The other keys that the tracker adapter's required keys name, as the `## Requirements` section of its file lists them. Read them from the adapter file, never from memory. When the adapter names a project number and a project owner (`tracker.project` and `tracker.project_owner`), ask `tracker.project` with no value proposed, because the person types the number, then `tracker.project_owner` with an empty value proposed, which means the owner of the repository. The shipped adapter that mirrors item status in a project board is the one that names them.
+4. `tracker.local_dir`, only for `local`, with `work/` proposed.
+5. `docs.kind`, with `repo` proposed, then `docs.location` when the kind is not `repo`.
+6. `code_host.kind`, then `code_host.merge`, with `squash` proposed, then `code_host.template` when Step 1 found a PR template.
+7. `domain_state.kind`: `none`, `schema-files` with `domain_state.schema_files`, or `db-mcp` with `domain_state.server` among the detected MCP servers.
+8. `project.languages.human`.
+9. The verify commands the stack did not propose, then `verify.integration` and `verify.integration_when`, which have no portable proposal.
+10. `architecture.modules`, confirming the proposal.
+11. `architecture.layers`, one question, with nothing proposed: the component types, in the order a request crosses them. Golden-path types are layers, so this answer names the types the golden paths are written for. Empty is an answer. No anticipated architecture is proposed: proposing nothing is the point.
+12. `architecture.boundary_types`, one question, with nothing proposed: the layers that cross a trust boundary. A name outside the layers is refused, and the question comes back. The security section of a golden path depends on this key. Empty is an answer.
+13. `architecture.sensitive_data`: the classes of data never logged and never committed, such as customer addresses.
+14. `docs.public_portal`, when the repository publishes documentation for other teams.
+15. Whether to write the CI file from `${CLAUDE_PLUGIN_ROOT}/templates/ci/`. Offer it only when a template exists whose file name starts with `code_host.kind`, and only when its destination does not exist. The first line of the template says where the file goes. Under `init`, never offer it and never write it: the skeleton has no manifest yet, so a CI run would fail on the first change request. The walking skeleton writes the CI file with its own toolchain step.
+16. Whether to write `.rastro/CALIBRATION.md` from `${CLAUDE_PLUGIN_ROOT}/templates/CALIBRATION.md`, where the team records its own measurements. Offer it only when that file does not exist.
 
 An optional file whose destination exists is never offered and never written. Leave it as it is, and say so at the gate: the team may have filled its toolchain step or recorded its measurements there. When the first line of the CI template says to merge its job into a file that already exists, show the job to merge in the closing report, and never overwrite that file.
 
 Answers that need a check before they are accepted:
 
 - **`tracker.local_dir`.** Refuse a directory equal to the workspace or inside it, and a directory that `git check-ignore -q` reports as ignored. Say why, then ask again: the state table reads items from git, and an unversioned item makes the table lose its source.
-- **`tracker: none`.** Before accepting it, say what it loses. The item lives only in the conversation and the workspace. The work cannot be resumed before the PR exists. The reconciliation goes to the PR description. The state table starts at the branch row. Name `local` as the option that keeps items versioned without a tracker tool.
+- **`tracker: none`.** Before accepting it, say what it loses. The item lives only in the conversation and the workspace. The work cannot be resumed before the PR exists. The reconciliation goes to the PR description. The state table has no item rows. Name `local` as the option that keeps items versioned without a tracker tool.
 - **A tool with no adapter.** When the answer names a tool that has no adapter file in either location, point to `${CLAUDE_PLUGIN_ROOT}/adapters/CONTRACT.md`. The team writes `.rastro/adapters/<dir>/<kind>.md` from it. Until that file exists, every skill that uses the port stops, and the doctor reports `missing adapter <dir>/<kind>`. Offer the tool-free kind of that port for the meantime: `local` or `none` for the tracker, `repo` for docs, `none` for the code host.
 
 ## Step 3 — Compose
@@ -106,7 +115,7 @@ Build every file in a temporary directory outside the repository, from `mktemp -
 
 ### `.rastro/config.yml`
 
-Start from `${CLAUDE_PLUGIN_ROOT}/templates/config.yml`, keeping its comments, and fill in the answers. Lists stay inline, as `[a, b]`: the hooks read nothing else. On a re-run, start from the existing file instead. Change only the keys answered in this run, and add the keys that are new in the template with their defaults.
+Start from `${CLAUDE_PLUGIN_ROOT}/templates/config.yml`, keeping its comments, and fill in the answers. Lists stay inline, as `[a, b]`: the hooks read nothing else. On a re-run, start from the existing file instead. Change only the keys answered in this run, and add the keys that are new in the template with their defaults. Also on a re-run, when `architecture.golden_paths` is empty, write the template's default and its new comment: the key changed from a list of files to a folder.
 
 ### The AGENTS.md block
 
@@ -119,7 +128,7 @@ Copy `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md` and fill its two place
 | No <item> exists | `breakdown` |
 ```
 
-With `tracker: none`, delete the `{{state_table_first_row}}` line and the two rows that contain `{{tracker_item}}`. Delete the lines themselves, so no blank line is left inside the table: the table starts at the branch row.
+With `tracker: none`, delete the `{{state_table_first_row}}` line and the two rows that contain `{{tracker_item}}`. Delete the lines themselves, so no blank line is left inside the table: after the `init` row, the table goes on at the branch row.
 
 After filling, search the block for `{{`. When any placeholder remains, stop and report it with its line: the template has a placeholder this skill does not fill, and writing it would put a raw placeholder in `AGENTS.md`.
 
@@ -171,7 +180,7 @@ Show the diff of each file against the repository, with `git diff --no-index` fo
 
 When nothing differs, say that the installation is current and stop: there is nothing to approve.
 
-**Gate — setup of <project.name>: write these files?** Class: fork. State:
+**Gate — setup of <project.name>: write these files?** Class: fork. Mode: decision. State:
 
 | | |
 |---|---|
@@ -209,11 +218,14 @@ Then print the closing report:
 - When the CI file was written: the team fills in its toolchain step, the `toolchain:` comment in the file, before the first pipeline runs. When the job must be merged by hand: the job, ready to merge.
 - When the block is new: the team replaces the example rule in `## Non-negotiable rules` with its own rules, each by ID. Setup keeps that section on every re-run once it differs from the example.
 - For an agent other than Claude Code: export `RASTRO_ROOT` with the rastro installation directory on each machine that runs it.
+- When the stack detection names a stack profile, point to it in the closing report, by the path the detection gives; the profile is read where it is and never copied. The detection names it as `${CLAUDE_PLUGIN_ROOT}/profiles/stacks/<name>/`, or under `RASTRO_ROOT` for an agent other than Claude Code.
 - Every problem the doctor reported, with nothing added and nothing removed.
 
 ## Handoff
 
-Setup stops after the closing report. The state table in the new block says where work starts: an unshaped request goes to `design-doc`, a shaped one to `breakdown`.
+Run on its own, setup stops after the closing report. The state table in the new block says where work starts: an unshaped request goes to `design-doc`, a shaped one to `breakdown`.
+
+When `init` invoked this skill, return to `init` after the closing report: it writes the walking skeleton, the intent of the first item.
 
 ## What this skill does NOT do
 
@@ -225,3 +237,4 @@ Setup stops after the closing report. The state table in the new block says wher
 | Fix what the doctor reports | the human, then a re-run of setup |
 | Offer a key that turns off a gate, the reconciliation, the anchor or the human executor | nobody: doctrine is not configurable |
 | Start work on a request | `design-doc`, `breakdown`, `implement` |
+| Start a project in a directory with no source code | `init`, which calls this skill with its answers |

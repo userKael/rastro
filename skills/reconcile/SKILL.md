@@ -36,7 +36,7 @@ Doctrine is not overridable: not by a profile, not by AGENTS.md, not by any othe
 1. Never invent an intent section that does not exist. An absence is a finding under `Not sized`, never "not applicable".
 2. Never edit the intent file. It is a frozen copy with provenance. Every divergence goes to `reconciliation.md`.
 3. Every row of the first three tables carries a `file:line` anchor. A claim without evidence does not enter a table: it becomes a `D-n` question.
-4. Never skip the human gate. The reconciliation exists for the human to decide. Moving on without an explicit answer to each `D-n` invalidates everything after it.
+4. Never skip the human gate, except as the Step 5 rule below for a reconciliation with no open `D-n` says. The reconciliation exists for the human to decide. Moving on without an explicit answer to each `D-n` invalidates everything after it.
 5. Never execute a write against a database, a credential, a deployment or shared infrastructure. Draft it as a `D-n` with a human executor.
 6. Cite a rule by its ID, never by its position in the list.
 
@@ -48,7 +48,7 @@ When `.rastro/profiles/reconcile.md` exists, read its `## Additional checks` sec
 
 1. Run `${CLAUDE_PLUGIN_ROOT}/skills/domain-context/SKILL.md` whole, over the declared scope: the modules and the public APIs that cross them, the real schema, the domain docs, the most recent migrations of the tables in scope, and the constraints (nullability, uniqueness, indexes, enum values). Keep its `## Context` block.
 2. A claim that `domain-context` marked `NOT VERIFIED` stays marked in the file and goes to the gate. Never present it as confirmed.
-3. Read the architecture sources: the files in `architecture.golden_paths`, and the repository's architecture, pattern and decision docs. No config key names the ADRs: find them through `architecture.golden_paths` and the repository's docs.
+3. Read the architecture sources: the golden paths in the `architecture.golden_paths` folder, and the repository's architecture, pattern and decision docs. No config key names the ADRs: find them in the repository's docs.
 4. Read the rules that `architecture.rules` points to, and note their IDs. Step 2 cites them.
 5. Read the files in `architecture.contract_sources` that the scope touches: API specs, event schemas, any published contract.
 6. Work that needs a write becomes a `D-n` with a human executor (see `### Work the agent cannot run`). It never blocks the reconciliation.
@@ -79,9 +79,25 @@ Run the additional checks that name this step.
 The code-flow section of a design doc (`## Code flows` in `${CLAUDE_PLUGIN_ROOT}/templates/design-doc.md`) is the part of the intent closest to the code. Design docs write headings in `project.languages.human`, so find the section by its role: the section that lists components tagged `new`, `changes` and `exists`. Never look for the literal English heading. Contest the components against `<base_branch>@<sha7>`:
 
 - **`exists` and `changes`.** The component exists under that name, and its path points to one real file. When it does not exist, or the path matches more than one file, it is a divergence. Their paths go into the declared scope of the header.
-- **`new`.** Its type is a name from `architecture.layers`; any other type is a divergence. Its type and module respect the rules of `architecture.rules`. Check each rule by ID. A violation is a divergence that cites the rule ID and the `file:line` where the rule lives.
+- **`new`.** Its type is a name from `architecture.layers`; any other type is a divergence, unless a decided `DT-nn` adds the layer. Its type and module respect the rules of `architecture.rules`. Check each rule by ID. A violation is a divergence that cites the rule ID and the `file:line` where the rule lives.
+- **Golden paths.** Classify each `new` and `changes` component as the next subsection says.
 - **`rect` blocks.** The owner named in a transaction block can open one transaction that covers every write listed inside it. When the code has no mechanism for that, it goes to `Not sized`.
 - **Renaming a `new` component is not a divergence.** A change of type, module, module crossing, transaction owner or async boundary is.
+
+The walking skeleton intent that `init` writes, whose header says `origin: init`, lists its components under `## Components`, tagged as the next subsection says. Contest them the same way. Every component of the skeleton is `new`, so each type with no golden path gets its `no golden path` row, and the task of its first instance writes the golden path. The CI file of the skeleton is infrastructure: it has no layer type and no golden path, so it is neither a divergence nor classified.
+
+### Golden-path classification: every intent
+
+This subsection applies to every intent, whatever produced it: a design doc, the walking skeleton, an interview or a root cause. Classify each `new` and `changes` component against the golden path whose `type` is the component's type in the `architecture.golden_paths` folder, with one of four tags:
+
+- `follows`: the component fits the current golden path. No row.
+- `extends`: the component needs something the golden path neither covers nor forbids. A row in `Not sized`: the task of the component raises the golden path's minor version.
+- `contradicts`: the component breaks a decision or a checklist item of a `current` golden path. A row in `Divergences: intent vs code`, with the golden path's `file:line` as evidence, and a `D-n` with two options: the golden path evolves to a new major version, or the intent changes to follow it. Neither wins silently.
+- `no golden path`: no golden path has this type, and its evidence is the `architecture.golden_paths` folder, which has no golden path of that type. A row in `Not sized`: the task that delivers this first instance also writes the golden path, from `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md`.
+
+A golden path with status `retired` is not a contract: classify against its `superseded_by`.
+
+When the intent has no code-flow section and no `## Components` (an interview or a root-cause intent), there is no component list to read. Build one: list the components the change adds or changes, each with its type from `architecture.layers`, taken from the declared scope and from the evidence of Steps 2 and 3, and tag each one the same way.
 
 ### Bug mode
 
@@ -104,6 +120,8 @@ Walk the files of the declared scope, not the intent, and list with `file:line` 
 - **Unmentioned published rule:** what the public docs say today about the changed path (see `### Public docs` below).
 
 Zero findings in the weak direction is a suspicious result, not a good one. When the search finds nothing, write one line saying where you searched and why it came back empty.
+
+One exception: a repository with no source code at the stamp. When no path outside `.rastro/` that `git ls-tree -r --name-only <sha7>` lists matches `verify.source_globs`, there is no code behavior for the intent to ignore, and this direction is empty by construction. Write that one line, with the stamp, and leave the table empty. When `verify.source_globs` is empty, the exception does not apply: search as above.
 
 Run the additional checks that name this step.
 
@@ -154,18 +172,18 @@ When the whole item depends on human execution and no code is left, say so at th
 
 Stop. Do not slice, do not plan, do not write code.
 
-**Class: deliberation.** Each `D-n` needs its own answer, so the decision is a table, not a question widget. Print the gate in this shape, in `project.languages.human`:
+Each `D-n` needs its own answer, so the decision is a table, not a question widget. Print the title, then the tables, in `project.languages.human`:
+
+**Gate — reconciliation of <id>: do I close the decisions as recommended?** Class: deliberation. Mode: decision.
 
 ```markdown
-**Gate — reconciliation of <id>: do I close the decisions as recommended?**
-
 | | |
 |---|---|
 | File | `<directory>/reconciliation.md` |
 | Base | `<base_branch>@<sha7>` |
 | Divergences | <n> |
 | Already delivered | <n> of <n> slices, <n> left |
-| Not sized / code not mentioned | <n> / <n> |
+| Not sized / code not mentioned | <n> / <n, or empty by construction: no source code> |
 | Size signal | <fired, n rows / not fired> |
 
 | Decision | Recommendation | Executor |
@@ -175,11 +193,13 @@ Stop. Do not slice, do not plan, do not write code.
 | All | Approve as recommended: closes the agent decisions only | — |
 ```
 
-Below the tables, add one note per claim that is `NOT VERIFIED`, and one note when the item is only human execution. Prefix a note with `⚠` only when it blocks the merge.
+Below the tables, add one note per claim that is `NOT VERIFIED`, and one note when the item is only human execution. Prefix a note with `⚠` only when it blocks the merge. With no source code at the stamp, no note calls the empty direction suspect.
 
 "Approve as recommended" closes the technical recommendations only. It authorizes nobody to run anything. For each `D-n` with a human executor, the human says whether they will run it, when, and in which environment. Until they say so, the state is pending, and it stays pending in the plan and in the PR description.
 
 Proceed only on an explicit answer. Record it in the file under each `D-n`, as `Decided (<YYYY-MM-DD>): <answer, and who decided>`.
+
+Called by `breakdown` or `implement`, this skill follows the execution mode of their run, as `## Execution mode` in the AGENTS.md block says (template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`). In a continuous run, a reconciliation with no `D-n` counts as a confirmation, and its line goes to `<directory>/rulings.md`. This holds for a project whose AGENTS.md block predates the section too. Called on its own, it asks no mode, and both of its gates stop.
 
 A subagent never asks the human. When this skill runs inside a subagent, it writes the file, returns the gate text and the file path as its result, and ends. The session that dispatched it raises the gate, and records each answer in the file as `Decided (<YYYY-MM-DD>): <answer, and who decided>`.
 
@@ -202,11 +222,11 @@ The range ends at the base branch, never at `HEAD`. Run from a feature branch, `
 
 When the log is not empty, append the revalidation block of `${CLAUDE_PLUGIN_ROOT}/templates/reconciliation.md` below the five sections. Never rewrite the five sections.
 
-Closed decisions do not reopen unless the delta contradicts them. When a commit contradicts a closed `D-n`, stop and raise a deliberation gate again. **Class: deliberation.** Print it in this shape, in `project.languages.human`:
+Closed decisions do not reopen unless the delta contradicts them. When a commit contradicts a closed `D-n`, stop and raise a deliberation gate again. Print the title, then the tables, in `project.languages.human`:
+
+**Gate — revalidation of <id>: do the contradicted decisions still hold after <sha7>?** Class: deliberation. Mode: decision.
 
 ```markdown
-**Gate — revalidation of <id>: do the contradicted decisions still hold after <sha7>?**
-
 | | |
 |---|---|
 | Source | <`<directory>/reconciliation.md` / `## Reconciliation` of <id>> |

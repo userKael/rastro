@@ -14,7 +14,7 @@ project:
     human:
 
 tracker:
-  # Where work items live: local, none, jira, github, or the name of your own adapter. (required)
+  # Where work items live: local, none, jira, github, github-projects, or the name of your own adapter. (required)
   kind:
   # Item id prefix, as in KEY-123; required unless kind is none. The setup skill proposes W for local.
   key:
@@ -22,11 +22,15 @@ tracker:
   hierarchy: [story, subtask]
   # Folder holding item files when kind is local.
   local_dir: work/
+  # GitHub Projects: the number of the Project that mirrors item status (kind github-projects).
+  project:
+  # GitHub Projects: login that owns the Project; empty means the owner of the repository.
+  project_owner:
 
 docs:
-  # Where design docs are published: repo, notion, or the name of your own adapter.
+  # Where design docs are published: repo, notion, claude-docs, or the name of your own adapter.
   kind: repo
-  # Folder ending in a slash when kind is repo; the parent database or page when kind is notion.
+  # Folder ending in a slash when kind is repo; the parent database or page when kind is notion; for claude-docs, read adapters/docs/claude-docs.md for the container the adapter uses.
   location: docs/design/
   # Location of the public documentation portal; when set, breakdown adds a doc subtask.
   public_portal:
@@ -70,8 +74,10 @@ architecture:
   layers:
   # Where the non-negotiable rules live; deliver generates its self-check from them.
   rules: "AGENTS.md#non-negotiable-rules"
-  # Files showing how to build each kind of component; implement reads the ones it uses.
-  golden_paths:
+  # Folder of golden paths, one file per component type, in the format of templates/golden-path.md. Versioned; setup does not create it.
+  golden_paths: docs/golden-paths/
+  # Component types, from architecture.layers, that cross a trust boundary: an exposed service, an external client, an integration, a queue consumer. Their golden paths must list threats and controls and check against the real system. Empty: no type is a boundary type.
+  boundary_types: []
   # Files that publish contracts (API specs, event schemas); one design doc per contract boundary.
   contract_sources: []
   # Classes of data that rules and deliver treat as sensitive.
@@ -102,3 +108,7 @@ review:
   kind: none
   # Markdown file holding the review rules, in the same rule format as architecture.rules.
   rules: .review-rules.md
+
+audit:
+  # Days a golden path may stay under-review before the audit reports it as drift. Empty: the audit lists the age and sets no limit; rastro ships no number.
+  under_review_days:

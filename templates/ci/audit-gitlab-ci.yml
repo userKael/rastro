@@ -1,0 +1,15 @@
+# Merge this job into .gitlab-ci.yml, or include this file from it. Create a pipeline schedule in the project settings to run it.
+rastro-audit:
+  stage: test
+  variables:
+    # audit-drift reads the git history; a shallow clone hides it.
+    GIT_DEPTH: "0"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+  script:
+    # toolchain: install bash and git. The audit runs no golden path check, so nothing else is usually needed.
+    - bash -c 'set -o pipefail; bash .rastro/git-hooks/audit-drift --fail-on-drift | tee audit-report.md'
+  artifacts:
+    when: always
+    paths:
+      - audit-report.md

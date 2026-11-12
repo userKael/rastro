@@ -15,7 +15,7 @@ This skill carries the team's agreement, not the craft of writing design docs. W
 
 ## Requirements
 
-- `.rastro/config.yml`. Keys read: `docs.kind`, `docs.location`, `code_host.kind`, `project.languages.human`, `architecture.modules`, `architecture.layers`, `architecture.rules`, `architecture.golden_paths`, `architecture.contract_sources`, `domain.stateful_entities`, `review.rules`, `workspace`.
+- `.rastro/config.yml`. Keys read: `docs.kind`, `docs.location`, `code_host.kind`, `project.languages.human`, `architecture.modules`, `architecture.layers`, `architecture.rules`, `architecture.golden_paths`, `architecture.boundary_types`, `architecture.contract_sources`, `domain.stateful_entities`, `review.rules`, `workspace`.
 - The docs adapter, chosen by `docs.kind`. Read `.rastro/adapters/docs/<kind>.md` when it exists, otherwise `${CLAUDE_PLUGIN_ROOT}/adapters/docs/<kind>.md`, before `collapse`, `publish` and `update`. If the adapter file does not exist, stop and report.
 - With `docs: repo`, the code-host adapter, chosen by `code_host.kind`, because publishing opens a change request through the code-host port. Read `.rastro/adapters/code-host/<kind>.md` when it exists, otherwise `${CLAUDE_PLUGIN_ROOT}/adapters/code-host/<kind>.md`, before `open_change_request`. If the adapter file does not exist, stop and report.
 - The `domain-context` skill, `${CLAUDE_PLUGIN_ROOT}/skills/domain-context/SKILL.md`, for grounding. It reaches the `domain_state` port. This skill never reads the database itself. `domain-context` stops on a missing domain-state adapter, and this skill stops with it.
@@ -52,7 +52,7 @@ Run the protocol of `${CLAUDE_PLUGIN_ROOT}/skills/domain-context/SKILL.md` in fu
 |---|---|
 | The modules touched, from `architecture.modules`, and the public API crossing between them | to name things right |
 | The real schema, through `domain-context` | tables, columns, enums, nullability and uniqueness, never the ORM entity |
-| The files in `architecture.golden_paths`: golden paths, patterns and ADRs | to avoid proposing against a decision already taken |
+| The golden paths in the `architecture.golden_paths` folder, and the repository's patterns and ADRs | to avoid proposing against a decision already taken |
 | The current state machines of the entities in `domain.stateful_entities` | base of the state diagram |
 | The contracts on the touched path, from `architecture.contract_sources`: events, routes other repositories call, the error map when one is listed | the contracts other teams consume |
 
@@ -186,6 +186,10 @@ Ground, do not derive. The code says what exists, and reuse is vocabulary. Choos
 | 4 | Every transaction boundary of the invariants becomes a `rect` with a named owner; a transaction that crosses modules cites its mechanism | a cross-module transaction with no mechanism |
 | 5 | A lane is a listed component or an external actor; a pure domain service and a module's own repository become a `Note`; one `box` per module | a diagram too wide to read |
 
+A `new` component whose type has no golden path in the `architecture.golden_paths` folder is the first instance of that type. Record it as a `DT-nn`: the type, and the decisions this first instance fixes for every later one. The golden path itself is written with the code, by `implement`. A type outside `architecture.layers` is a `DT-nn` too: it adds the layer, and its first instance defines the golden path.
+
+When that type is in `architecture.boundary_types`, or the `DT-nn` that adds its layer says it crosses a trust boundary, it is a boundary type: its `DT-nn` also lists the threats considered, drawn from the public reference that `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md` names, the control for each and how each control is verified. "None identified" does not serve a boundary type. A `DT-nn` that adds a layer also says whether the new type crosses a trust boundary; when it does, the type joins `architecture.boundary_types`.
+
 One `###` per entry point: a request, a job, a webhook. A sad path goes in an `alt` block or in its own `###`.
 
 ## Step 3 — Validation
@@ -200,6 +204,7 @@ Before the gate, check every item:
 - [ ] Candidate slicing carries the draft notice.
 - [ ] No estimate in days, points or phases with an owner.
 - [ ] No proposal contradicts an ADR or a golden path without saying so.
+- [ ] Every `DT-nn` of a first instance whose type is in `architecture.boundary_types`, or whose `DT-nn` says it crosses a trust boundary, lists its threats, the control for each and how each is verified.
 - [ ] Every `DT-nn` opens with its record and collapses its deliberation.
 - [ ] Every `DT-nn` has `Why (b) lost` filled with the argument, never a pointer.
 - [ ] Every section passed the question "If this is wrong, what changes?" and sits on the right side.
@@ -213,11 +218,11 @@ An item that fails and cannot be resolved becomes a line in Open questions. It i
 
 ## Step 4 — Gate and publication
 
-Stop before publishing. The gate follows `## Gate anatomy` in the rastro block of `AGENTS.md` (template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`). **Class: fork.** Print the state only:
+Stop before publishing. The gate follows `## Gate anatomy` in the rastro block of `AGENTS.md` (template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`). Print the title, then the state only:
+
+**Gate — design doc of <slug> ready: publish it?** Class: fork. Mode: team.
 
 ```markdown
-**Gate — design doc of <slug> ready: publish it?**
-
 | | |
 |---|---|
 | Profile applied | <full / core>, <one document / plus sibling <slug>> |

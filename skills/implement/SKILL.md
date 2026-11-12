@@ -7,7 +7,7 @@ description: Implements one work item end to end, from its id. It reads the item
 
 **Input:** the id of the item to implement: a subtask, or a task or bug that has no subtasks. Never an item that has subtasks. With `tracker: none`, the input is the item file in the workspace, `<workspace>/<slug>/item.md`.
 
-**Output:** a branch with verified commits, plus the workspace `<workspace>/<id>/`: the frozen copy of the design doc, `reconciliation.md`, `plan.md` and, after subagent execution, `rulings.md`. The workspace is gitignored. `deliver` transposes it into the PR description.
+**Output:** a branch with verified commits, plus the workspace `<workspace>/<id>/`: the frozen copy of the design doc, `reconciliation.md`, `plan.md` and `rulings.md`, after subagent execution or a continuous run. The workspace is gitignored. `deliver` transposes it into the PR description.
 
 Four stages, in order, never skipped: INTAKE → RECONCILIATION → PLAN → EXECUTION.
 
@@ -22,7 +22,8 @@ Four stages, in order, never skipped: INTAKE → RECONCILIATION → PLAN → EXE
 - The `reconcile` skill, at `${CLAUDE_PLUGIN_ROOT}/skills/reconcile/SKILL.md`, which owns the reconciliation protocol and its gate.
 - The `deliver` skill, at `${CLAUDE_PLUGIN_ROOT}/skills/deliver/SKILL.md`, which receives the handoff.
 - Plan template: `${CLAUDE_PLUGIN_ROOT}/templates/plan.md`.
-- Team profile, optional: `.rastro/profiles/implement.md`. Its `## Additional checks` section lists extra checks, each with the stage where it runs and whether it is a gate or an observation. Run each one at its stage. Environment preparation before integration tests, and title aliases of the team's older design docs, belong there.
+- The template `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md`, when the item creates a golden path.
+- Team profile, optional: `.rastro/profiles/implement.md`. Its `## Additional checks` section lists extra checks, each with the stage where it runs and whether it is a gate or an observation. Run each one at its stage. A check marked as a gate that fails makes the recommended option of its gate "adjust", so that gate stops even in a continuous run. Environment preparation before integration tests, and title aliases of the team's older design docs, belong there.
 - Writing rules, optional: when `.rastro/profiles/writing.md` exists, apply it to every text a person reads: reports, gates, the plan.
 - Optional skills, each with a built-in fallback:
   - `superpowers:writing-plans` writes the plan. Without it, fill `${CLAUDE_PLUGIN_ROOT}/templates/plan.md`.
@@ -63,10 +64,11 @@ The direction matters. Tracing from a design doc to its item is weak: a design d
 
 ### Steps
 
-1. Read the item with `read_item`: title, description, children, and the real parent. Read the parent with `read_item` too.
+1. Read the item with `read_item`: title, description, children, and the real parent. Read the parent with `read_item` too. Then read the execution mode, as `## Execution mode` in the AGENTS.md block says (template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`). For a project whose AGENTS.md block predates the section, the top item is the parent, or the item itself when it has no parent.
 2. Extract the acceptance criteria from the item. An item without them yields the first finding of the reconciliation.
 3. Find the design doc in `## Sources` of the parent when the item has one, otherwise of the item itself: the item that holds, or will hold, `## Reconciliation`. When the parent has no `## Sources`, fall back to the item's own. With `tracker: local`, the sources may sit in the `sources:` frontmatter field instead of a section. Otherwise look for a design doc link in the description. Otherwise stop and ask the human which design doc applies. When the human says there is none, the item description is the intent: materialize it in place of the design doc, at the same path and with the same header.
    - A bug with no design doc: its root cause is the intent. Skip the role mapping: `reconcile` runs in root-cause mode.
+   - The walking-skeleton item, whose `## Sources` lists ADRs and marks none as the source of truth, is an item with no design doc. Do not stop to ask for one: the ADRs are its sources, and its description is the intent.
    - Any other item with no design doc: map the roles against the description, and record every absent role together as one `Not sized` finding.
 4. Materialize the design doc with `fetch` into `<workspace>/<id>/design-doc.md`, keeping mermaid blocks. The workspace is gitignored: commit nothing from it.
 5. Expand everything that was collapsed. Collapsing tells a person what to read first, never what the agent may skip. Check that the copy has one deliberation per `DT-nn` and that no section arrived with only its title. An empty section is a capture failure. A capture gap becomes a false `Not sized` finding, which is a whole PR of invented work.
@@ -161,7 +163,7 @@ After the gate, write `## Reconciliation` where this stage looked for it, on the
 
 ## Stage 3 — PLAN
 
-With `superpowers:writing-plans`, follow that skill. Without it, fill `${CLAUDE_PLUGIN_ROOT}/templates/plan.md`. Either way, five bindings apply.
+With `superpowers:writing-plans`, follow that skill, except its execution handoff: this skill's plan gate replaces it. Without it, fill `${CLAUDE_PLUGIN_ROOT}/templates/plan.md`. Either way, five bindings apply.
 
 ### The Spec field
 
@@ -179,7 +181,8 @@ The `## Global Constraints` block reaches the reviewer of each task verbatim. Wh
 
 - **Rules by ID.** Each rule ID from `architecture.rules` that this plan touches, with why. One line gives the resolved location of `architecture.rules`, such as `AGENTS.md#non-negotiable-rules`, so the reviewer can open the text there. The rule text is never copied.
 - **Delivery conventions.** The branch format and the commit format, repeated here for the reviewer.
-- **Applicable golden paths.** Only the files of `architecture.golden_paths` this plan uses, each with why.
+- **Applicable golden paths.** Only the golden paths of the `architecture.golden_paths` folder this plan uses, each with why.
+- **Golden paths this item creates or evolves.** Each `no golden path`, `extends` and decided `contradicts` row of the reconciliation: the golden path, the change (created, extended or changed), the task that writes it, and how it is verified, `review` or the command. That task is the task of the instance, never a task of its own. For a type in `architecture.boundary_types`, the line adds that the task writes `## Security` from the reference the template names and a real-system scenario in `## Verification`.
 - **Relevant state machines.** Each entity of `domain.stateful_entities` the plan touches: states, allowed transitions, and the `file:line` that defines them.
 - **Code-flow boundaries.** Only the `new` and `changes` items of the code flow that survived the reconciliation.
 - **Decisions of this item.** Each `D-n` and each `DT-nn` that still binds the plan.
@@ -188,9 +191,13 @@ An inflated block dilutes the reviewer's attention. Leave out what this plan doe
 
 ### Test scenarios in each task
 
-Every task carries `### Expected test scenarios` before its steps, as Given/When/Then. The human writes them, or this stage writes them under human review. The agent derives the tests from the scenarios, and only then implements. A task without scenarios cannot execute and goes back to the plan gate.
+Every task carries `### Expected test scenarios` before its steps, as Given/When/Then. The human writes them, or this stage writes them, reviewed at the plan gate by the person or, in a continuous run, by the choice made at the start. The agent derives the tests from the scenarios, and only then implements. A task without scenarios cannot execute and goes back to the plan gate.
 
 The invariants role feeds the scenarios. Each task also keeps its **Files** block (paths with lines, and the test file), its **Interfaces** block (what it consumes and produces), and steps of 2 to 5 minutes in the cycle: write the test, see it fail, implement, see it pass, commit.
+
+### Footprint and tier of each task
+
+Each task carries a footprint and a tier under its title, in the shape of the plan template: `Footprint: diff <small | medium | large>, read <small | medium | large>` and `Tier: <light | standard | deep>`. The diff bucket is how much the task changes; the read bucket is how much of the codebase the agent has to read to change it safely. The tier comes from the table in `.rastro/CALIBRATION.md`, where the project records what each bucket means in lines and files, and which model runs each tier. When `.rastro/CALIBRATION.md` is absent or its tier table is unfilled, every task is `standard`. When that table says "not measured", every task is `standard` and the plan says the tiers are not calibrated. The footprint is a planning aid inside `plan.md`: never write it to a tracker item, because items carry no estimate. After a task is committed, record its real size next to the prediction, `Actual: <n> lines in <k> files`, from the diff of its commit. The read scope has no recorded actual; the person compares it.
 
 ### Where the plan lives
 
@@ -206,13 +213,14 @@ Read the six fields from the human-execution block of that `D-n` in the holder's
 
 - Never tick a box by inference. Only the human's explicit confirmation closes it.
 - Never start a blocked task while its boxes are open. When the human orders to go on anyway, record that order in the plan; `deliver` carries it to the PR.
+- In a continuous run, a `[HUMAN]` task that blocks no remaining task stays open, and execution goes on; `deliver` reports it under `Pending human execution`. A `[HUMAN]` task that blocks a remaining task stops execution there, as in a run that stops at every gate.
 - Never rewrite the artifact. It was reviewed at the reconciliation gate, and a rewritten artifact is one nobody reviewed.
 
 ## Stage 4 — EXECUTION
 
-Execution starts only after the human approved the plan at the gate below.
+Execution starts only after the plan is approved at the gate below, by the person or, in a continuous run, by the choice made at the start.
 
-### Execution mode
+### Inline or subagents
 
 Use `superpowers:subagent-driven-development` when any of these holds:
 
@@ -221,11 +229,15 @@ Use `superpowers:subagent-driven-development` when any of these holds:
 - the plan touches 2 or more modules of `architecture.modules`;
 - the plan includes a migration.
 
-Otherwise, inline execution. Without superpowers, inline execution is the only mode, whatever the criterion says.
+Otherwise, inline execution. Without superpowers, inline execution is the only option, whatever the criterion says.
 
-Announce the mode and the criterion that set it. The human may override it at the gate.
+Announce inline or subagent execution and the criterion that set it. The human may override it at the gate.
 
-**Gate — plan for <id>: execute it as announced?** Class: fork. State:
+When subagents run, each task's implementer and reviewer use the model its tier maps to in `.rastro/CALIBRATION.md`. A task with no mapping uses the session's own model.
+
+The handoff of this skill replaces the branch-finishing step of `superpowers:subagent-driven-development` and `superpowers:executing-plans`. In a continuous run, never enter `superpowers:finishing-a-development-branch`: invoke `deliver`.
+
+**Gate — plan for <id>: execute it as announced?** Class: fork. Mode: confirmation. State:
 
 | | |
 |---|---|
@@ -233,9 +245,9 @@ Announce the mode and the criterion that set it. The human may override it at th
 | PRs in the parent's stack | <n> |
 | Modules touched | <names> |
 | Migration | <yes or no> |
-| Mode | <subagents or inline>, because <criterion> |
+| Execution | <subagents or inline>, because <criterion> |
 
-Ask with the structured question tool, recommended option first: execute as announced, switch the mode, or adjust the plan. Without that tool, end the turn with the question.
+Ask with the structured question tool, recommended option first: execute as announced, switch between inline and subagents, or adjust the plan. Without that tool, end the turn with the question.
 
 ### Inline execution
 
@@ -245,9 +257,10 @@ Run the tasks one at a time, in plan order:
 2. Write the failing test for one scenario, run it, and see it fail for the expected reason.
 3. Implement the smallest change that makes it pass, and run it again.
 4. Repeat for each scenario of the task.
-5. Commit with explicit paths, following the convention.
-6. Tick the task in `plan.md`.
-7. At a `[HUMAN]` task, stop and ask the human. Never start a task it blocks.
+5. For a task that wrote or extended a golden path, raise the golden-path review gate of `### Writing a golden path` before the commit.
+6. Commit with explicit paths, following the convention.
+7. Tick the task in `plan.md`.
+8. At a `[HUMAN]` task, stop and ask the human, unless `### Human execution steps` lets a continuous run go on. Never start a task it blocks.
 
 ### Branch and commits
 
@@ -265,6 +278,49 @@ The commit convention lives in the AGENTS.md block, which reaches every subagent
 
 A red test is a diagnosis before it is a fix. Before editing any file, write the `VERDICT` block of `## Failing tests` in the AGENTS.md block. When the wrong artifact is the design doc, stop and bring it to the human: a design doc is not fixed during execution.
 
+### Writing a golden path
+
+The task that delivers the first instance of a type writes its golden path. The golden path lands in the same task as its instance:
+
+- Copy `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md` to a file named `<type>.md` in the `architecture.golden_paths` folder, `docs/golden-paths/` when the key is absent or empty. Create the folder when it is absent.
+- When the design doc recorded a `DT-nn` for this first instance, the draft starts from that `DT-nn`'s decisions and `## Security` from its threats. Fill the rest from the code just written. `instances` holds the `file:line` of the instance and never a copy of its code. Every decision carries its `Why:` and its `Revisit if:`. A decision with no reason is a circumstance of the first instance, not a decision: leave it out.
+- Set `status: current`, `version: 1.0.0` and `verified_by: review`. An automated check written against one instance freezes its accidents. It comes when a later instance confirms the golden path.
+- Fill `## Security` for every type: the threats considered, the control for each and how it is verified, or "none identified" with the reason. A type in `architecture.boundary_types`, or one that its `DT-nn` says crosses a trust boundary (the same `DT-nn` that adds the layer), is a boundary type, and "none identified" does not serve it: draw its threats from the public reference that `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md` names, one line per threat with its control and how the control is verified, and give `## Verification` at least one scenario against the real system, without mocks, in the shape the template gives.
+- When the type is not yet in `architecture.layers`, the same commit adds it to `.rastro/config.yml`, as the decided `DT-nn` says, and to `architecture.boundary_types` when that `DT-nn` says the type crosses a trust boundary.
+
+An `extends` raises the minor version, adds the instance to `instances` and a row to `## History`. A `contradicts` decided for the golden path raises the major version, moves every instance that no longer follows it to `## Known debt`, and adds a row to `## History`. A `follows` adds the instance to `instances` when it is absent, in the same commit as the instance, with no version change and no review gate.
+
+A golden path moves from `verified_by: review` to `"automated: <command>"` (quoted, because the unquoted form is not valid YAML) only in a task that writes the check, never in the task of its first instance. Before the change, run the command twice and paste both outputs in the task report: on the branch, where it exits 0, and with one instance edited to break one decision, where it exits non-zero and prints what the template's `## Verification` asks. Undo that edit. The same commit raises the minor version, adds a row to `## History`, rewrites `## Verification` to name the command, and makes `verify.lint` run the command, directly or through a script, so CI runs it too. This change adds no decision, so it raises no review gate.
+
+The person implementing the task defines the golden path with the agent, at the golden-path review gate:
+
+**Gate — golden path `<id>` <version> drafted: do these decisions hold?** Class: deliberation. Mode: decision. State, a two-column table:
+
+| | |
+|---|---|
+| Golden path | `<id>` <version>, new or extended |
+| Instance | `<file:line>` |
+| Boundary type | <no, or yes: <n> threats, <n> real-system scenarios> |
+
+Then the deliberation table, one row per decision the draft adds or changes, plus the quick-exit row:
+
+| Decision | Why | Revisit if | Instance |
+|---|---|---|---|
+| <decision> | <the reason> | <the condition> | `<file:line>` |
+| all hold as drafted | | | |
+
+For a type in `architecture.boundary_types`, or one that its `DT-nn` says crosses a trust boundary, a second deliberation table follows, one row per threat the draft adds or changes in `## Security`, plus its own quick-exit row:
+
+| Threat | Control | Verified by |
+|---|---|---|
+| <threat, with its item in the reference> | <the control> | <the check, the test or the real-system scenario> |
+| all hold as drafted | | |
+
+The person confirms, rewrites or drops each decision and each threat, and may add a threat the draft missed. The file keeps only what the person confirmed, rewrote or added. A boundary type keeps at least one threat. The sequence depends on inline or subagent execution:
+
+- Inline: draft the golden path, raise the review gate, then commit the instance and the confirmed golden path together.
+- With subagents: the subagent commits the instance with the drafted golden path and returns the review-gate rows as text, and never raises the gate, so the main session raises the review gate before it dispatches the next task. The person's answers land in one more commit of the same task that touches only the golden path.
+
 ### Discovered-constraint gate
 
 Execution finds what the plan did not know: a constraint of a tool, a framework or a database that breaks a premise. That is a gate, not a footnote, because the path chosen changes what enters the PR.
@@ -275,7 +331,7 @@ Raise it when any of these holds:
 - the workaround changes global configuration, rollback semantics or migration order;
 - the alternatives have different operational consequences for whoever runs production.
 
-**Gate — <the constraint in one line>: which path do I take?** Class: fork. State:
+**Gate — <the constraint in one line>: which path do I take?** Class: fork. Mode: decision. State:
 
 | | |
 |---|---|
@@ -290,27 +346,42 @@ Never turn this gate into a paragraph. Constraint, alternatives, consequences an
 
 A subagent never raises this gate. The subagent that meets the constraint fills the table as text, ends its task without working around the constraint, and the main session raises the gate. A workaround chosen inside a subagent is a production decision taken without the operating context.
 
+### Golden-path gate
+
+Execution can find what the reconciliation did not: the code this task needs breaks a decision or a checklist item of a `current` golden path. That is a gate, never a silent choice: otherwise the code that lands first becomes the precedent by default.
+
+**Gate — <component> contradicts golden path `<id>`: which one changes?** Class: fork. Mode: decision. State:
+
+| | |
+|---|---|
+| Golden path | `<id>` <version>, the decision or item at `<file:line>` |
+| What the code needs | <the behavior, with the `file:line` that requires it> |
+| Instances that follow it | <count>, the first at `<file:line>` |
+| Already ruled out | <what was tried, and why it does not serve> |
+
+Ask with the structured question tool: change the code to follow the golden path, or evolve the golden path to a new major version, as `### Writing a golden path` says. Without that tool, end the turn with the question. A subagent never raises this gate: it fills the table as text and ends its task.
+
 ### Verification before any claim of done
 
 Run the configured commands and paste their output literally: `verify.lint`, `verify.typecheck`, `verify.unit`. Run `verify.integration` when the change touches a path that matches `verify.integration_when`, typically repositories, migrations and transaction boundaries. A key left empty is reported as not configured, never as passed.
 
 The coverage figure comes from the output of `verify.unit` when it prints one. Every number that reaches the PR description, a review note or a commit is the same number, taken on the same revision. A number copied from an earlier run drifts between those three places.
 
-Coverage is not evidence of behavior. A mock that returns a complete fixture hides code that wipes a field. A guard written on the wrong field passes a full suite. When the change touches an integration with an external system, say in the report that a manual test is missing and what it must exercise.
+Coverage is not evidence of behavior. A mock that returns a complete fixture hides code that wipes a field. A guard written on the wrong field passes a full suite. When the change touches an integration with an external system, say in the report that a manual test is missing and what it must exercise. When the type of a component has a golden path with real-system scenarios, the report lists them as the manual test to run.
 
 ### Preserve the rulings
 
 Preserve rulings before deleting the workspace. Subagent execution keeps a workspace with a ledger of the controller's judgment calls: parked findings, rulings, deferred minors. Before deleting that workspace:
 
-1. Extract every ledger line that carries `Ruling:`, `parked` or `minor (deferred)` into `<workspace>/<id>/rulings.md`.
-2. Edit the file into readable prose: one line per item, with `file:line` when there is one.
+1. Append every ledger line that carries `Ruling:`, `parked` or `minor (deferred)` to `<workspace>/<id>/rulings.md`. Never overwrite the file: a continuous run may already have written its confirmations there.
+2. Edit the lines you appended into readable prose: one line per item, with `file:line` when there is one. Leave each `- Continuous run,` line as it is: `deliver` reads it by that prefix.
 3. Only then delete the subagent workspace.
 
 Do not commit `rulings.md`. It becomes the agent rulings and recorded debt sections of the PR description. Deleted before that, a conscious decision looks to the reviewer like an oversight.
 
 ## Handoff
 
-When every task is done and verification is green, print this block, then stop:
+When every task is done and verification is green, print this block:
 
 ```
 READY FOR deliver — <id>
@@ -322,7 +393,7 @@ Workspace <workspace>/<id>/, gitignored, for deliver to transpose:
 - design-doc.md: frozen copy, version <v>, <date>; only the link goes to the PR
 - reconciliation.md: divergences and decided D-n, for the PR sections
 - plan.md: the executed plan, for the collapsed block
-- rulings.md: agent rulings, for their section; absent without subagents
+- rulings.md: agent rulings and continuous-run confirmations, for their section; absent without either
 
 Verification, on this revision:
 - lint: <output>   type check: <output>
@@ -334,7 +405,7 @@ Decisions to cite: <D-1, DT-03, ...>
 Risks to record: <...>
 ```
 
-The next stage is `deliver`, at `${CLAUDE_PLUGIN_ROOT}/skills/deliver/SKILL.md`. It runs when the human asks for it: this skill does not move on by itself.
+The next stage is `deliver`, at `${CLAUDE_PLUGIN_ROOT}/skills/deliver/SKILL.md`. In a run that stops at every gate, it runs when the human asks for it: this skill does not move on by itself. In a continuous run, invoke it with the id.
 
 ## What this skill does NOT do
 

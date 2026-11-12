@@ -58,12 +58,478 @@ fake_framework() {
   printf '%s\n' "$root"
 }
 
+put_gp() {
+  mkdir -p "$1/docs/golden-paths" "$1/src/workers"
+  cp "$FIXTURE_ROOT/golden-paths/processor.md" "$1/docs/golden-paths/processor.md"
+  printf 'x\n' >"$1/src/workers/send-receipt.processor.ts"
+}
+gp_config() {
+  printf '\narchitecture:\n  %s\n' "$2" >>"$1/.rastro/config.yml"
+}
+gp_sed() {
+  local file="$1/docs/golden-paths/processor.md"
+  sed "$2" "$file" >"$file.new" && mv "$file.new" "$file"
+}
+GP_FILE=docs/golden-paths/processor.md
+
+test_doctor_golden_paths_absent_is_silent() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  run_doctor "$repo"
+  assert_closing 0 "gp absent"
+  assert_not_contains "$OUT" "golden path" "gp absent: silent"
+}
+test_doctor_golden_path_ok() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  run_doctor "$repo"
+  assert_closing 0 "gp ok"
+}
+test_doctor_golden_path_missing_key() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" '/^verified_by:/d'
+  run_doctor "$repo"
+  assert_contains "$OUT" "- PROBLEM: golden path $GP_FILE: missing verified_by" "gp missing key"
+  assert_closing 1 "gp missing key"
+}
+test_doctor_golden_path_bad_status() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's/^status: .*/status: draft/'
+  run_doctor "$repo"
+  assert_contains "$OUT" "golden path $GP_FILE: status draft is not current, under-review or retired" "gp bad status"
+}
+test_doctor_golden_path_retired_needs_successor() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's/^status: .*/status: retired/'
+  run_doctor "$repo"
+  assert_contains "$OUT" "retired without superseded_by" "gp retired"
+}
+test_doctor_golden_path_id_mismatch() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's/^id: .*/id: worker/'
+  run_doctor "$repo"
+  assert_contains "$OUT" "id worker does not match the file name" "gp id mismatch"
+}
+test_doctor_golden_path_verified_by() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's/^verified_by: .*/verified_by: lint/'
+  run_doctor "$repo"
+  assert_contains "$OUT" "verified_by is neither review nor automated: <command>" "gp verified_by lint"
+  gp_sed "$repo" 's/^verified_by: .*/verified_by: automated: bash scripts\/arch.sh/'
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "verified_by is neither" "gp verified_by automated"
+  assert_closing 0 "gp verified_by automated"
+}
+test_doctor_golden_path_missing_instance() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  rm "$repo/src/workers/send-receipt.processor.ts"
+  run_doctor "$repo"
+  assert_contains "$OUT" "instance src/workers/send-receipt.processor.ts does not exist" "gp missing instance"
+}
+test_doctor_golden_path_instance_with_spaces() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  put "$repo" "src/my dir/a.ts" x
+  gp_sed "$repo" 's|^instances: .*|instances: ["src/my dir/a.ts:4"]|'
+  run_doctor "$repo"
+  assert_closing 0 "gp spaces"
+}
+test_doctor_golden_path_type_not_a_layer() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "layers: [handler, service]"
+  run_doctor "$repo"
+  assert_contains "$OUT" "type processor is not in architecture.layers" "gp layer"
+}
+test_doctor_golden_path_current_without_instance() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's/^instances: .*/instances: []/'
+  run_doctor "$repo"
+  assert_contains "$OUT" "current with no instance" "gp no instance"
+}
+test_doctor_golden_paths_folder_without_slash() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "golden_paths: docs/golden-paths"
+  gp_sed "$repo" 's/^status: .*/status: draft/'
+  run_doctor "$repo"
+  assert_contains "$OUT" "status draft" "gp no slash"
+}
+test_doctor_golden_paths_skip_readme() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  put "$repo" docs/golden-paths/README.md "# Golden paths"
+  run_doctor "$repo"
+  assert_closing 0 "gp readme"
+}
+test_doctor_golden_paths_list_form() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  gp_config "$repo" "golden_paths: [a.md, b.md]"
+  run_doctor "$repo"
+  assert_eq 1 "$(count_lines_containing "$OUT" "golden_paths")" "gp list form: one line"
+  assert_closing 1 "gp list form"
+  assert_contains "$OUT" "it now names one folder" "gp list form"
+}
+test_doctor_golden_path_crlf() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's/$/\r/'
+  run_doctor "$repo"
+  assert_closing 0 "gp crlf"
+}
+
+test_doctor_golden_path_without_frontmatter() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put "$repo" docs/golden-paths/processor.md "# Golden path: processor"
+  run_doctor "$repo"
+  assert_status 0 "gp no frontmatter: status"
+  assert_contains "$OUT" "- PROBLEM: golden path $GP_FILE: no frontmatter" "gp no frontmatter"
+  assert_eq 1 "$(count_lines_containing "$OUT" "golden path")" "gp no frontmatter: one line"
+}
+test_doctor_golden_path_instances_not_a_list() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's|^instances: .*|instances: a.ts|'
+  run_doctor "$repo"
+  assert_contains "$OUT" "- PROBLEM: golden path $GP_FILE: instances is not an inline list" "gp instances not a list"
+}
+test_doctor_golden_path_lib_missing_never_blocks() {
+  local repo lib
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  lib="$RASTRO_TEST_TMP/lib-no-frontmatter"
+  mkdir -p "$lib"
+  cp "$RASTRO_TESTS_DIR/../hooks/lib/"*.sh "$lib/"
+  rm -f "$lib/frontmatter.sh"
+  run_cmd env CLAUDE_PROJECT_DIR="$repo" RASTRO_ROOT="$FIXTURE_ROOT" RASTRO_LIB="$lib" HOME="$EMPTY_HOME" bash "$DOCTOR"
+  assert_status 0 "gp lib missing: status"
+  assert_contains "$OUT" "- PROBLEM: could not check golden paths: $lib/frontmatter.sh not found" "gp lib missing: reported"
+  assert_closing 1 "gp lib missing"
+}
+test_doctor_golden_path_shared_lib_missing_never_blocks() {
+  local repo lib
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  lib="$RASTRO_TEST_TMP/lib-no-goldenpath"
+  mkdir -p "$lib"
+  cp "$RASTRO_TESTS_DIR/../hooks/lib/"*.sh "$lib/"
+  rm -f "$lib/goldenpath.sh"
+  run_cmd env CLAUDE_PROJECT_DIR="$repo" RASTRO_ROOT="$FIXTURE_ROOT" RASTRO_LIB="$lib" HOME="$EMPTY_HOME" bash "$DOCTOR"
+  assert_status 0 "goldenpath lib missing: status"
+  assert_contains "$OUT" "- PROBLEM: could not check golden paths: $lib/goldenpath.sh not found" "goldenpath lib missing: reported"
+  assert_closing 1 "goldenpath lib missing"
+}
+test_doctor_golden_path_type_in_layers() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "layers: [handler, processor]"
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "architecture.layers" "gp type in layers: no layer problem"
+  assert_closing 0 "gp type in layers"
+}
+test_doctor_golden_path_duplicate_type() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  cp "$repo/$GP_FILE" "$repo/docs/golden-paths/worker.md"
+  sed 's/^id: .*/id: worker/' "$repo/docs/golden-paths/worker.md" >"$repo/docs/golden-paths/worker.new"
+  mv "$repo/docs/golden-paths/worker.new" "$repo/docs/golden-paths/worker.md"
+  run_doctor "$repo"
+  assert_status 0 "gp duplicate type: status"
+  assert_contains "$OUT" "- PROBLEM: golden path docs/golden-paths/worker.md: type processor already has golden path $GP_FILE" "gp duplicate type"
+  assert_eq 1 "$(count_lines_containing "$OUT" "already has golden path")" "gp duplicate type: reported once"
+  assert_closing 1 "gp duplicate type"
+}
+test_doctor_golden_path_duplicate_type_retired_ignored() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  sed -e 's/^id: .*/id: worker/' -e 's/^status: .*/status: retired/' -e 's/^instances: .*/instances: []/' \
+    -e 's/^origin: /superseded_by: processor\'$'\n''origin: /' "$repo/$GP_FILE" >"$repo/docs/golden-paths/worker.md"
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "already has golden path" "gp retired later: not counted"
+  assert_closing 0 "gp retired later"
+  # a retired golden path that sorts first does not make the current one a duplicate
+  mv "$repo/docs/golden-paths/worker.md" "$repo/docs/golden-paths/archive.md"
+  sed -i.bak 's/^id: worker/id: archive/' "$repo/docs/golden-paths/archive.md"
+  rm -f "$repo/docs/golden-paths/archive.md.bak"
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "already has golden path" "gp retired earlier: not counted"
+  assert_closing 0 "gp retired earlier"
+}
+test_doctor_golden_path_check_not_on_path() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's|^verified_by: .*|verified_by: automated: rastro-no-such-check --all|'
+  run_doctor "$repo"
+  assert_contains "$OUT" "- PROBLEM: golden path $GP_FILE: verified_by runs rastro-no-such-check, which is not on PATH; deliver cannot run the check until it is installed" "gp check not on path"
+  assert_closing 1 "gp check not on path"
+}
+test_doctor_golden_path_check_relative_path() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  mkdir -p "$repo/scripts"
+  printf '#!/bin/sh\nexit 0\n' >"$repo/scripts/check-gp.sh"
+  chmod +x "$repo/scripts/check-gp.sh"
+  gp_sed "$repo" 's|^verified_by: .*|verified_by: automated: ./scripts/check-gp.sh --all|'
+  run_doctor "$repo"
+  assert_closing 0 "gp check relative path"
+}
+test_doctor_golden_path_check_env_prefix() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's|^verified_by: .*|verified_by: automated: CHECK_MODE=strict bash scripts/arch.sh|'
+  run_doctor "$repo"
+  assert_closing 0 "gp check env prefix"
+}
+test_doctor_golden_path_check_path_not_executable() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  mkdir -p "$repo/scripts"
+  gp_sed "$repo" 's|^verified_by: .*|verified_by: automated: ./scripts/check-gp.sh --all|'
+  run_doctor "$repo"
+  assert_contains "$OUT" "- PROBLEM: golden path $GP_FILE: verified_by runs ./scripts/check-gp.sh, which is not an executable file; deliver cannot run the check until it is installed" "gp check path not executable"
+  assert_not_contains "$OUT" "which is not on PATH" "gp check path not executable: not the PATH message"
+  assert_closing 1 "gp check path not executable"
+}
+test_doctor_golden_path_check_never_runs() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's|^verified_by: .*|verified_by: automated: touch doctor-ran-the-check|'
+  run_doctor "$repo"
+  [ ! -e "$repo/doctor-ran-the-check" ] || _assert_fail "gp check never runs: not in the repository" "doctor-ran-the-check exists in $repo"
+  [ ! -e "$PWD/doctor-ran-the-check" ] || _assert_fail "gp check never runs: not in the working directory" "doctor-ran-the-check exists in $PWD"
+  assert_closing 0 "gp check never runs"
+}
+test_doctor_golden_path_check_retired_skipped() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's|^status: .*|status: retired|
+s|^origin: |superseded_by: worker\
+origin: |
+s|^verified_by: .*|verified_by: automated: rastro-no-such-check|'
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "which is not on PATH" "gp check retired skipped"
+  assert_closing 0 "gp check retired skipped"
+}
+
+test_doctor_golden_path_check_quoted_command() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" "s|^verified_by: .*|verified_by: automated: 'bash' scripts/arch.sh|"
+  run_doctor "$repo"
+  assert_closing 0 "gp check quoted command on PATH"
+  gp_sed "$repo" "s|^verified_by: .*|verified_by: automated: \"my tool\" --x|"
+  run_doctor "$repo"
+  assert_closing 0 "gp check quoted command with a space is skipped"
+  gp_sed "$repo" "s|^verified_by: .*|verified_by: automated: \"NAME=a b\" bash x|"
+  run_doctor "$repo"
+  assert_closing 0 "gp check quoted assignment with a space is skipped"
+  gp_sed "$repo" "s|^verified_by: .*|verified_by: automated: 'rastro-no-such-check' --all|"
+  run_doctor "$repo"
+  assert_contains "$OUT" "- PROBLEM: golden path $GP_FILE: verified_by runs rastro-no-such-check, which is not on PATH" "gp check quoted command not on path: quotes stripped"
+  assert_closing 1 "gp check quoted command not on path"
+}
+
+gp_append() {
+  printf '%s\n' "$2" >>"$1/$GP_FILE"
+}
+SEC_TAIL="list the threats considered, the control for each and how each control is verified"
+OK_SEC=$'\n## Security\n\n- Unbounded retries, from OWASP API Security Top 10 API4:2023. Control: a retry limit. Verified by: the retry test.'
+NONE_SEC=$'\n## Security\n\nNone identified: the processor reads no outside input.'
+
+test_doctor_boundary_security_ok() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "boundary_types: [processor]"
+  gp_append "$repo" "$OK_SEC"
+  run_doctor "$repo"
+  assert_closing 0 "boundary security ok"
+}
+test_doctor_boundary_security_missing() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "boundary_types: [processor]"
+  run_doctor "$repo"
+  assert_contains "$OUT" "- PROBLEM: golden path $GP_FILE: processor is a boundary type and has no ## Security section; $SEC_TAIL" "boundary security missing"
+  assert_closing 1 "boundary security missing"
+}
+test_doctor_boundary_security_empty() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "boundary_types: [processor]"
+  gp_append "$repo" $'\n## Security\n\n   \n## Verification\n\nThe checklist in review.'
+  run_doctor "$repo"
+  assert_contains "$OUT" "processor is a boundary type and its ## Security section is empty" "boundary security empty"
+  assert_closing 1 "boundary security empty"
+}
+test_doctor_boundary_security_none_identified() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "boundary_types: [processor]"
+  gp_append "$repo" "$NONE_SEC"
+  run_doctor "$repo"
+  assert_contains "$OUT" "its ## Security section says \"none identified\"" "boundary security none identified"
+  assert_closing 1 "boundary security none identified"
+}
+test_doctor_boundary_security_subsection_at_end() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "boundary_types: [processor]"
+  gp_append "$repo" $'\n## Security\n\n### Threats\n\n- Unbounded retries, from OWASP API Security Top 10 API4:2023. Control: a retry limit. Verified by: the retry test.'
+  run_doctor "$repo"
+  assert_closing 0 "boundary security subsection at end"
+}
+test_doctor_boundary_security_crlf() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "boundary_types: [processor]"
+  gp_append "$repo" $'\n## Security  \n\n- Unbounded retries, from OWASP API Security Top 10 API4:2023. Control: a retry limit. Verified by: the retry test.'
+  gp_sed "$repo" 's/$/\r/'
+  run_doctor "$repo"
+  assert_closing 0 "boundary security crlf"
+}
+test_doctor_boundary_security_placeholders_only() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "boundary_types: [processor]"
+  gp_append "$repo" $'\n## Security\n\n<A type in the list crosses a trust boundary. Draw its threats from a public reference.>\n\n- <threat>, from <reference and item>. Control: <the control>. Verified by: <how>.'
+  run_doctor "$repo"
+  assert_contains "$OUT" "processor is a boundary type and its ## Security section is empty" "boundary security placeholders only"
+  assert_closing 1 "boundary security placeholders only"
+}
+test_doctor_boundary_security_not_a_boundary() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_append "$repo" "$NONE_SEC"
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "boundary type" "boundary security not a boundary"
+  assert_closing 0 "boundary security not a boundary"
+}
+test_doctor_boundary_security_retired_skipped() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_config "$repo" "boundary_types: [processor]"
+  gp_sed "$repo" 's|^status: .*|status: retired|
+s|^origin: |superseded_by: worker\
+origin: |'
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "boundary type" "boundary security retired skipped"
+  assert_closing 0 "boundary security retired skipped"
+}
+test_doctor_boundary_types_not_a_layer() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  gp_config "$repo" $'layers: [handler, processor]\n  boundary_types: [external_client]'
+  run_doctor "$repo"
+  assert_contains "$OUT" "- PROBLEM: architecture.boundary_types names external_client, which is not in architecture.layers" "boundary types not a layer"
+  assert_closing 1 "boundary types not a layer"
+}
+test_doctor_boundary_types_without_layers() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  gp_config "$repo" "boundary_types: [external-client]"
+  run_doctor "$repo"
+  assert_closing 0 "boundary types without layers"
+}
+test_doctor_boundary_types_block_list() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  printf '\narchitecture:\n  boundary_types:\n    - processor\n' >>"$repo/.rastro/config.yml"
+  run_doctor "$repo"
+  assert_contains "$OUT" "- PROBLEM: config key architecture.boundary_types uses an unsupported list form" "boundary types block list"
+  assert_eq 1 "$(count_lines_containing "$OUT" "boundary_types")" "boundary types block list: reported once"
+}
+
+test_doctor_projects_without_project_number() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put "$repo" .rastro/adapters/tracker/github-projects.md $'# Adapter: tracker/github-projects\n\n## Requirements\n\nREQUIRED: none'
+  edit_config "$repo" 's/kind: fake/kind: github-projects/'
+  run_doctor "$repo"
+  assert_status 0 "projects without number: status"
+  assert_contains "$OUT" "- PROBLEM: tracker.project is not set; the github-projects tracker needs the number of the Project" "projects without number: problem"
+  assert_closing 1 "projects without number"
+  edit_config "$repo" 's/^  key: W/  key: W\n  project: 7/'
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "tracker.project is not set" "projects with a number: silent"
+  assert_closing 0 "projects with a number"
+  edit_config "$repo" 's/kind: github-projects/kind: fake/'
+  edit_config "$repo" '/^  project: 7/d'
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "tracker.project" "other tracker kind: silent"
+}
+test_doctor_under_review_days_not_a_number() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  gp_config "$repo" "layers: [processor]"
+  printf 'audit:\n  under_review_days: 30d\n' >>"$repo/.rastro/config.yml"
+  run_doctor "$repo"
+  assert_status 0 "under_review_days 30d: status"
+  assert_contains "$OUT" "- PROBLEM: audit.under_review_days must be a whole number of days, not 30d" "under_review_days 30d: problem"
+  assert_closing 1 "under_review_days 30d"
+  edit_config "$repo" 's/under_review_days: 30d/under_review_days: 30/'
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "audit.under_review_days" "under_review_days 30: silent"
+  assert_closing 0 "under_review_days 30"
+}
+test_doctor_golden_path_check_quoted_verified_by() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's|^verified_by: .*|verified_by: "automated: rastro-no-such-check --all"|'
+  run_doctor "$repo"
+  assert_contains "$OUT" "- PROBLEM: golden path $GP_FILE: verified_by runs rastro-no-such-check, which is not on PATH" "quoted verified_by: read like the unquoted form"
+  assert_not_contains "$OUT" "neither review nor automated" "quoted verified_by: not rejected"
+  assert_closing 1 "quoted verified_by"
+}
+
 test_doctor_without_config() {
   local repo
   repo=$(make_tmp_repo)
   run_doctor "$repo"
   assert_status 0 "no config: status"
-  assert_eq "rastro doctor: no .rastro/config.yml found. Run the setup skill." "$OUT" "no config: single line"
+  assert_eq "rastro doctor: no .rastro/config.yml found. Run the setup skill, or rastro:init in a directory with no source code." "$OUT" "no config: single line"
   assert_eq "" "$ERR" "no config: silent stderr"
 }
 test_doctor_ok() {
@@ -307,6 +773,7 @@ test_doctor_reads_every_shipped_adapter() {
       domain-state) printf 'domain_state:\n  kind: %s\n  server: acme-db\n' "$kind" >>"$repo/.rastro/config.yml" ;;
       review) printf 'review:\n  kind: %s\n' "$kind" >>"$repo/.rastro/config.yml" ;;
     esac
+    [ "$rel" != tracker/github-projects.md ] || edit_config "$repo" 's/^  key: W/  key: W\n  project: 7/'
     DOCTOR_ROOT=$real run_doctor "$repo"
     assert_status 0 "shipped $rel: status"
     assert_not_contains "$OUT" "missing adapter" "shipped $rel: found"
@@ -557,6 +1024,9 @@ test_doctor_missing_lib_never_blocks() {
 
 test_doctor_without_config
 test_doctor_ok
+test_doctor_projects_without_project_number
+test_doctor_under_review_days_not_a_number
+test_doctor_golden_path_check_quoted_verified_by
 test_doctor_missing_required_key
 test_doctor_requires_a_verify_command
 test_doctor_missing_adapter
@@ -589,4 +1059,45 @@ test_doctor_unsupported_list_form
 test_doctor_unreadable_config
 test_doctor_without_git
 test_doctor_missing_lib_never_blocks
+test_doctor_golden_paths_absent_is_silent
+test_doctor_golden_path_ok
+test_doctor_golden_path_missing_key
+test_doctor_golden_path_bad_status
+test_doctor_golden_path_retired_needs_successor
+test_doctor_golden_path_id_mismatch
+test_doctor_golden_path_verified_by
+test_doctor_golden_path_missing_instance
+test_doctor_golden_path_instance_with_spaces
+test_doctor_golden_path_type_not_a_layer
+test_doctor_golden_path_current_without_instance
+test_doctor_golden_paths_folder_without_slash
+test_doctor_golden_paths_skip_readme
+test_doctor_golden_paths_list_form
+test_doctor_golden_path_crlf
+test_doctor_golden_path_without_frontmatter
+test_doctor_golden_path_instances_not_a_list
+test_doctor_golden_path_lib_missing_never_blocks
+test_doctor_golden_path_shared_lib_missing_never_blocks
+test_doctor_golden_path_type_in_layers
+test_doctor_golden_path_duplicate_type
+test_doctor_golden_path_duplicate_type_retired_ignored
+test_doctor_golden_path_check_not_on_path
+test_doctor_golden_path_check_relative_path
+test_doctor_golden_path_check_env_prefix
+test_doctor_golden_path_check_path_not_executable
+test_doctor_golden_path_check_never_runs
+test_doctor_golden_path_check_retired_skipped
+test_doctor_golden_path_check_quoted_command
+test_doctor_boundary_security_ok
+test_doctor_boundary_security_missing
+test_doctor_boundary_security_empty
+test_doctor_boundary_security_none_identified
+test_doctor_boundary_security_subsection_at_end
+test_doctor_boundary_security_crlf
+test_doctor_boundary_security_placeholders_only
+test_doctor_boundary_security_not_a_boundary
+test_doctor_boundary_security_retired_skipped
+test_doctor_boundary_types_not_a_layer
+test_doctor_boundary_types_without_layers
+test_doctor_boundary_types_block_list
 finish

@@ -20,3 +20,24 @@ Gate — setup of
 --doctor
 .rastro/profiles/writing.md
 `GH` for the shipped adapter whose item ids are `GH-<n>`
+when `architecture.golden_paths` is empty, write the template's default and its new comment
+no key sets the execution mode
+write these files?** Class: fork. Mode: decision.
+Read the CI workflow files and the manifests
+A command that a CI workflow runs comes first
+after the `init` row, the table goes on at the branch row
+The state table has no item rows.
+When `init` invokes this skill, the answers it hands over count as answered
+return to `init` after the closing report
+init runs first and calls setup with its answers
+Run on its own, setup stops after the closing report.
+Under `init`, never offer it and never write it
+run `rastro:init` instead
+When the stack detection names a stack profile, point to it in the closing report, by the path the detection gives; the profile is read where it is and never copied.
+and note the stack profile when the detection section names one
+The detection names it as `${CLAUDE_PLUGIN_ROOT}/profiles/stacks/<name>/`, or under `RASTRO_ROOT` for an agent other than Claude Code.
+Without `origin/HEAD` (a repository with no remote, or one that was never fetched), `git symbolic-ref --short HEAD` proposes the current branch instead.
+ask `tracker.project` with no value proposed
+then `tracker.project_owner` with an empty value proposed
+11. `architecture.layers`, one question, with nothing proposed
+12. `architecture.boundary_types`, one question, with nothing proposed

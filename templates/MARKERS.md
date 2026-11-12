@@ -9,16 +9,24 @@ Identifiers are not translated either: `D-n`, `DT-nn`, rule IDs, domain names.
 | `## Reconciliation` | `breakdown` or `implement` → state table, `implement` |
 | `## Acceptance criteria` | `breakdown` → `implement`, through `read_item` of the tracker adapter |
 | `reconciliation.md` | `reconcile` → `breakdown`, `implement`, `deliver` |
-| `NOT VERIFIED` | `domain-context` → every skill |
+| `NOT VERIFIED` | `domain-context`, `audit` (the skill and its script) → every skill |
 | `[HUMAN]` | `implement` (task) → `deliver` |
 | `[no PR]` | `breakdown` → rulers |
 | `## Context` | `domain-context` → `reconcile` |
 | `Decided (<YYYY-MM-DD>):` | deliberation gate → `implement` |
+| `- Continuous run,` | a confirmation gate in a continuous run → `deliver` |
+| `origin: init, conversation with` | `init`, in the walking skeleton intent → `breakdown`, `reconcile` |
 | `D-n`, `DT-nn` | decision identifiers; stable once cited |
-| `new` | `design-doc` → `reconcile`, `implement` |
+| `new` | `design-doc` or `init` → `reconcile`, `implement` |
 | `changes` | `design-doc` → `reconcile`, `implement` |
 | `exists` | `design-doc` → `reconcile` |
+| `follows` | `reconcile` → `implement` |
+| `extends` | `reconcile` → `breakdown`, `implement` |
+| `contradicts` | `reconcile` → `implement` |
+| `no golden path` | `reconcile` → `breakdown`, `implement` |
 
-The last three tag the components of `## Code flows` in a design doc: `new` is a component that does not exist yet, `changes` is one that exists and this change edits, and `exists` is one that is reused without change.
+`new`, `changes` and `exists` tag the components of `## Code flows` in a design doc, and of `## Components` in the walking skeleton intent that `init` writes: `new` is a component that does not exist yet, `changes` is one that exists and this change edits, and `exists` is one that is reused without change.
+
+The four golden-path tags classify a `new` or `changes` component against the golden path of its type, in the `architecture.golden_paths` folder.
 
 An item without `## Reconciliation` is a hand-made item and gets a full reconciliation. That covers items written before the adopter installed rastro.

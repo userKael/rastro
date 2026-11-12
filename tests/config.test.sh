@@ -33,15 +33,18 @@ test_template_parses() {
            tracker.kind tracker.key tracker.hierarchy tracker.local_dir docs.kind docs.location docs.public_portal \
            code_host.kind code_host.merge code_host.template domain_state.kind domain_state.server domain_state.schema_files \
            verify.lint verify.typecheck verify.unit verify.integration verify.integration_when verify.lint_file verify.source_globs \
-           architecture.modules architecture.layers architecture.rules architecture.golden_paths architecture.contract_sources architecture.sensitive_data \
+           architecture.modules architecture.layers architecture.rules architecture.golden_paths architecture.boundary_types architecture.contract_sources architecture.sensitive_data \
            domain.stateful_entities conventions.branch conventions.commit conventions.types conventions.co_author_trailer conventions.forbidden_paths \
-           workspace review.kind review.rules; do
+           workspace review.kind review.rules audit.under_review_days; do
     rastro_config_has "$k"; assert_eq 0 $? "template has $k"
   done
   assert_eq "main" "$(rastro_config_get project.base_branch)" "default base_branch"
+  assert_eq "" "$(rastro_config_get audit.under_review_days)" "default under_review_days is empty"
   assert_eq "squash" "$(rastro_config_get code_host.merge)" "default merge"
   assert_eq ".agent/" "$(rastro_config_get workspace)" "default workspace"
   assert_eq ".review-rules.md" "$(rastro_config_get review.rules)" "default review.rules is markdown"
+  assert_eq "docs/golden-paths/" "$(rastro_config_get architecture.golden_paths)" "default golden_paths is a folder"
+  assert_eq "[]" "$(rastro_config_get architecture.boundary_types)" "default boundary_types is an empty list"
   assert_eq $'feat\nfix\nrefactor\nchore\ndocs\nci\nperf' "$(rastro_config_list conventions.types)" "default types"
 }
 test_unsupported_lists() {

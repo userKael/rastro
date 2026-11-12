@@ -1,0 +1,365 @@
+#!/usr/bin/env bash
+# Mechanical drift checks for golden paths. Prints a markdown report; changes nothing.
+# Usage: audit-drift [--previous FILE] [--fail-on-drift]
+# --previous FILE is resolved from the project root; a missing file prints "No previous audit.".
+# Verdicts: ok, review (a signal to look, never counted as drift), drift, NOT VERIFIED.
+set -eu
+lib=${RASTRO_LIB:-$(dirname "$0")/../lib}
+. "$lib/config.sh"
+. "$lib/frontmatter.sh"
+. "$lib/goldenpath.sh"
+. "$lib/metrics.sh"
+
+previous=""
+fail_on_drift=0
+while [ "$#" -gt 0 ]; do
+  case $1 in
+    --previous)
+      if [ "$#" -lt 2 ]; then
+        echo "audit-drift: --previous needs a file" >&2
+        exit 2
+      fi
+      previous=$2
+      shift 2
+      ;;
+    --fail-on-drift)
+      fail_on_drift=1
+      shift
+      ;;
+    *)
+      echo "audit-drift: unknown option: $1" >&2
+      echo "usage: audit-drift [--previous FILE] [--fail-on-drift]" >&2
+      exit 2
+      ;;
+  esac
+done
+
+root=$(rastro_root)
+RASTRO_CONFIG=$(rastro_config_path) || {
+  echo "audit-drift: no .rastro/config.yml in $root" >&2
+  exit 2
+}
+export RASTRO_CONFIG
+cd "$root"
+
+rows=""
+drifts=0
+row() {
+  local detail=${4//|//}
+  rows=$rows"| $1 | $2 | $3 | $detail |"$'\n'
+  [ "$3" != drift ] || drifts=$((drifts + 1))
+}
+
+# nohist is set when the history cannot be trusted: a shallow clone or no repository.
+nohist=false
+nohist_why=""
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+  nohist=true
+  nohist_why="not a git repository; no history to read"
+elif [ "$(git rev-parse --is-shallow-repository 2>/dev/null)" = true ]; then
+  nohist=true
+  nohist_why="shallow clone; fetch the full history"
+fi
+now=${RASTRO_NOW:-$(date +%s)}
+
+limit=$(rastro_config_get audit.under_review_days 2>/dev/null) || limit=""
+limit_bad=""
+case $limit in
+  "") ;;
+  *[!0-9]*) limit_bad=$limit; limit="" ;;
+esac
+
+boundary=$(rastro_config_list architecture.boundary_types 2>/dev/null) || boundary=""
+seen=""
+found=0
+gp_metrics=""
+item_events=""
+
+# History rows of a golden path as "version<TAB>item": lines with 4 columns whose
+# first column is X.Y.Z. Anything else is ignored.
+gp_history() {
+  tr -d '\r' <"$1" | awk '
+    /^## / { on = ($0 ~ /^## History[ \t]*$/); next }
+    on && /^\|/ {
+      sub(/[ \t]+$/, "")
+      n = split($0, c, "|")
+      if (n < 6) next
+      for (i = 2; i <= 5; i++) gsub(/^[ \t]+|[ \t]+$/, "", c[i])
+      if (c[2] !~ /^[0-9]+\.[0-9]+\.[0-9]+$/) next
+      if (substr(c[4], 1, 1) == "<") next
+      printf "%s\t%s\n", c[2], c[4]
+    }
+  '
+}
+
+# gp_lifecycle FILE REL: records versions, contradictions and commits for one golden path.
+gp_lifecycle() {
+  local file=$1 rel=$2 v it versions=0 contra=0 commits name
+  while IFS=$'\t' read -r v it; do
+    [ -n "$v" ] || continue
+    versions=$((versions + 1))
+    if [ "$v" = 1.0.0 ]; then
+      [ -z "$it" ] || item_events=$item_events$it$'\t'created$'\n'
+    else
+      [ -z "$it" ] || item_events=$item_events$it$'\t'evolved$'\n'
+    fi
+    if [[ $v =~ ^([0-9]+)\.0\.0$ ]] && [ "$((10#${BASH_REMATCH[1]}))" -gt 1 ]; then
+      contra=$((contra + 1))
+    fi
+  done <<<"$(gp_history "$file")"
+  if [ "$nohist" = true ]; then
+    commits=-
+  else
+    commits=$(git log --oneline -- "$rel" 2>/dev/null | grep -c . || true)
+  fi
+  name=${rel##*/}
+  gp_metrics=$gp_metrics"| ${name%.md} | $versions | $contra | $commits |"$'\n'
+}
+
+gp_audit() {
+  local file=$1 rel=$2 dump key value type="" status="" instances="" has_instances=0
+  local s inst path sha base_sha add_sha n ct age existing=0 detail
+  if ! dump=$(rastro_frontmatter_dump "$file" 2>/dev/null); then
+    found=1
+    row frontmatter "$rel" "NOT VERIFIED" "no frontmatter; not audited"
+    return 0
+  fi
+  while IFS=$'\t' read -r key value; do
+    case $key in
+      type) type=$value ;;
+      status) status=$value ;;
+      instances) has_instances=1; instances=$value ;;
+    esac
+  done <<<"$dump"
+  found=1
+  gp_lifecycle "$file" "$rel"
+
+  case $status in
+    "" | current | under-review | retired) ;;
+    *) row status "$rel" drift "status $status is not current, under-review or retired" ;;
+  esac
+
+  if [ "$status" != retired ]; then
+    # Baseline: the commit that last changed the version line; the last commit of the file when none did.
+    base_sha=$(git log -1 --format=%H -G '^version:' -- "$rel" 2>/dev/null) || base_sha=""
+    [ -n "$base_sha" ] || base_sha=$(git log -1 --format=%H -- "$rel" 2>/dev/null) || base_sha=""
+    if [ "$has_instances" -eq 1 ]; then
+      rastro_frontmatter_split "$instances" && s=0 || s=$?
+      if [ "$s" -eq 0 ]; then
+        for inst in ${RASTRO_FM_ITEMS[@]+"${RASTRO_FM_ITEMS[@]}"}; do
+          path=$(rastro_gp_instance_path "$inst")
+          if [ ! -e "$root/$path" ]; then
+            row instance-missing "$rel:$path" drift "instance does not exist"
+          elif [ "$nohist" = true ]; then
+            row instances-changed "$rel:$path" "NOT VERIFIED" "$nohist_why"
+          elif [ -z "$(git log -1 --format=%H -- "$path" 2>/dev/null)" ]; then
+            row instances-changed "$rel:$path" "NOT VERIFIED" "instance not committed yet"
+          else
+            # Per instance, the baseline is the later of the version change and the
+            # commit that last added this path to the golden path file.
+            sha=$base_sha
+            add_sha=$(git log -1 --format=%H -S"$path" -- "$rel" 2>/dev/null) || add_sha=""
+            if [ -n "$add_sha" ] && [ "$add_sha" != "$sha" ]; then
+              if [ -z "$sha" ] || git merge-base --is-ancestor "$sha" "$add_sha" 2>/dev/null; then
+                sha=$add_sha
+              fi
+            fi
+            if [ -z "$sha" ]; then
+              row instances-changed "$rel:$path" ok "golden path not committed yet"
+            else
+              n=$(git log --format=%h "$sha..HEAD" -- "$path" 2>/dev/null | grep -c . || true)
+              if [ "$n" -gt 0 ]; then
+                detail="$n commits touched it since its baseline ${sha:0:7}, the later of the last version change of $rel and the commit that listed it"
+                [ "$n" -ne 1 ] || detail="1 commit touched it since its baseline ${sha:0:7}, the later of the last version change of $rel and the commit that listed it"
+                row instances-changed "$rel:$path" review "$detail"
+              else
+                row instances-changed "$rel:$path" ok "no commit touched it since its baseline ${sha:0:7}, the later of the last version change of $rel and the commit that listed it"
+              fi
+            fi
+          fi
+        done
+      fi
+    fi
+  fi
+
+  if [ "$status" = current ]; then
+    if [ "$has_instances" -eq 1 ] && rastro_frontmatter_split "$instances"; then
+      for inst in ${RASTRO_FM_ITEMS[@]+"${RASTRO_FM_ITEMS[@]}"}; do
+        path=$(rastro_gp_instance_path "$inst")
+        [ ! -e "$root/$path" ] || existing=$((existing + 1))
+      done
+    fi
+    if [ "$existing" -eq 0 ]; then
+      row no-instance "$rel" drift "no instance exists on disk"
+    else
+      row no-instance "$rel" ok "$existing instance(s) exist"
+    fi
+  fi
+
+  if [ -n "$type" ] && [ "$status" != retired ]; then
+    if s=$(rastro_gp_seen_find "$seen" "$type"); then
+      row duplicate-type "$rel" drift "type $type already has golden path $s"
+    else
+      row duplicate-type "$rel" ok "type $type has one golden path"
+    fi
+    seen=$seen$type$'\t'$rel$'\n'
+    if rastro_gp_list_has "$boundary" "$type"; then
+      s=$(rastro_gp_security "$file")
+      case $s in
+        ok) row boundary-security "$rel" ok "security section lists threats" ;;
+        *) row boundary-security "$rel" drift "$type is a boundary type and its security section is $s" ;;
+      esac
+    fi
+  fi
+
+  if [ "$status" = under-review ]; then
+    ct=$(git log -1 --format=%ct -- "$rel" 2>/dev/null) || ct=""
+    if [ "$nohist" = true ]; then
+      row under-review-age "$rel" "NOT VERIFIED" "$nohist_why"
+    elif [ -z "$ct" ]; then
+      row under-review-age "$rel" ok "golden path not committed yet"
+    else
+      age=$(((now - ct) / 86400))
+      if [ -n "$limit_bad" ]; then
+        row under-review-age "$rel" "NOT VERIFIED" "audit.under_review_days is not a whole number ($limit_bad); age not checked"
+      elif [ -z "$limit" ]; then
+        row under-review-age "$rel" ok "age $age days, no limit set"
+      elif [ "$age" -gt "$limit" ]; then
+        row under-review-age "$rel" drift "age $age days, limit $limit"
+      else
+        row under-review-age "$rel" ok "age $age days, limit $limit"
+      fi
+    fi
+  fi
+}
+
+gp_dir=$(rastro_gp_folder 2>/dev/null) && s=0 || s=$?
+if [ "$s" -eq 0 ]; then
+  while IFS= read -r file; do
+    [ -n "$file" ] || continue
+    gp_audit "$file" "${file#"$root"/}"
+  done <<<"$(rastro_gp_files "$root" "$gp_dir")"
+else
+  echo "audit-drift: architecture.golden_paths is in the old list form; no golden paths read" >&2
+  found=1
+  row config architecture.golden_paths "NOT VERIFIED" "old list form; it now names one folder, so no golden path was audited"
+fi
+
+commit=$(git rev-parse --short HEAD 2>/dev/null) || commit=none
+
+printf '# Drift audit\n\n'
+printf 'Date: %s\n' "$(date +%Y-%m-%d)"
+printf 'Commit: %s\n\n' "$commit"
+printf '## Mechanical checks\n\n'
+if [ "$found" -eq 0 ]; then
+  printf 'No golden paths.\n'
+else
+  printf '| Check | Subject | Verdict | Detail |\n'
+  printf '|---|---|---|---|\n'
+  printf '%s' "$rows"
+fi
+printf '\n'
+
+printf '## Metrics\n\n'
+printf 'All numbers are cumulative: the lint figures since the log began, the golden path figures over the whole git history.\n\n'
+ws=$(rastro_workspace 2>/dev/null) || ws=.agent/
+ws=${ws%/}
+rastro_metrics_lint_summary "$root/${ws:-.agent}/metrics/lint.log" | sed 's/^/- /'
+printf '\n'
+if [ "$found" -eq 0 ]; then
+  printf 'No golden paths.\n'
+elif [ -z "$gp_metrics" ]; then
+  printf 'No golden path could be read.\n'
+else
+  printf '| Golden path | Versions | Contradictions | Commits |\n'
+  printf '|---|---|---|---|\n'
+  printf '%s' "$gp_metrics"
+  printf '\n'
+  if [ -n "$item_events" ]; then
+    printf '| Item | Golden paths created | Golden paths evolved |\n'
+    printf '|---|---|---|\n'
+    printf '%s' "$item_events" | awk -F'\t' '
+      !($1 in seen) { seen[$1] = 1; order[++n] = $1 }
+      $2 == "created" { c[$1]++ }
+      $2 == "evolved" { e[$1]++ }
+      END { for (i = 1; i <= n; i++) printf "| %s | %d | %d |\n", order[i], c[order[i]], e[order[i]] }
+    '
+  else
+    printf 'No History entries.\n'
+  fi
+fi
+printf '\nContradictions counts golden path changes decided as incompatible (a major version). A contradiction settled by changing the code leaves no trace in the repository and is not counted.\n\n'
+
+# Rows of a report as "check subject<TAB>verdict<TAB>detail".
+report_rows() {
+  awk '
+    /^## / { on = ($0 == "## Mechanical checks"); next }
+    on && /^\| / && !/^\| Check \|/ && !/^\|---/ {
+      n = split($0, c, / \| /)
+      if (n < 4) next
+      key = substr(c[1], 3) " " c[2]
+      detail = c[4]
+      sub(/ \|$/, "", detail)
+      printf "%s\t%s\t%s\n", key, c[3], detail
+    }
+  '
+}
+
+printf '## Changes since the previous audit'
+if [ -n "$previous" ] && [ -f "$previous" ]; then
+  prev_date=$(sed -n 's/^Date: //p' "$previous" | head -n 1 | tr -d '\r')
+  [ -z "$prev_date" ] || printf ' (%s)' "$prev_date"
+  printf '\n\n'
+  prev_rows=$(mktemp)
+  cur_rows=$(mktemp)
+  trap 'rm -f "$prev_rows" "$cur_rows"' EXIT
+  tr -d '\r' <"$previous" | report_rows >"$prev_rows"
+  { printf '## Mechanical checks\n'; printf '%s' "$rows"; } | report_rows >"$cur_rows"
+  # Per key: new (drift or review it did not have before), not verified, resolved
+  # (the verdict is ok now), no longer checked (the key is gone), unchanged counts.
+  awk -F'\t' '
+    function sorted(arr, cnt,   i, j, t) {
+      for (i = 1; i <= cnt; i++)
+        for (j = i + 1; j <= cnt; j++)
+          if (arr[j] < arr[i]) { t = arr[i]; arr[i] = arr[j]; arr[j] = t }
+    }
+    FILENAME == ARGV[1] { pv[$1] = $2; next }
+    { cv[$1] = $2; cd[$1] = $3; order[++n] = $1 }
+    END {
+      for (i = 1; i <= n; i++) {
+        k = order[i]
+        if (cv[k] == "drift" && pv[k] != "drift") printf "- new: %s: %s\n", k, cd[k]
+      }
+      for (i = 1; i <= n; i++) {
+        k = order[i]
+        if (cv[k] == "review" && pv[k] != "review") printf "- new review: %s: %s\n", k, cd[k]
+      }
+      for (i = 1; i <= n; i++) {
+        k = order[i]
+        if (cv[k] == "NOT VERIFIED") printf "- not verified: %s\n", k
+      }
+      for (k in pv) {
+        if ((k in cv) && cv[k] == "ok" && pv[k] == "drift") res[++m] = k
+        if ((k in cv) && cv[k] == "ok" && pv[k] == "review") rev[++r] = k
+        if (!(k in cv)) gone[++g] = k
+      }
+      sorted(res, m); sorted(rev, r); sorted(gone, g)
+      for (i = 1; i <= m; i++) printf "- resolved: %s\n", res[i]
+      for (i = 1; i <= r; i++) printf "- resolved review: %s\n", rev[i]
+      for (i = 1; i <= g; i++) printf "- no longer checked: %s\n", gone[i]
+      ud = 0; ur = 0
+      for (k in cv) {
+        if (cv[k] == "drift" && pv[k] == "drift") ud++
+        if (cv[k] == "review" && pv[k] == "review") ur++
+      }
+      printf "- unchanged: %d drift(s), %d review(s)\n", ud, ur
+    }
+  ' "$prev_rows" "$cur_rows"
+else
+  printf '\n\nNo previous audit.\n'
+fi
+
+if [ "$fail_on_drift" -eq 1 ] && [ "$drifts" -gt 0 ]; then
+  exit 1
+fi
+exit 0

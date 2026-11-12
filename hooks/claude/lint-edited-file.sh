@@ -5,6 +5,7 @@ lib=${RASTRO_LIB:-$(dirname "$0")/../lib}
 . "$lib/paths.sh"
 . "$lib/json.sh"
 . "$lib/lint.sh"
+. "$lib/metrics.sh"
 RASTRO_CONFIG=$(rastro_config_path) || exit 0
 
 relative_to_root() {
@@ -23,7 +24,10 @@ relative_to_root() {
   printf '%s' "$rel"
 }
 
-file=$(rastro_json_string file_path)
+input=$(cat)
+file=$(rastro_json_string file_path <<<"$input")
+session=$(rastro_json_string session_id <<<"$input")
+session=${session:--}
 [ -n "$file" ] || exit 0
 lint=$(rastro_config_get verify.lint_file)
 [ -n "$lint" ] || exit 0
@@ -44,6 +48,11 @@ done <<<"$globs"
 
 rc=0
 out=$(rastro_lint_file "$root" "$rel" "$lint") || rc=$?
+case $rc in
+  0) rastro_metrics_lint_record "$root" "$rel" pass "$session" ;;
+  126 | 127) ;;
+  *) rastro_metrics_lint_record "$root" "$rel" fail "$session" ;;
+esac
 case $rc in
   0) exit 0 ;;
   126 | 127)

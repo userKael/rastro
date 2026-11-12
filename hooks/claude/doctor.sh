@@ -43,7 +43,7 @@ fi
 framework=${RASTRO_ROOT:-${CLAUDE_PLUGIN_ROOT:-$(dirname "$0")/../..}}
 
 cfg=$(rastro_config_path) || {
-  printf 'rastro doctor: no .rastro/config.yml found. Run the setup skill.\n'
+  printf 'rastro doctor: no .rastro/config.yml found. Run the setup skill, or rastro:init in a directory with no source code.\n'
   exit 0
 }
 RASTRO_CONFIG=$cfg
@@ -230,6 +230,23 @@ for key in project.name project.languages.human tracker.kind code_host.kind; do
   esac
 done
 
+if [ "$k_tracker" = github-projects ]; then
+  checks=$((checks + 1))
+  if get tracker.project && [ -z "$val" ]; then
+    problem "tracker.project is not set; the github-projects tracker needs the number of the Project. Run the setup skill to set it."
+  fi
+fi
+
+if get audit.under_review_days; then
+  case $val in
+    "") ;;
+    *[!0-9]*)
+      checks=$((checks + 1))
+      problem "audit.under_review_days must be a whole number of days, not $val; the drift audit cannot check the age of a golden path under review"
+      ;;
+  esac
+fi
+
 checks=$((checks + 1))
 verify_set=0
 verify_unread=0
@@ -331,6 +348,198 @@ if [ "$k_tracker" = local ] && get tracker.local_dir; then
         fi
         prev=$id
       done <<<"$sorted"
+    fi
+  fi
+fi
+
+gp_check() {
+  local file=$1 rel=$2 base key value s dump id type version status vb origin sup inst path seen_t seen_rel cmd bin
+  local has_instances=0 instances="" state
+  base=${file##*/}
+  base=${base%.md}
+  checks=$((checks + 1))
+  dump=$(rastro_frontmatter_dump "$file" 2>/dev/null) && s=0 || s=$?
+  if [ "$s" -ne 0 ]; then
+    problem "golden path $rel: no frontmatter"
+    return
+  fi
+  id="" type="" version="" status="" vb="" origin="" sup=""
+  while IFS=$'\t' read -r key value; do
+    case $key in
+      id) id=$value ;;
+      type) type=$value ;;
+      version) version=$value ;;
+      status) status=$value ;;
+      verified_by) vb=$value ;;
+      origin) origin=$value ;;
+      superseded_by) sup=$value ;;
+      instances) has_instances=1; instances=$value ;;
+    esac
+  done <<<"$dump"
+  [ -n "$id" ] || problem "golden path $rel: missing id"
+  [ -n "$type" ] || problem "golden path $rel: missing type"
+  [ -n "$version" ] || problem "golden path $rel: missing version"
+  [ -n "$status" ] || problem "golden path $rel: missing status"
+  [ -n "$vb" ] || problem "golden path $rel: missing verified_by"
+  [ -n "$instances" ] || problem "golden path $rel: missing instances"
+  [ -n "$origin" ] || problem "golden path $rel: missing origin"
+  if [ -n "$id" ] && [ "$id" != "$base" ]; then
+    problem "golden path $rel: id $id does not match the file name"
+  fi
+  if [ -n "$status" ]; then
+    case $status in
+      current | under-review) ;;
+      retired)
+        [ -n "$sup" ] || problem "golden path $rel: retired without superseded_by"
+        ;;
+      *) problem "golden path $rel: status $status is not current, under-review or retired" ;;
+    esac
+  fi
+  if [ -n "$vb" ] && [ "$vb" != review ]; then
+    case $vb in
+      "automated: "?*)
+        if [ "$status" != retired ]; then
+          cmd=${vb#automated:}
+          cmd=${cmd#"${cmd%%[![:space:]]*}"}
+          bin=""
+          while [ -n "$cmd" ]; do
+            bin=${cmd%%[[:space:]]*}
+            case $bin in
+              [A-Za-z_]*=*)
+                case ${bin%%=*} in
+                  *[!A-Za-z0-9_]*) break ;;
+                esac
+                cmd=${cmd#"$bin"}
+                cmd=${cmd#"${cmd%%[![:space:]]*}"}
+                bin=""
+                ;;
+              *) break ;;
+            esac
+          done
+          case $bin in
+            \"?*\") bin=${bin#\"}; bin=${bin%\"} ;;
+            \'?*\') bin=${bin#\'}; bin=${bin%\'} ;;
+          esac
+          case $bin in
+            *[\"\']*) bin="" ;;
+          esac
+          if [ -n "$bin" ]; then
+            checks=$((checks + 1))
+            if ! (cd "$root" 2>/dev/null && command -v -- "$bin" >/dev/null 2>&1); then
+              case $bin in
+                */*) problem "golden path $rel: verified_by runs $bin, which is not an executable file; deliver cannot run the check until it is installed" ;;
+                *) problem "golden path $rel: verified_by runs $bin, which is not on PATH; deliver cannot run the check until it is installed" ;;
+              esac
+            fi
+          fi
+        fi
+        ;;
+      *) problem "golden path $rel: verified_by is neither review nor automated: <command>" ;;
+    esac
+  fi
+  if [ -n "$type" ] && [ -n "$gp_layers" ]; then
+    case $'\n'"$gp_layers" in
+      *$'\n'"$type"$'\n'*) ;;
+      *) problem "golden path $rel: type $type is not in architecture.layers" ;;
+    esac
+  fi
+  if [ -n "$type" ] && [ "$status" != retired ] && [ -n "$gp_boundary" ]; then
+    case $'\n'"$gp_boundary" in
+      *$'\n'"$type"$'\n'*)
+        checks=$((checks + 1))
+        state=$(rastro_gp_security "$file")
+        case $state in
+          missing) problem "golden path $rel: $type is a boundary type and has no ## Security section; list the threats considered, the control for each and how each control is verified" ;;
+          empty) problem "golden path $rel: $type is a boundary type and its ## Security section is empty; list the threats considered, the control for each and how each control is verified" ;;
+          none) problem "golden path $rel: $type is a boundary type and its ## Security section says \"none identified\"; list the threats considered, the control for each and how each control is verified" ;;
+        esac
+        ;;
+    esac
+  fi
+  if [ -n "$type" ] && [ "$status" != retired ]; then
+    seen_rel=$(rastro_gp_seen_find "$gp_seen" "$type") &&
+      problem "golden path $rel: type $type already has golden path $seen_rel"
+    gp_seen=$gp_seen$type$'\t'$rel$'\n'
+  fi
+  [ "$has_instances" -eq 1 ] || return 0
+  rastro_frontmatter_split "$instances" && s=0 || s=$?
+  if [ "$s" -eq 3 ]; then
+    problem "golden path $rel: instances is not an inline list"
+    return
+  fi
+  if [ "$status" = current ] && [ "${#RASTRO_FM_ITEMS[@]}" -eq 0 ]; then
+    problem "golden path $rel: current with no instance"
+  fi
+  for inst in ${RASTRO_FM_ITEMS[@]+"${RASTRO_FM_ITEMS[@]}"}; do
+    path=$(rastro_gp_instance_path "$inst")
+    [ -e "$root/$path" ] || problem "golden path $rel: instance $path does not exist"
+  done
+}
+
+gp_boundary=""
+gp_layers=""
+gp_layers_read=0
+gp_read_layers() {
+  [ "$gp_layers_read" -eq 0 ] || return 0
+  gp_layers_read=1
+  gp_layers=$(rastro_config_list architecture.layers 2>/dev/null) || gp_layers=""
+  [ -z "$gp_layers" ] || gp_layers=$gp_layers$'\n'
+}
+if get architecture.boundary_types; then
+  case $val in
+    "" | "[]") ;;
+    *)
+      gp_boundary=$(rastro_config_list architecture.boundary_types 2>/dev/null) || gp_boundary=""
+      [ -z "$gp_boundary" ] || gp_boundary=$gp_boundary$'\n'
+      ;;
+  esac
+fi
+if [ -n "$gp_boundary" ]; then
+  gp_read_layers
+  if [ -n "$gp_layers" ]; then
+    checks=$((checks + 1))
+    while IFS= read -r bt; do
+      [ -n "$bt" ] || continue
+      case $'\n'"$gp_layers" in
+        *$'\n'"$bt"$'\n'*) ;;
+        *) problem "architecture.boundary_types names $bt, which is not in architecture.layers" ;;
+      esac
+    done <<<"$gp_boundary"
+  fi
+fi
+
+if get architecture.golden_paths; then
+  gp_lib_ok=0
+  if . "$lib/goldenpath.sh" 2>/dev/null; then
+    gp_lib_ok=1
+    gp_dir=$(rastro_gp_folder 2>/dev/null) && s=0 || s=$?
+  else
+    # Without the lib the folder cannot be resolved the shared way; the
+    # problem below says so once the folder turns out to exist.
+    # This inline fallback mirrors rastro_gp_folder in hooks/lib/goldenpath.sh.
+    gp_dir=${val:-docs/golden-paths/}
+    case $gp_dir in '['*) s=2 ;; *) s=0 ;; esac
+    case $gp_dir in */) ;; *) gp_dir=$gp_dir/ ;; esac
+  fi
+  if [ "$s" -eq 2 ]; then
+    checks=$((checks + 1))
+    problem "architecture.golden_paths is a list; it now names one folder, such as docs/golden-paths/"
+  else
+    if [ -d "$root/$gp_dir" ]; then
+      if ! . "$lib/frontmatter.sh" 2>/dev/null; then
+        checks=$((checks + 1))
+        problem "could not check golden paths: $lib/frontmatter.sh not found"
+      elif [ "$gp_lib_ok" -eq 0 ]; then
+        checks=$((checks + 1))
+        problem "could not check golden paths: $lib/goldenpath.sh not found"
+      else
+        gp_read_layers
+        gp_seen=""
+        while IFS= read -r f; do
+          [ -n "$f" ] || continue
+          gp_check "$f" "$gp_dir${f##*/}"
+        done <<<"$(rastro_gp_files "$root" "$gp_dir")"
+      fi
     fi
   fi
 fi

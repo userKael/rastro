@@ -33,3 +33,12 @@ git push -u origin docs/design-<slug>
 The human's choice of **Publish** authorizes this push, and only this one.
 With `code_host: none`, do not push
 the nine required-reading sections
+is the first instance of that type
+The golden path itself is written with the code
+publish it?** Class: fork. Mode: team.
+`architecture.golden_paths`, `architecture.boundary_types`
+"None identified" does not serve a boundary type.
+the type joins `architecture.boundary_types`
+lists its threats, the control for each and how each is verified
+or the `DT-nn` that adds its layer says it crosses a trust boundary, it is a boundary type
+whose type is in `architecture.boundary_types`, or whose `DT-nn` says it crosses a trust boundary, lists its threats

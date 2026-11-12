@@ -1,6 +1,6 @@
 ---
 name: breakdown
-description: Entry skill of the rastro flow. Turns an intent (a published design doc, an observed bug, or a well-formed change request) into work items through the tracker port. The result is a bug, a task, or a story with subtasks, each subtask anchored in file:line, with the reconciliation embedded in the top item under the Reconciliation section. Use when the request is "start X", "I have a design doc to break down", "I found a bug and want an item", or "split this story into subtasks". Do NOT use when an item already exists and the request is to implement it; that is implement. Do NOT use for a shapeless request; that goes to design-doc. Ends by handing over the created item ids. It creates no implementation branch, writes no code and opens no implementation PR.
+description: Entry skill of the rastro flow. Turns an intent (a published design doc, an observed bug, a well-formed change request, or the walking skeleton that init writes) into work items through the tracker port. The result is a bug, a task, or a story with subtasks, each subtask anchored in file:line, with the reconciliation embedded in the top item under the Reconciliation section. Use when the request is "start X", "I have a design doc to break down", "I found a bug and want an item", or "split this story into subtasks". Do NOT use when an item already exists and the request is to implement it; that is implement. Do NOT use for a shapeless request; that goes to design-doc. Ends by handing over the created item ids. It creates no implementation branch, writes no code and opens no implementation PR.
 ---
 
 # breakdown
@@ -42,13 +42,13 @@ For rules, conventions and rulers, the order is `AGENTS.md`, then the team profi
 
 This skill is the operational authority for the story rule, the subtask rule, the `[no PR]` valve and the merge test. The `AGENTS.md` block does not repeat them.
 
-Every gate below stops by default and declares its class, following `## Gate anatomy` in the `AGENTS.md` block.
+Every gate below stops by default and declares its class and its mode, following `## Gate anatomy` in the `AGENTS.md` block.
 
 ## Inviolable rules
 
 Read these before anything else. A violation means stop and report, never work around.
 
-1. **Never create an item before the slicing gate.** Automating creation makes the ceremony fast, not good, and a badly formed item costs more than it saves. Measure on your backlog how often items without subtasks get cancelled. `.rastro/CALIBRATION.md` holds that question.
+1. **Never create an item before the slicing gate.** Automating creation makes the ceremony fast, not good, and a badly formed item costs more than it saves. Measure on your backlog how often items without subtasks get cancelled. `.rastro/CALIBRATION.md` holds that question. In a continuous run the gate still runs, and the choice made at the start answers it.
 2. **Never slice without reconciliation.** The reconciliation produces the `file:line` evidence that S3 requires. Slicing without an anchor is speculation.
 3. **Never copy the design doc into the item.** The description points to the source and never rewrites it. Two copies of the same truth diverge.
 4. **The item type is an output, never a question.** Bug, task or story comes out of the reconciliation (4.1), not out of the interview. A taxonomy that depends on judgment does not converge across authors.
@@ -56,12 +56,17 @@ Read these before anything else. A violation means stop and report, never work a
 6. **Never skip the reconciliation because `design-doc` wrote the design doc.** That design doc is grounded in vocabulary, not in decisions. It can still be wrong, and finding that is the job of the reconciliation. An empty reconciliation looks like success.
 7. **Never inherit the candidate slicing of a design doc as authority.** It is a seed, and its own template says so. The cut comes from the reconciliation and the merge test (4.7).
 
+## Step 0 — Execution mode
+
+Before triage, read the execution mode as `## Execution mode` in the rastro block of `AGENTS.md` says (template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`). No item exists yet, so the top item of this run is `breakdown-<slug>`, with `<slug>` derived here as Step 2 describes. Section 5.5 replaces it with the id of the top item. The confirmation lines taken before creation go to `<workspace>/breakdown-<slug>/rulings.md`.
+
 ## Step 1 — TRIAGE
 
-Four branches. Choose by observation, not by an open question.
+Five branches. Choose by observation, not by an open question.
 
 | Signal in the input | Branch | Go to |
 |---|---|---|
+| An intent file whose header says `origin: init, conversation with`: the walking skeleton | walking skeleton | 2.4 |
 | A reference to a published design doc | design doc | 2.1 |
 | Observed behavior contradicts a pre-existing contract: a test, a design doc, an ADR, a golden path, a doc | bug | 2.2 |
 | A nameable request, with a clear object and a clear contract | interview | 2.3 |
@@ -83,7 +88,7 @@ The skill is `${CLAUDE_PLUGIN_ROOT}/skills/design-doc/SKILL.md`. Do not supply t
 
 ### Anchor test
 
-Before going down any branch, ask: does the flow you will change already exist, so it can be read? With no existing flow to change, the work has no boundary. When the test fails, the branch is shapeless, even when a design doc exists.
+Before going down any branch, ask: does the flow you will change already exist, so it can be read? With no existing flow to change, the work has no boundary. When the test fails, the branch is shapeless, even when a design doc exists. In a repository with no source code, the walking skeleton is the exception: no flow exists to read, so its anchors are the accepted ADRs in `docs/adr/` and `.rastro/config.yml`, by `file:line`. Any other request in a repository with no source code goes to `init` first.
 
 ### Branch declaration: not a question
 
@@ -180,6 +185,10 @@ captured_on: <YYYY-MM-DD>
 
 When the answer to question 2 is still generic after one re-ask, the request probably belongs to the shapeless branch. Say so and stop.
 
+### 2.4 Walking skeleton branch
+
+`init` wrote this intent with the person, after its gate, at `<workspace>/breakdown-walking-skeleton/intent.md`, so `<slug>` is `walking-skeleton`. Take it as it is: the three questions of 2.3 do not run again, and the file is never edited. Its `## Components` list one `new` component for each layer the skeleton crosses, and `reconcile` classifies each one against the golden paths, of which none exists yet.
+
 ## Step 3 — RECONCILIATION
 
 Invoke `${CLAUDE_PLUGIN_ROOT}/skills/reconcile/SKILL.md` with:
@@ -248,6 +257,8 @@ All four items are required.
 | S3 | Anchor in the code | no `file:line`, symbol, table or migration coming from the reconciliation |
 | S4 | Declared order | the subtask states neither its number in the sequence nor what it unblocks |
 
+In the walking skeleton, no code exists yet: the S3 anchor is the `file:line` of the ADR or of `.rastro/config.yml` that decides the slice.
+
 The summary format is required:
 
 ```
@@ -266,6 +277,8 @@ Summaries that fail:
 - `Catch up with what the bookstore team agreed`: says neither what nor where
 
 Out of the rule, on purpose: independence, isolated value, demonstrability and estimate. Slice 1 is often a foundation, and a foundation almost never demonstrates anything. INVEST is a story ruler and stays one. A subtask is a decomposition of work.
+
+A `no golden path` or `extends` row of the reconciliation never becomes its own subtask. The subtask that delivers the first instance writes the golden path, and the subtask that delivers the extension raises its version. A golden path with no instance has nothing to point at, and an instance with no golden path is the drift the reconciliation found.
 
 When `.rastro/profiles/breakdown.md` has a `## Subtask rule` section, it replaces S1 to S4. The `file:line` anchor stays required even then, because it is doctrine: a profile that drops S3 does not drop the anchor. When it has a `## Subtask summary format` section, that format replaces the one above. `.rastro/CALIBRATION.md` asks which format the team already uses.
 
@@ -292,7 +305,7 @@ When the reconciliation found nothing for the portal, do not invent a doc subtas
 
 ### 4.6 Additional checks
 
-When `.rastro/profiles/breakdown.md` has a `## Additional checks` section, run each check at the step it names. A check marked as a gate stops at the next gate of this skill. A check marked as an observation becomes a note below the state table of that gate.
+When `.rastro/profiles/breakdown.md` has a `## Additional checks` section, run each check at the step it names. A check marked as a gate stops at the next gate of this skill. A check marked as an observation becomes a note below the state table of that gate. A failing check marked as a gate makes the recommended option of that gate "adjust", so the gate stops even in a continuous run.
 
 ### 4.7 Merge test
 
@@ -306,11 +319,11 @@ Merge when 1 and 2 are yes. Question 3 is the only size criterion, and it can on
 
 ## Gate — slicing
 
-Stop. Nothing has been created yet. **Class: fork.** Print the state and the proposal only:
+Stop. Nothing has been created yet. Print the title, then the state and the proposal only:
+
+**Gate — slicing of <slug> proposed: create the items?** Class: fork. Mode: confirmation.
 
 ```markdown
-**Gate — slicing of <slug> proposed: create the items?**
-
 | | |
 |---|---|
 | Base | `<base_branch>@<sha7>` |
@@ -327,15 +340,15 @@ Stop. Nothing has been created yet. **Class: fork.** Print the state and the pro
 Nothing has been created yet.
 ```
 
-A failed rule item becomes one note below the state table, naming the item, such as `H4`, and what is missing. The recommended option then becomes adjust, not create. A type substitution and each gate check from `## Additional checks` also become notes.
+A failed rule item becomes one note below the state table, naming the item, such as `H4`, and what is missing. The recommended option then becomes adjust, not create. A type substitution and each gate check from `## Additional checks` also become notes. A failing gate check makes the recommended option adjust too.
 
 Then ask with the structured question tool, recommended option first, without repeating the options in the text above it:
 
 - **Create** (recommended when the story rule passes 5 of 5 or does not apply): creates the items; with `tracker: local`, it also pushes the item branch and opens the item PR. No implementation branch and no code.
 - **Adjust the slicing**: the human says what changes, and the gate runs again.
-- **Stop**: nothing is created.
+- **Stop**: nothing is created. The run ends, and `<workspace>/mode` is deleted.
 
-Without a structured question tool, end the turn with the question. Create items only after an explicit choice of **Create**.
+Without a structured question tool, end the turn with the question. Create items only after an explicit choice of **Create**, at the gate or, in a continuous run, at the start. When the recommended option is not **Create**, the gate stops even in a continuous run: only the human can say what changes.
 
 ## Step 5 — CREATION
 
@@ -347,8 +360,8 @@ Write it from `${CLAUDE_PLUGIN_ROOT}/templates/work-item.md`, in `project.langua
 
 - **Context:** 2 to 4 lines on why the item exists. It points to the source and never repeats the design doc.
 - **Observer and assertion:** H1 and H2.
-- **Scope:** H4, plus the declared scope of the reconciliation, with the paths of its `exists` and `changes` items. `implement` filters the delta revalidation by this list.
-- **Sources:** the design doc reference, version and capture date, marked as the source of truth; the violated contract for a bug; the separate intents found in 2.1; the reconciliation stamp `<base_branch>@<sha7>` and its date.
+- **Scope:** H4, plus the declared scope of the reconciliation, with the paths of its `exists` and `changes` items. `implement` filters the delta revalidation by this list. For the walking skeleton, whose modules are "none yet", the list is the paths the skeleton creates, one per component, so the delta revalidation has a path and `implement` never stops to ask for one.
+- **Sources:** the design doc reference, version and capture date, marked as the source of truth; the violated contract for a bug; the separate intents found in 2.1; the reconciliation stamp `<base_branch>@<sha7>` and its date; for the walking skeleton, each ADR it builds on, by path, none of them marked as the source of truth.
 - **`## Reconciliation`:** the five sections of `reconciliation.md`, as tables.
 
 The `## Reconciliation` section holds tables only, with no free paragraph and no cell above 200 characters. It carries findings and decisions, never design doc content. A huge description and an empty one are both extremes. The target is a short table with `file:line`. Cut a long cell down to its anchor; the full text stays in the workspace.
@@ -389,13 +402,17 @@ A `[no PR]` subtask writes `[no PR]` in Anchor and Revert. A subtask never repea
 - **`tracker: none`:** the item lives in the conversation and in the workspace, and the reconciliation goes to the PR description later. After creation, copy `<workspace>/breakdown-<slug>/reconciliation.md` to `<workspace>/<item id>/reconciliation.md`, where `<item id>` is the id of the top item, and say so at the continuity gate. `implement` reads it there, which keeps one stamped reading. Say that the work cannot be resumed before a PR exists.
 - **Any other tracker:** follow `create_item` and `item_types` of the adapter as written.
 
+### 5.5 The run after creation
+
+Write the id of the top item on the `item:` line of `<workspace>/mode`, so that `implement` and `deliver` recognize the run. In a continuous run, append the lines of `<workspace>/breakdown-<slug>/rulings.md` to `<workspace>/<first id>/rulings.md`, where `<first id>` is subtask 1, or the top item when it has no subtasks. The line of the continuity gate below goes there too. `implement` and `deliver` work in that folder, so the lines reach the first PR.
+
 ## Gate — continuity
 
-**Class: fork.** Print the state, with the created ids linked:
+Print the title, then the state, with the created ids linked:
+
+**Gate — <id> created: implement <subtask 1 / the item> now?** Class: fork. Mode: confirmation.
 
 ```markdown
-**Gate — <id> created: implement <subtask 1 / the item> now?**
-
 | | |
 |---|---|
 | Created | [<id>](<url>), <type>, <k subtasks / no subtasks> |
@@ -414,12 +431,14 @@ With `tracker: local`, add a note below the table: the items exist for other clo
 
 Then ask with the structured question tool, recommended option first, without repeating the options in the text above it:
 
-- **Stop here** (recommended): the items are ready; the PRs take days and involve other people.
-- **Implement <id>, PR 1**: invokes `implement` on the subtask, never on the story. For a task or a bug with no subtasks, on the item itself.
+- **Stop here** (recommended when the run stops at every gate): the items are ready; the PRs take days and involve other people. The run ends, and `<workspace>/mode` is deleted.
+- **Implement <id>, PR 1** (recommended in a continuous run): invokes `implement` on the subtask, never on the story. For a task or a bug with no subtasks, on the item itself.
+
+With `tracker: local` and an item PR not merged yet, the recommended option is **Stop here** in both modes: the person must merge the item PR first, because the items are on the base branch only after the merge, and `implement` could not read them before. The gate then stops even in a continuous run, and the run ends with `<workspace>/mode` deleted.
 
 Without a structured question tool, end the turn with the question.
 
-The default is to stop. Never go on to implementation without an explicit choice. A flow of several PRs takes days and involves other people, and this skill does not pretend to run it in one go.
+The default is to stop. Never go on to implementation without an explicit choice. A continuous run is that choice, made at the start. A flow of several PRs takes days and involves other people, and this skill does not pretend to run it in one go.
 
 ## Handoff
 
@@ -427,7 +446,7 @@ When the human chooses to implement, invoke `implement` with the id of the subta
 
 With any tracker but `none`, the `## Reconciliation` section of the item is the copy `implement` inherits: it finds the section in the parent. With `tracker: none`, `implement` reads the copy at `<workspace>/<item id>/reconciliation.md` (5.4). Either way, it revalidates by delta over the declared scope instead of running the protocol again.
 
-After subtask 1, the loop goes on: `implement`, then `deliver`, then subtask 2. The human drives the loop at the continuity gate of `deliver`.
+After subtask 1, the loop goes on: `implement`, then `deliver`, then subtask 2. The human drives the loop at the continuity gate of `deliver`, or, in a continuous run, the choice made at the start.
 
 ## What this skill does NOT do
 

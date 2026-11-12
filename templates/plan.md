@@ -1,6 +1,6 @@
 # <item id> Implementation Plan
 
-> **Template.** Delete this note when filling in. The plan lives in `<workspace>/<item id>/plan.md` and is not versioned. Write the headings in `project.languages.human`; `[HUMAN]`, `D-n` and `DT-nn` stay literal.
+> **Template.** Delete this note when filling in. The plan lives in `<workspace>/<item id>/plan.md` and is not versioned. Write the headings in `project.languages.human`; `[HUMAN]`, `D-n` and `DT-nn` stay literal. Footprint, Tier and Actual are planning aids and stay in this file: never write them to a tracker item.
 
 - **Goal:** <one sentence: what exists when this plan is done>
 - **Spec:** `<workspace>/<id>/reconciliation.md`
@@ -27,6 +27,12 @@ Only the golden paths this plan uses.
 
 - `<path>`: <why it applies>
 
+### Golden paths this item creates or evolves
+
+From the `no golden path`, `extends` and decided `contradicts` rows of the reconciliation. The task of the instance writes the golden path.
+
+- `<id>`: <created | extended to <version> | changed to <version>>, in Task <n>, verified by <review | the command>; for a type in `architecture.boundary_types`, the task also writes `## Security` from the reference and a real-system scenario
+
 ### Relevant state machines
 
 - `<entity>`: states `<a, b, c>`; allowed transitions `<a to b, b to c>`; defined at `<file:line>`
@@ -43,6 +49,10 @@ Only the `new` and `changes` items that survived the reconciliation.
 - `D-n`, `DT-nn`: <the decisions that still bind this plan>
 
 ## Task 1: <what this task delivers>
+
+- **Footprint:** diff <small | medium | large>, read <small | medium | large>
+- **Tier:** <light | standard | deep>, from the table in `.rastro/CALIBRATION.md`
+- **Actual:** <filled after the commit: <n> lines in <k> files>
 
 **Files:**
 

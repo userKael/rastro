@@ -16,13 +16,13 @@ line_of() {
 }
 
 assert_toolchain_before_verify() {
-  local file=$1 marker verify
+  local file=$1 target=${2:-.rastro/git-hooks/run-verify} marker verify
   marker=$(line_of "$file" '# toolchain:')
-  verify=$(line_of "$file" '.rastro/git-hooks/run-verify')
+  verify=$(line_of "$file" "$target")
   if [ -z "$marker" ]; then
     _assert_fail "${file#"$root"/} has no step marked # toolchain:"
   elif [ -n "$verify" ] && [ "$marker" -ge "$verify" ]; then
-    _assert_fail "${file#"$root"/} puts # toolchain: after run-verify"
+    _assert_fail "${file#"$root"/} puts # toolchain: after $target"
   fi
 }
 
@@ -107,6 +107,42 @@ test_gitlab() {
   assert_called_scripts_ship "$gitlab"
 }
 
+test_audit_templates() {
+  local audit_github="$root/templates/ci/audit-github.yml"
+  local audit_gitlab="$root/templates/ci/audit-gitlab-ci.yml"
+  [ -f "$audit_github" ] || {
+    _assert_fail "templates/ci/audit-github.yml does not exist"
+    return
+  }
+  [ -f "$audit_gitlab" ] || {
+    _assert_fail "templates/ci/audit-gitlab-ci.yml does not exist"
+    return
+  }
+  need "$audit_github" 'schedule:'
+  need "$audit_github" 'cron:'
+  need "$audit_github" 'workflow_dispatch:'
+  need "$audit_github" 'fetch-depth: 0'
+  need "$audit_github" 'shell: bash'
+  need "$audit_github" '# toolchain:'
+  need "$audit_github" '.rastro/git-hooks/audit-drift --fail-on-drift'
+  need "$audit_github" 'actions/upload-artifact@v4'
+  [ "$(head -n 1 "$audit_github")" = '# Copy to .github/workflows/rastro-audit.yml.' ] ||
+    _assert_fail "audit-github.yml does not start with the copy instruction"
+  assert_toolchain_before_verify "$audit_github" '.rastro/git-hooks/audit-drift'
+  assert_no_tabs "$audit_github"
+  assert_called_scripts_ship "$audit_github"
+
+  need "$audit_gitlab" '$CI_PIPELINE_SOURCE == "schedule"'
+  need "$audit_gitlab" 'GIT_DEPTH: "0"'
+  need "$audit_gitlab" '# toolchain:'
+  need "$audit_gitlab" '.rastro/git-hooks/audit-drift --fail-on-drift'
+  need "$audit_gitlab" 'artifacts:'
+  assert_toolchain_before_verify "$audit_gitlab" '.rastro/git-hooks/audit-drift'
+  assert_no_tabs "$audit_gitlab"
+  assert_called_scripts_ship "$audit_gitlab"
+}
+
 test_github
 test_gitlab
+test_audit_templates
 finish

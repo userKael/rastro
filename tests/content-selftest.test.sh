@@ -38,7 +38,7 @@ plugin_copy() {
 }
 add_core_skills() {
   local s
-  for s in setup design-doc breakdown reconcile domain-context implement deliver; do
+  for s in init setup design-doc breakdown reconcile domain-context implement deliver audit; do
     mkdir -p "$1/skills/$s"
     sed "s/^name: alpha/name: $s/" "$1/skills/alpha/SKILL.md" >"$1/skills/$s/SKILL.md"
     cp "$1/tests/anchors/alpha.txt" "$1/tests/anchors/$s.txt"
@@ -53,6 +53,10 @@ write_core_markers() {
 | `## Reconciliation` | breakdown |
 | `reconciliation.md` | reconcile |
 | `NOT VERIFIED` | domain-context |
+| `follows` | reconcile |
+| `extends` | reconcile |
+| `contradicts` | reconcile |
+| `no golden path` | reconcile |
 | `[HUMAN]` | implement |
 | `[no PR]` | breakdown |
 | `## Context` | domain-context |
@@ -62,6 +66,7 @@ MARKERS
   cat >"$1/templates/core-markers.md" <<'BODY'
 ## Reconciliation
 reconciliation.md NOT VERIFIED [HUMAN] [no PR]
+follows extends contradicts no golden path
 ## Context
 Decided (<YYYY-MM-DD>): D-n DT-nn
 BODY
@@ -233,6 +238,30 @@ test_skills_tool_names() {
   expect_fail "tool name in a skill" skills "$r" "names a tool product or stack" "SKILL.md:"
 }
 
+test_skills_gate_modes() {
+  local r title='**Gate — alpha ready: go on?**' lineno msg='gate does not declare its mode next to its class' line
+  r=$(fresh)
+  append "$r" skills/alpha/SKILL.md "$title Class: fork. Mode: confirmation. State:"
+  expect_pass "gate with class and mode" skills "$r"
+  r=$(fresh)
+  append "$r" skills/alpha/SKILL.md "$title Class: fork. State:"
+  lineno=$(wc -l <"$r/skills/alpha/SKILL.md")
+  expect_fail "gate without a mode" skills "$r" "skills/alpha/SKILL.md:$lineno: $msg"
+  r=$(fresh)
+  append "$r" skills/alpha/SKILL.md "$title Class: fork."
+  append "$r" skills/alpha/SKILL.md "Mode: confirmation."
+  expect_fail "mode on the next line" skills "$r" "$msg"
+  r=$(fresh)
+  append "$r" skills/alpha/SKILL.md "$title Class: fork. Mode: optional."
+  expect_fail "unknown mode" skills "$r" "$msg"
+  r=$(fresh)
+  append "$r" skills/alpha/SKILL.md "$title Mode: team."
+  expect_fail "mode without a class" skills "$r" "$msg"
+  r=$(fresh)
+  line="$title Class: fork. Mode: team."
+  printf '%s\r\n' "$line" >>"$r/skills/alpha/SKILL.md"
+  expect_pass "gate line ending in CRLF" skills "$r"
+}
 test_adapters_missing_files() {
   local r
   r=$(fresh)
@@ -445,13 +474,13 @@ test_required_skills() {
   local r c
   r=$(fresh)
   with_mode core expect_fail "core skills required by flag" skills "$r" \
-    "required skill 'setup' is missing" "required skill 'design-doc' is missing" "required skill 'breakdown' is missing" \
+    "required skill 'init' is missing" "required skill 'setup' is missing" "required skill 'design-doc' is missing" "required skill 'breakdown' is missing" \
     "required skill 'reconcile' is missing" "required skill 'domain-context' is missing" "required skill 'implement' is missing" \
-    "required skill 'deliver' is missing"
+    "required skill 'deliver' is missing" "required skill 'audit' is missing"
   r=$(plugin_copy)
-  with_mode default expect_fail "default root requires all seven" skills "$r" "required skill 'setup' is missing" "required skill 'deliver' is missing"
+  with_mode default expect_fail "default root requires all nine" skills "$r" "required skill 'setup' is missing" "required skill 'deliver' is missing" "required skill 'audit' is missing"
   add_core_skills "$r"
-  with_mode default expect_pass "default root with all seven" skills "$r"
+  with_mode default expect_pass "default root with all nine" skills "$r"
   rm -r "$r/skills/deliver"
   with_mode default expect_fail "default root, SKILL.md missing" skills "$r" "required skill 'deliver' is missing"
   c=$(plugin_copy)
@@ -463,7 +492,7 @@ test_required_skills() {
   mv "$c/skills/setup" "$c/skills/tmp-name" && mv "$c/skills/tmp-name" "$c/skills/Setup"
   with_mode default expect_fail "default root, skill directory differs in case" skills "$c" "required skill 'setup' is missing"
   c=$(plugin_copy)
-  with_mode default expect_fail "no argument means all seven are required" skills "$c" "required skill 'implement' is missing"
+  with_mode default expect_fail "no argument means all nine are required" skills "$c" "required skill 'implement' is missing"
 }
 test_required_markers() {
   local r
@@ -502,6 +531,7 @@ test_skills_plugin_paths
 test_skills_bare_paths
 test_skills_config_keys
 test_skills_tool_names
+test_skills_gate_modes
 test_adapters_missing_files
 test_adapters_title
 test_adapters_requirements

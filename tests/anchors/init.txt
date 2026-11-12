@@ -1,0 +1,58 @@
+${CLAUDE_PLUGIN_ROOT}/templates/adr.md
+${CLAUDE_PLUGIN_ROOT}/templates/stack-detection.md
+${CLAUDE_PLUGIN_ROOT}/skills/setup/SKILL.md
+${CLAUDE_PLUGIN_ROOT}/skills/breakdown/SKILL.md
+## Inviolable rules
+## Step 0 — Where init starts
+## Step 1 — Detect
+## Step 2 — Interview
+## Step 3 — Draft the ADRs
+## Step 4 — Gate
+## Step 5 — Write
+## Step 6 — Setup
+## Step 7 — Walking skeleton
+## Handoff
+One question at a time.
+Write nothing before the gate.
+Never commit and never push.
+Never write a golden path.
+An ADR with no human decision behind it is fabricated.
+<reason not given>
+This repository has source code
+`git rev-parse --show-toplevel`
+inside another repository
+When nothing is open, go to Step 7.
+`architecture.modules`
+"none yet"
+`architecture.layers`
+`architecture.boundary_types`
+`verify.source_globs`
+the next free number
+never overwrites
+**Gate — decisions of <project.name>: do these ADRs hold, and do I write them?** Class: deliberation. Mode: decision.
+| all hold as drafted | | | |
+`git init` runs only after the gate
+`git symbolic-ref --short HEAD`
+<workspace>/breakdown-walking-skeleton/intent.md
+origin: init, conversation with <person>
+## Components
+The skeleton also writes the CI file with its toolchain step, as one of its own components
+When the intent already exists, keep it as it is.
+`git ls-tree --name-only <project.base_branch> -- .rastro/config.yml`
+before the first item
+init asks no execution mode
+Once `.rastro/config.yml` exists, only Step 7 is open.
+including answers read back from accepted ADRs
+after this run's `git init` when there was one
+When no ADR is drafted and no `git init` is needed, skip the gate.
+verify commands, and the CI that runs them when a CI file already exists
+When the intent already exists, skip the question.
+stop and follow the next row of the state table
+`chore(infra): <subject>`
+drafts at most three ADRs (stack, structure, verification)
+When the stack detection names a stack profile, point to it in the closing report, by the path the detection gives; the profile is read where it is and never copied.
+and note the stack profile when the detection section names one
+The detection names it as `${CLAUDE_PLUGIN_ROOT}/profiles/stacks/<name>/`, or under `RASTRO_ROOT` for an agent other than Claude Code.
+the CI file comes with the walking skeleton, not with `setup`
+match the stack answer of the interview against the profile folders that the stack detection lists under `Stack profile:`
+the agent install folders (`.agents/`, `.codex/`, `.cursor/`)

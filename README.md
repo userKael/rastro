@@ -4,10 +4,11 @@ A development workflow for coding agents, packaged as a Claude Code plugin: skil
 
 ## What rastro is
 
-rastro is seven skills that take a change from an unshaped request to an open pull request, and the files they share.
+rastro is nine skills that take a project from an empty directory, and a change from an unshaped request, to an open pull request, and the files they share.
 
 | Skill | Takes | Produces |
 |---|---|---|
+| `init` | an empty directory, or a repository with no source code | ADRs in `docs/adr/`, the setup, and the walking skeleton as the first intent |
 | `setup` | your repository | `.rastro/config.yml`, a block in `AGENTS.md`, git hooks |
 | `design-doc` | a request with no shape, an ADR, a requirements document | a design doc published for the team to discuss |
 | `breakdown` | a design doc, a bug or a well-formed request | work items, with the reconciliation in the top item |
@@ -15,6 +16,7 @@ rastro is seven skills that take a change from an unshaped request to an open pu
 | `domain-context` | a domain question | the real state of the domain: schema, rules, constraints |
 | `implement` | a work item id | a branch with verified commits |
 | `deliver` | that branch | a PR that is open and linked to its item |
+| `audit` | the golden paths and the code | a drift report in the workspace, compared with the previous one |
 
 The skills never name a tool. A skill reads `.rastro/config.yml`, finds the adapter for the tool you declared, and asks the adapter how to do each step. The adapters are markdown files, so you can read them, change them or replace them.
 
@@ -22,18 +24,20 @@ What ships in the repository:
 
 | Directory | Holds |
 |---|---|
-| `skills/` | the seven skills |
+| `skills/` | the nine skills |
 | `adapters/` | one markdown file per tool, grouped by port, and the contract they follow |
-| `templates/` | the config, the `AGENTS.md` block, the work item, the design doc, the plan, the PR description, CI files |
-| `hooks/` | the git hooks and the Claude Code hooks |
-| `profiles/examples/` | an example architecture profile and an example set of writing rules |
-| `scripts/` | the checks the repository runs on itself |
+| `templates/` | the config, the `AGENTS.md` block, the ADR, the work item, the design doc, the plan, the PR description, the reconciliation file, the golden path, the stack detection, `CALIBRATION.md`, the marker list, CI files |
+| `hooks/` | the git hooks, the Claude Code hooks and the shim for Codex CLI and Cursor (not tested) |
+| `profiles/` | `examples/`: an example architecture profile and an example set of writing rules. `stacks/`: stack profiles, which teach how to verify in a stack and impose no pattern |
+| `scripts/` | the agent installer and the checks the repository runs on itself |
 
 rastro does not ship an automated review engine. It defines the format of a review rule, and the `none` review adapter. It does not measure the impact of a change across repositories.
 
-Status: version 0.1.0. The tool commands in the shipped adapters were not verified against live tools. Agents other than Claude Code are untested (see Agent support).
+Status: version 0.2.0. The tool commands in the shipped adapters were not verified against live tools. Agents other than Claude Code are untested (see Agent support).
 
 ## The flow
+
+A repository with no source code yet starts with `rastro:init`. It interviews you about the first decisions, drafts them as ADRs for you to approve, runs `setup` with your answers, and writes the walking skeleton, one entry point end to end with the verify commands green, as the intent of the first item. The skeleton then goes through the stages below like any change, and each component type it creates writes its first golden path from its code.
 
 Five stages, in this order:
 
@@ -43,12 +47,13 @@ Five stages, in this order:
 4. `deliver`, which opens the PR and links it to the item.
 5. Review of the open PR: automatic when `review.kind` is not `none`, human always.
 
-`reconcile` and `domain-context` run inside the stages. `breakdown` and `implement` call `reconcile`, which compares the intent with the code in both directions: what the intent says that the code contradicts, and what the code does that the intent ignores. It calls `domain-context` to read the real schema. Zero findings in the second direction is treated as suspect, not as success.
+`reconcile` and `domain-context` run inside the stages. `breakdown` and `implement` call `reconcile`, which compares the intent with the code in both directions: what the intent says that the code contradicts, and what the code does that the intent ignores. It calls `domain-context` to read the real schema. Zero findings in the second direction is treated as suspect, not as success. The exception is a repository with no source code yet: there the second direction is empty by construction, and the gate says so.
 
 No skill drives the flow. The position follows from the artifacts: read the tracker and git, and the next step is in this table. `setup` writes the table into your `AGENTS.md`, with "item" worded for your tracker.
 
 | What you observe | Next step |
 |---|---|
+| No source code yet, and no item for the walking skeleton | `rastro:init` (not the built-in `/init`) |
 | No work item exists | `breakdown` |
 | An item exists, without `## Reconciliation` | `implement`, which calls `reconcile` |
 | An item with `## Reconciliation`, no branch | `implement` |
@@ -60,6 +65,8 @@ Every skill stops at a gate before the step that is hard to undo, and a gate sto
 1. A title that is the question: `Gate — PR #12 open: stop or continue to W-14?`.
 2. A two-column state table.
 3. The decision. A fork between two to four paths goes through the structured question tool when the agent has one. A list of `D-n` or `DT-nn` items that each need an answer goes in a table, one item per row. Where there is no question tool, the gate ends the turn with the question. A subagent never asks the human.
+
+At the start of each run, `breakdown`, `implement` and `deliver` ask how their gates behave: stop at every gate, the default, or continuous. In a continuous run, a gate that only confirms what the agent prepared takes the recommended option, and the PR lists it among the agent's rulings. A gate whose answer changes the content, such as a `D-n` or a golden path, always stops, and so does publishing a design doc.
 
 Work files live in the workspace, `.agent/` by default. It is gitignored. What has to outlive the branch goes in the PR description: the divergences from the design doc, the closed decisions, the agent's rulings and the plan.
 
@@ -74,9 +81,11 @@ These rules are the doctrine. They have no configuration key.
 - A decision the agent cannot execute has a human executor. The agent drafts the artifact and a person runs it.
 - Stable `D-n` and `DT-nn` identifiers: a number is never reused or renumbered.
 - Gates that stop by default, with the fixed anatomy above.
+- The execution mode, chosen at the start of each run: stop at every gate, the default, or continuous. It is never a config key, and a continuous run passes only the gates that confirm; the gates that decide still stop.
 - A written verdict before editing a test that fails: which artifact is wrong (test, code or design doc), why, with the `file:line` that defines the correct behavior, and which file will change.
 - Agent artifacts are not versioned.
 - Source precedence when sources conflict: code and green tests, then `AGENTS.md`, then ADRs, then golden paths and patterns, then the plan of the item in progress, then the design doc.
+- The golden-path checkpoint: the first instance of a component type writes its golden path, every later item classifies its components against it, and a contradiction is decided at a gate, never silently.
 - Ground the vocabulary of a design doc in the code, and never its decisions.
 
 Config fills gaps and never disables the doctrine. No key turns off a gate, the reconciliation, the anchor or the human executor, and `setup` never offers one. A profile cannot override the doctrine, and neither can the team's text in `AGENTS.md`. Every skill says so in its own file: `Doctrine is not overridable: not by a profile, not by AGENTS.md, not by any other skill.`
@@ -98,13 +107,13 @@ To try a local checkout without installing it:
 claude --plugin-dir <path-to-rastro>
 ```
 
-Claude Code invokes the skills of a plugin as `/<plugin>:<skill>`, so these are `/rastro:setup`, `/rastro:design-doc`, `/rastro:breakdown`, `/rastro:reconcile`, `/rastro:domain-context`, `/rastro:implement` and `/rastro:deliver`.
+Claude Code invokes the skills of a plugin as `/<plugin>:<skill>`, so these are `/rastro:init`, `/rastro:setup`, `/rastro:design-doc`, `/rastro:breakdown`, `/rastro:reconcile`, `/rastro:domain-context`, `/rastro:implement`, `/rastro:deliver` and `/rastro:audit`.
 
-Install the plugin once per machine. Run `/rastro:setup` once per repository.
+Install the plugin once per machine. Run `/rastro:setup` once per repository, or `/rastro:init` in a directory with no source code yet, which runs `setup` for you.
 
 ## Configure
 
-Run `/rastro:setup` in your repository. It detects before it asks: the git remote, the stack manifest, the MCP servers in `.mcp.json` and `~/.claude.json`, an existing `AGENTS.md` or `CLAUDE.md`, and any linter or commit-message tool. It asks the rest one question at a time, shows the diff of every file, and stops for your approval. It writes nothing before that and it never commits.
+Run `/rastro:setup` in your repository. It detects before it asks: the git remote, the stack manifest and the CI workflow files, the MCP servers in `.mcp.json` and `~/.claude.json`, an existing `AGENTS.md` or `CLAUDE.md`, and any linter or commit-message tool. It asks the rest one question at a time, shows the diff of every file, and stops for your approval. It writes nothing before that and it never commits. A command that your CI already runs comes first among the proposals for the `verify` commands, because it is the one that really runs.
 
 On approval, it writes:
 
@@ -115,7 +124,7 @@ On approval, it writes:
 | `CLAUDE.md` | the line `@AGENTS.md`, created or added, because Claude Code reads `AGENTS.md` only when no `CLAUDE.md` exists |
 | `.gitignore` | the workspace |
 | `.rastro/git-hooks/`, `.rastro/lib/` | the git hooks, wired through `core.hooksPath` or through the hook manager already in place |
-| CI file, `.rastro/CALIBRATION.md` | only when you say yes |
+| CI file, `.rastro/CALIBRATION.md` | only when you say yes; under `rastro:init`, the CI file comes with the walking skeleton instead |
 
 `setup` is idempotent: a second run with the same answers changes nothing. `/rastro:setup --doctor` prints the health of the installation and writes nothing.
 
@@ -142,6 +151,10 @@ Required: `project.name`, `project.languages.human`, `tracker.kind`, `tracker.ke
 
 The default pattern `.env*` also refuses `.env.example`. Negation is not supported: to commit `.env.example`, list exact names in `conventions.forbidden_paths` instead, such as `[.env, .env.local, "*.bak"]`.
 
+### Starting from an empty directory
+
+In an empty directory, or a repository with no source code yet, run `/rastro:init`. It asks one question at a time: the purpose of the project, the stack, the modules ("none yet" is an answer), the component types in `architecture.layers`, which of them cross a trust boundary in `architecture.boundary_types`, the verify commands, the tracker, the docs tool, the code host and the languages. It drafts at most three ADRs (stack, structure, verification) in `docs/adr/`, from `templates/adr.md`, and you confirm, rewrite or drop each one at its gate: an ADR the agent wrote without your decision would be fabricated. It writes nothing before that gate, runs `git init` only after it, when the directory has no repository of its own, or you chose a new one inside another, and never commits. Then it runs `setup` with your answers, and `setup` asks only the rest. Last, it writes the walking skeleton as the intent of the first item: one entry point end to end through the layers you chose, with the verify commands green. Commit the files it lists, then run `/rastro:init` again or `/rastro:breakdown`. `init` writes no golden path: each component type of the skeleton writes its own from its code, as any first instance does.
+
 ### Profiles
 
 A profile is a markdown file that replaces a default of one skill. Put it at `.rastro/profiles/<skill>.md`, for example `.rastro/profiles/breakdown.md`. Each skill says, at the step where it uses a ruler or a template, which section of its profile replaces it.
@@ -154,7 +167,9 @@ A profile is a markdown file that replaces a default of one skill. Put it at `.r
 | `deliver` | the sections of the PR description |
 | every skill | `## Additional checks`: extra checks, each with the step where it runs, what it verifies and whether it is a gate or an observation |
 
-Writing rules go in `.rastro/profiles/writing.md`, and every skill applies them to the text a person reads. `profiles/examples/writing.md` is a starting point. `profiles/examples/architecture-services/` holds an example set of architecture rules in a bookstore domain, and four golden paths with gaps for your stack.
+Writing rules go in `.rastro/profiles/writing.md`, and every skill applies them to the text a person reads. `profiles/examples/writing.md` is a starting point. `profiles/examples/architecture-services/` holds an example set of architecture rules in a bookstore domain, and four example golden paths in the format of `templates/golden-path.md`, with gaps for your stack.
+
+A stack profile is reference material for one stack, kept under `profiles/stacks/`. `profiles/stacks/node-nestjs-typescript/` covers Node.js with NestJS and TypeScript. A stack profile teaches how to verify, with recipes for a module boundary check, tests for a module and a path, and security questions per boundary type. It imposes no pattern and ships no golden path. `setup` points to it when it detects the stack; you read it where it is, and take into your own golden paths only what your team adopts.
 
 `setup` does not create `.rastro/profiles/` or `.rastro/adapters/`, because git does not version an empty directory. Create each one when you have a first file for it.
 
@@ -172,9 +187,25 @@ The non-negotiable rules of your project live in `AGENTS.md`, in the section `##
 
 Skills cite a rule by its ID, never by its position. `deliver` generates its self-check from the list, so no skill copies the text of a rule. Known debt is not precedent: a new file with the same defect is a blocking violation.
 
+### Golden paths
+
+A golden path is how the project builds one type of component: a file in the `architecture.golden_paths` folder, by default `docs/golden-paths/`, in the format of `templates/golden-path.md`. rastro ships none, and `setup` does not create the folder. The first instance of a type writes its golden path in the same change and points to its own code by `file:line`. Later items classify each component against it as `follows`, `extends`, `contradicts` or `no golden path`. A golden path starts verified by review, and `verified_by` names a command once a check enforces it. The doctor reports a golden path whose instance no longer exists or whose fields are missing.
+
+A check that enforces a golden path exits non-zero when an instance breaks it, and prints one line per violation: what is wrong, at its `file:line`; why, by the id of the golden path and the decision it breaks; and how to fix it. `templates/golden-path.md` shows the shape. rastro ships no check: you write it in your stack, name it in `verified_by: "automated: <command>"`, and make `verify.lint` run it, so CI runs it too. A check written against the first instance freezes its accidents, so `deliver` suggests one only when a golden path verified by review has two or more instances: a note at its continuity gate, never a block. The doctor reports a check whose command is not on PATH, and never runs it.
+
+`architecture.boundary_types` lists the component types that cross a trust boundary: an exposed service, an external client, an integration, a queue consumer. It is empty by default. The golden path of a boundary type fills `## Security` with the threats considered, each cited by its item in a public reference such as the OWASP ASVS or the OWASP API Security Top 10, the control for each and how each control is verified; "none identified" is not accepted. Its `## Verification` holds at least one scenario against the real system, without mocks: context, steps, success criteria and what to do when blocked. `design-doc` asks for the threats and `implement` writes both. The doctor reports a boundary type whose `## Security` section is missing, empty or says "none identified", and a boundary type that is not in `architecture.layers`.
+
+In rastro 0.1.0, `architecture.golden_paths` was a list of files. It now names one folder, and the doctor reports the list form.
+
 ### Calibration
 
 rastro ships no calibration numbers. Where another workflow would quote a figure, the default rulers say "measure". `.rastro/CALIBRATION.md`, from `templates/CALIBRATION.md`, is where you record your own measurements, each with a date and a source.
+
+### Drift audit
+
+The `audit` skill looks for drift between your golden paths and your code, and writes a report to `<workspace>/audit/<YYYY-MM-DD>.md`. Reports stay in the workspace and are never committed: they are derived from the repository, and a committed copy would be out of date the next day. The mechanical checks are one script, `.rastro/git-hooks/audit-drift`, which also runs without an agent: instances changed since their baseline (the later of the golden path's last version change and the commit that listed the instance), a listed instance that no longer exists, golden paths with no instance, two golden paths for one type, a boundary type with no `## Security` section, and a golden path under review for longer than `audit.under_review_days`. The skill adds two checks that need reading the code: components of a type that has a golden path but is missing from `instances`, and `Revisit if:` conditions that now hold. Each report is compared with the previous one. A row has one of four verdicts: `ok`, `review`, `drift` or `NOT VERIFIED`. A changed instance (`instances-changed`) is a `review`, never `drift`, because the golden path may be old or the instance may have evolved inside the pattern. A listed instance that does not exist (`instance-missing`) is `drift`; `--fail-on-drift` counts only `drift`. Treat a `review` row as a request to look at that instance: if it still follows the golden path, nothing changes and the row stays as information until the golden path's next version; if it no longer follows, the normal flow applies, so the next item that touches it classifies it, and a contradiction goes through the golden path gate of `implement`. What the audit could not check is `NOT VERIFIED` (a shallow clone, no git history, a golden path without frontmatter), and the comparison never reports it as resolved.
+
+The report also prints numbers, cumulative since the log began: first-pass and self-heal of the per-file lint, which the hook records in `<workspace>/metrics/`, and golden paths created, evolved and contradicted, read from git history and the `## History` table of each golden path. `templates/ci/audit-github.yml` and `templates/ci/audit-gitlab-ci.yml` run the script on a schedule; they are optional and you copy one by hand. `.rastro/CALIBRATION.md` also holds the footprint buckets that choose a model for each task of a plan, and the steps of a before/after probe.
 
 ## Working without an issue tracker or a docs tool
 
@@ -183,7 +214,7 @@ You need neither. Each row below is a mode that needs no external tool. Together
 | Setting | What the flow does | What you lose |
 |---|---|---|
 | `tracker: local` | An item is a markdown file in `tracker.local_dir` (default `work/`), with frontmatter and the same sections as a tracker item. There is no status field: the state table reads the branch and the PR | An item exists for other clones only after its PR merges into the base branch |
-| `tracker: none` | The item lives in the conversation and in the workspace. The reconciliation goes to the PR description | The work cannot be resumed before the PR exists. The state table starts at the branch row. `setup` says so before it accepts `none` |
+| `tracker: none` | The item lives in the conversation and in the workspace. The reconciliation goes to the PR description | The work cannot be resumed before the PR exists. The state table has no item rows. `setup` says so before it accepts `none` |
 | `docs: repo` | `design-doc` creates the branch `docs/design-<slug>` and opens a PR with `docs/design/<slug>.md`. The PR is where the team discusses, and its merge is the approval. The publication gate opens the PR and never merges it | The version is a commit sha, not a counter. With `code_host: none` there is no PR, so there is no place for the discussion |
 | `code_host: none` | `deliver` audits the branch and writes the PR description to `<workspace>/<id>/pr-description.md` | A person pushes the branch and opens the PR. There is no URL, no CI state and no automatic link between item and PR |
 | `domain_state: none` | `domain-context` reads the migrations and the ORM schema | Every claim about the live database is marked `NOT VERIFIED` |
@@ -198,7 +229,7 @@ Without superpowers, the skills fall back like this:
 | `implement`, the plan | `writing-plans` | `templates/plan.md` |
 | `implement`, the execution | `subagent-driven-development` when the skill's size criteria are met | inline, one task at a time, one commit per task |
 | `breakdown`, the bug branch | `systematic-debugging` | a short built-in protocol: reproduce, hypothesis, evidence, root cause with `file:line` |
-| `deliver`, opening the PR | `finishing-a-development-branch` | straight through the `code_host` port |
+| `deliver`, opening the PR | `finishing-a-development-branch`; in a continuous run, `deliver` opens the PR through the `code_host` port | straight through the `code_host` port |
 | `design-doc`, the craft | a general design-doc skill, when installed | `templates/design-doc.md` |
 
 ## Bring your own adapter
@@ -207,8 +238,8 @@ Adapters ship for these tools:
 
 | Port | Config key | Shipped adapters |
 |---|---|---|
-| `tracker` | `tracker.kind` | `jira`, `github`, `local`, `none` |
-| `docs` | `docs.kind` | `notion`, `repo` |
+| `tracker` | `tracker.kind` | `jira`, `github`, `github-projects`, `local`, `none` |
+| `docs` | `docs.kind` | `notion`, `repo`, `claude-docs` |
 | `code-host` | `code_host.kind` | `github`, `gitlab`, `none` |
 | `domain-state` | `domain_state.kind` | `db-mcp`, `schema-files`, `none` |
 | `review` | `review.kind` | `none` |
@@ -227,12 +258,12 @@ Until your adapter exists, set the port to its tool-free kind: `local` or `none`
 |---|---|---|
 | 1. Git hooks | `pre-commit` refuses a staged file that matches `conventions.forbidden_paths`. `commit-msg` validates the message against `conventions.commit`. It requires the `[id]` only when the branch name carries an id, and a design doc branch does not | Any agent, and people |
 | 2. CI | `check-changed-paths` fails when a forbidden path is in the change set. `check-pr-title` validates the PR title as a commit message when `code_host.merge` is `squash`. `check-commits` validates the message of every commit of the branch when it is not. `run-verify` runs the `verify.*` commands, and fails when none is configured. Templates ship for GitHub and GitLab in `templates/ci/`, and `setup` offers to write one | Any agent, and people |
-| 3. Agent harness | `guard-git.sh` denies `git add -A`, `git add .`, `git add --all`, `git commit -a` and `--no-verify`, also behind `git -C <dir>`. It also denies any `core.hooksPath` other than `.rastro/git-hooks`, set with `git config` or `git -c`. After each file edit, the hook runs `verify.lint_file` on that file, and tells the agent when the linter is missing. When the agent tries to stop, the hook lints the changed files that match `verify.source_globs` and blocks while the result is red, and lists the `verify.typecheck`, `verify.unit` and `verify.integration` commands that still need to run. At session start, the hook runs the doctor | Claude Code only |
+| 3. Agent harness | `guard-git.sh` denies `git add -A`, `git add .`, `git add --all`, `git commit -a` and `--no-verify`, also behind `git -C <dir>`. It also denies any `core.hooksPath` other than `.rastro/git-hooks`, set with `git config` or `git -c`. After each file edit, the hook runs `verify.lint_file` on that file, and tells the agent when the linter is missing. It also records each lint verdict in the workspace, for the audit's metrics. When the agent tries to stop, the hook lints the changed files that match `verify.source_globs` and blocks while the result is red, and lists the `verify.typecheck`, `verify.unit` and `verify.integration` commands that still need to run. At session start, the hook runs the doctor | Claude Code; Codex CLI and Cursor through `scripts/install-agent.sh`, not tested (see Agent support) |
 
 Four limits:
 
 - With `code_host.merge` set to `squash`, the default, CI validates the PR title, because the title becomes the commit on the base branch. The individual commit messages are then checked by the local `commit-msg` hook, not by CI, because they never reach the base branch. With any other merge mode, `check-commits` validates every commit message of the branch in CI, so a commit made in a clone without the hook is caught there.
-- Layer 3 starts once `setup` has written `.rastro/config.yml`. Until then, `guard-git.sh` and the lint hooks exit without checking anything, and the doctor says to run `setup`. Installing the plugin is not enough.
+- Layer 3 starts once `setup` has written `.rastro/config.yml`. Until then, `guard-git.sh` and the lint hooks exit without checking anything, and the doctor says to run `setup`, or `rastro:init` in a directory with no source code. Installing the plugin is not enough.
 - Git has no hook for `git add`, so only layer 3 denies the wildcard forms. A file that a wildcard drags in is still refused by layer 1.
 - `guard-git.sh` reads the command text of each shell call. It is a guard against slips, not a sandbox: a command that a script assembles at run time is not seen.
 
@@ -242,15 +273,51 @@ The git hooks, the CI scripts and the Claude Code hooks need bash and git, and n
 
 ## Agent support
 
-Claude Code is the reference. The plugin, the `/rastro:<skill>` commands and layer 3 of the hooks exist only there. Layers 1 and 2 work with any agent and for people.
+Claude Code is the reference. The plugin, the `/rastro:<skill>` commands and layer 3 of the hooks were built for it. Layers 1 and 2 work with any agent and for people. Codex CLI and Cursor get the skills and the layer 3 hooks through an installer.
+
+Codex CLI and Cursor: compatible by design, verified only by the tests of the shim that translates their hook protocol. The flow has not been run end to end in Codex CLI or Cursor yet; that run is a human acceptance step, and until it happens treat the support below as not tested.
 
 Other agents that read AGENTS.md and SKILL.md: compatible by design, not tested.
 
-To try rastro in such an agent:
+What works per agent:
 
-- Export `RASTRO_ROOT` with the path of the rastro directory. The skills cite their files as `${CLAUDE_PLUGIN_ROOT}/...`, which Claude Code replaces by itself. Another agent reads the same directory from `RASTRO_ROOT`.
-- Copy or link the skills where that agent discovers skills. Keep `adapters/`, `templates/` and `profiles/` in the rastro directory: each file exists once, and the skills reach it through `RASTRO_ROOT`.
-- Run `setup` for the repository. Its gates end the turn with the question when the agent has no structured question tool.
+| What | Claude Code | Codex CLI (not tested) | Cursor (not tested) | How it is wired |
+|---|---|---|---|---|
+| Skills | yes | yes | yes | Claude Code: the plugin. Codex CLI and Cursor: `.agents/skills/` in the project |
+| Git hooks and CI (layers 1 and 2) | yes | yes | yes | `.rastro/git-hooks/` and the CI scripts, no agent involved |
+| Agent hooks (layer 3): git guard, lint per edited file, check on stop, doctor at session start | yes | yes | yes | Claude Code: the plugin's `hooks/hooks.json`. Codex CLI: `.codex/hooks.json`. Cursor: `.cursor/hooks.json` |
+
+To install rastro for one agent in one project:
+
+```
+bash scripts/install-agent.sh codex <project dir>
+bash scripts/install-agent.sh cursor <project dir>
+bash scripts/install-agent.sh --link codex <project dir>
+```
+
+`--link` works only as the first argument.
+
+The script copies each skill to `<project dir>/.agents/skills/<skill>/` (`--link` makes symlinks instead) and writes the hook file for that agent, pointing at `hooks/agents/adapt.sh`, a shim that translates the agent's hook protocol to the Claude Code hooks, so the hook logic exists once. It is safe to run again: it records the skills it installed in `.agents/skills/.rastro-installed` and replaces only those (and symlinks), so a skill of your own with the same name, such as `setup`, is left alone, named on stderr, and the script exits with 3. It refuses, with exit 2, a skills folder that resolves into the rastro directory. It never merges or overwrites an existing hook file that differs, an older rastro one included: it prints the block to merge by hand and exits with 3.
+
+Then export the path of the rastro directory in the shell that starts the agent:
+
+```
+export RASTRO_ROOT=<path to the rastro directory>
+```
+
+The skills cite their files as `${CLAUDE_PLUGIN_ROOT}/...`, which Claude Code replaces by itself. Another agent reads the same directory from `RASTRO_ROOT`. Run `setup` for the repository as usual.
+
+Two warnings. Codex runs a project hook only after you trust the `.codex/` layer of the project and review the hooks in `/hooks`; until then they do not run. And the hook file holds an absolute path to the rastro directory on your machine, so do not commit it: run the installer again in each clone.
+
+What does not port:
+
+- The structured question tool. Without it, a gate ends the turn with the question, and the answer comes in the next message.
+- The plugin and its `/rastro:<skill>` commands. An agent invokes a skill by its own mechanism, for example `$<skill>` or `/skills` in Codex CLI.
+- Layer 3 messages that need the agent to read a hook's output. NOT VERIFIED in Cursor: whether the agent sees the lint failure of `afterFileEdit`, and the informational stop message, which the shim drops. NOT VERIFIED in Codex CLI: whether the `systemMessage` of the stop hook is accepted, and whether `timeout` is read from `.codex/hooks.json`. NOT VERIFIED in Cursor: whether `.agents/skills/` accepts symlinks, so `--link` is for Codex CLI.
+- `PowerShell` tool calls: the Codex matcher for the git guard covers `Bash` only.
+- NOT VERIFIED on Windows: whether Codex CLI and Cursor run `bash` as Git Bash, and accept the `/c/...` path form the installer writes into the hook file.
+- NOT VERIFIED in Codex CLI: whether the Stop payload carries `stop_hook_active`, and whether exit 2 on Stop continues the turn. If it does not, a red lint the agent cannot fix could block every stop.
+- NOT VERIFIED in Cursor: whether its payloads carry `session_id`. Without it, the lint metrics for Cursor are recorded under the session `-`.
 
 ## License
 

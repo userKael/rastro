@@ -42,3 +42,58 @@ The range ends at the base branch, not at `HEAD`
 Copy each human-execution block below the decisions table too, with its artifact verbatim.
 Read the six fields from the human-execution block of that `D-n` in the holder's `## Reconciliation`
 When the block is missing, or its artifact is, stop and report
+### Writing a golden path
+### Golden-path gate
+Gate — <component> contradicts golden path
+freezes its accidents
+drafted: do these decisions hold?
+A decision with no reason is a circumstance of the first instance
+Golden paths this item creates or evolves
+${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md
+`docs/golden-paths/` when the key is absent or empty
+The golden path lands in the same task as its instance
+returns the review-gate rows as text
+the main session raises the review gate before it dispatches the next task
+### Footprint and tier of each task
+When that table says "not measured", every task is `standard` and the plan says the tiers are not calibrated.
+Actual: <n> lines in <k> files
+each task's implementer and reviewer use the model its tier maps to
+For a task that wrote or extended a golden path, raise the golden-path review gate
+the draft starts from that `DT-nn`'s decisions
+A `follows` adds the instance to `instances` when it is absent
+the same commit adds it to `.rastro/config.yml`
+all hold as drafted
+execute it as announced?** Class: fork. Mode: confirmation.
+do these decisions hold?** Class: deliberation. Mode: decision.
+which path do I take?** Class: fork. Mode: decision.
+which one changes?** Class: fork. Mode: decision.
+the top item is the parent, or the item itself when it has no parent
+### Inline or subagents
+A `[HUMAN]` task that blocks a remaining task stops execution there
+Never overwrite the file: a continuous run may already have written its confirmations there.
+Leave each `- Continuous run,` line as it is
+In a continuous run, invoke it with the id.
+except its execution handoff: this skill's plan gate replaces it.
+The handoff of this skill replaces the branch-finishing step of `superpowers:subagent-driven-development` and `superpowers:executing-plans`.
+In a continuous run, never enter `superpowers:finishing-a-development-branch`: invoke `deliver`.
+Execution starts only after the plan is approved at the gate below, by the person or, in a continuous run, by the choice made at the start.
+reviewed at the plan gate by the person or, in a continuous run, by the choice made at the start
+A check marked as a gate that fails makes the recommended option of its gate "adjust", so that gate stops even in a continuous run.
+(template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`). For a project whose AGENTS.md block predates the section
+how it is verified, `review` or the command
+writes `## Security` from the reference the template names and a real-system scenario in `## Verification`
+"none identified" does not serve it
+at least one scenario against the real system, without mocks
+when that `DT-nn` says the type crosses a trust boundary
+only in a task that writes the check, never in the task of its first instance
+This change adds no decision, so it raises no review gate.
+| Boundary type |
+| Threat | Control | Verified by |
+A boundary type keeps at least one threat.
+or one that its `DT-nn` says crosses a trust boundary
+the draft starts from that `DT-nn`'s decisions and `## Security` from its threats.
+adds a row to `## History`, rewrites `## Verification` to name the command, and makes `verify.lint` run the command
+When the type of a component has a golden path with real-system scenarios, the report lists them as the manual test to run.
+When `.rastro/CALIBRATION.md` is absent or its tier table is unfilled, every task is `standard`.
+The walking-skeleton item, whose `## Sources` lists ADRs and marks none as the source of truth, is an item with no design doc.
+`"automated: <command>"` (quoted, because the unquoted form is not valid YAML)

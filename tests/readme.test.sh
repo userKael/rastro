@@ -49,14 +49,25 @@ test_agent_support_is_honest() {
   [ -f "$readme" ] || return 0
   need_in_section 'Agent support' 'Claude Code'
   need_in_section 'Agent support' 'Other agents that read AGENTS.md and SKILL.md: compatible by design, not tested.'
+  need_in_section 'Agent support' 'Codex CLI and Cursor: compatible by design, verified only by the tests of the shim that translates their hook protocol.'
   need_in_section 'Agent support' 'RASTRO_ROOT'
+  need_in_section 'Agent support' 'has not been run end to end in Codex CLI or Cursor yet'
+  # Outside the Agent support section, a line that names Codex must say it is not tested.
   local line
   while IFS= read -r line; do
     case $line in
       *'not tested'*) ;;
       *) _assert_fail "README.md names Codex without saying it is not tested" "line: $line" ;;
     esac
-  done < <(grep -F -e 'Codex' "$readme")
+  done < <(grep -F -e 'Codex' "$readme" | grep -vxF -f <(section_body 'Agent support'))
+  # Inside the section, a line that names Codex or Cursor and claims a level of
+  # verification must carry a qualifier.
+  while IFS= read -r line; do
+    case $line in
+      *'NOT VERIFIED'* | *'not tested'* | *'verified only by the tests of the shim'* | *'has not been run'*) ;;
+      *) _assert_fail "README.md Agent support claims verification for Codex or Cursor without a qualifier" "line: $line" ;;
+    esac
+  done < <(section_body 'Agent support' | grep -iE 'Codex|Cursor' | grep -iE 'verified|tested|end to end')
 }
 
 test_install_and_configure_name_the_real_commands() {
@@ -89,6 +100,13 @@ test_doctrine_is_listed_and_not_configurable() {
   done
 }
 
+test_golden_paths_are_documented() {
+  [ -f "$readme" ] || return 0
+  need_in_section 'What is not configurable' 'golden-path checkpoint'
+  need_in_section 'Configure' 'docs/golden-paths/'
+  need_in_section 'Configure' 'the doctor reports the list form'
+}
+
 test_hooks_section_states_what_ci_checks() {
   [ -f "$readme" ] || return 0
   need_in_section 'Hooks in three layers' 'squash'
@@ -119,6 +137,14 @@ test_adapter_section_points_to_the_contract() {
   need_in_section 'Bring your own adapter' 'not verified against live tools'
 }
 
+test_readme_describes_stack_profiles() {
+  local needle
+  [ -f "$readme" ] || return 0
+  for needle in 'profiles/stacks/node-nestjs-typescript/' 'A stack profile teaches how to verify'; do
+    grep -qF -e "$needle" "$readme" || _assert_fail "README.md lacks required text" "text: $needle"
+  done
+}
+
 test_readme_has_no_internal_plan_terms() {
   [ -f "$readme" ] || return 0
   if grep -qE -e '(^|[^A-Za-z])V-[0-9]|Plan [0-9]|Task [0-9]' "$readme"; then
@@ -137,14 +163,88 @@ test_marketplace_manifest_is_exact() {
   assert_eq "$want" "$got" ".claude-plugin/marketplace.json differs from the required manifest"
 }
 
+test_execution_mode_is_documented() {
+  [ -f "$readme" ] || return 0
+  need_in_section 'The flow' 'stop at every gate, the default, or continuous'
+  need_in_section 'The flow' 'ask how their gates behave'
+  need_in_section 'Working without an issue tracker or a docs tool' 'in a continuous run, `deliver` opens the PR'
+  need_in_section 'What is not configurable' 'chosen at the start of each run'
+  need_in_section 'What is not configurable' 'never a config key'
+}
+
+test_golden_path_checks_are_documented() {
+  [ -f "$readme" ] || return 0
+  need_in_section 'Configure' 'exits non-zero'
+  need_in_section 'Configure' 'make `verify.lint` run it'
+  need_in_section 'Configure' 'and never runs it'
+  need_in_section 'Configure' 'two or more instances'
+  need_in_section 'Configure' 'architecture.boundary_types'
+  need_in_section 'Configure' 'OWASP API Security Top 10'
+  need_in_section 'Configure' 'without mocks'
+  need_in_section 'Configure' 'asks for the threats and `implement` writes both'
+  need_in_section 'Configure' 'is not in `architecture.layers`'
+}
+
+test_init_is_documented() {
+  [ -f "$readme" ] || return 0
+  need_in_section 'What rastro is' 'rastro is nine skills'
+  need_in_section 'What rastro is' '| `init` |'
+  need_in_section 'What rastro is' 'the nine skills'
+  need_in_section 'What rastro is' '| `profiles/` | `examples/`:'
+  need_in_section 'What rastro is' '`stacks/`: stack profiles'
+  need_in_section 'What rastro is' 'the golden path, the stack detection, `CALIBRATION.md`'
+  need_in_section 'The flow' '| No source code yet, and no item for the walking skeleton | `rastro:init` (not the built-in `/init`) |'
+  need_in_section 'The flow' 'empty by construction'
+  need_in_section 'Install' '/rastro:init'
+  need_in_section 'Configure' 'the CI workflow files'
+  need_in_section 'Configure' '### Starting from an empty directory'
+  need_in_section 'Configure' 'would be fabricated'
+  need_in_section 'Configure' '`init` writes no golden path'
+  need_in_section 'Working without an issue tracker or a docs tool' 'The state table has no item rows.'
+  ! grep -qiF 'eight skills' "$readme" || _assert_fail "README.md still counts eight skills"
+}
+
+test_readme_describes_drift_audit() {
+  local needle
+  [ -f "$readme" ] || return 0
+  for needle in '### Drift audit' '.rastro/git-hooks/audit-drift' 'audit.under_review_days' 'audit-github.yml' '<workspace>/audit/<YYYY-MM-DD>.md' 'before/after probe' '| `audit` | the golden paths and the code |' 'a `review` row' 'cumulative since the log began'; do
+    grep -qF -e "$needle" "$readme" || _assert_fail "README.md lacks required text" "text: $needle"
+  done
+}
+
+test_readme_adapter_table_lists_new_adapters() {
+  [ -f "$readme" ] || return 0
+  section_body 'Bring your own adapter' | grep -qF '`jira`, `github`, `github-projects`' ||
+    _assert_fail "README.md adapter table lacks github-projects on the tracker row"
+  section_body 'Bring your own adapter' | grep -qF '`notion`, `repo`, `claude-docs`' ||
+    _assert_fail "README.md adapter table lacks claude-docs on the docs row"
+}
+
+test_readme_agent_support_says_what_ports() {
+  [ -f "$readme" ] || return 0
+  local needle
+  for needle in 'scripts/install-agent.sh' '.agents/skills/' 'codex' 'cursor' 'RASTRO_ROOT' 'NOT VERIFIED' \
+    'structured question tool' '/rastro:' 'commands' 'verified only by the tests of the shim'; do
+    need_in_section 'Agent support' "$needle"
+  done
+}
+
 test_readme_has_every_section
 test_agent_support_is_honest
+test_readme_agent_support_says_what_ports
 test_install_and_configure_name_the_real_commands
 test_modes_without_a_tool_are_tabled
 test_doctrine_is_listed_and_not_configurable
+test_golden_paths_are_documented
 test_hooks_section_states_what_ci_checks
 test_configure_states_defaults_and_env_example
 test_adapter_section_points_to_the_contract
 test_readme_has_no_internal_plan_terms
 test_marketplace_manifest_is_exact
+test_execution_mode_is_documented
+test_golden_path_checks_are_documented
+test_init_is_documented
+test_readme_describes_stack_profiles
+test_readme_describes_drift_audit
+test_readme_adapter_table_lists_new_adapters
 finish
