@@ -1,5 +1,5 @@
 ---
-id: creating-a-migration
+id: migration
 type: migration
 version: 1.0.0
 status: current

@@ -1,5 +1,5 @@
 ---
-id: creating-an-external-client
+id: external-client
 type: external-client
 version: 1.0.0
 status: current

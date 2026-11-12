@@ -1,5 +1,5 @@
 ---
-id: creating-a-service
+id: service
 type: service
 version: 1.0.0
 status: current
@@ -16,7 +16,7 @@ A service performs one business operation. A handler calls it. It calls other se
 
 Rules in play, defined in `../rules.md`: `[module-public-api]`, `[no-service-cycle]`, `[pure-domain]` and `[no-sensitive-log]`.
 
-Not covered here: a pure computation on one entity, such as checking that an `orders` order has at least one line. That belongs in `domain` as a plain class and needs no service. A call to a system outside the process follows `creating-an-external-client.md`.
+Not covered here: a pure computation on one entity, such as checking that an `orders` order has at least one line. That belongs in `domain` as a plain class and needs no service. A call to a system outside the process follows `external-client.md`.
 
 ## Decisions
 

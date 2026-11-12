@@ -13,7 +13,7 @@ STACK_FILES=(README verification testing security-questions)
 STACK_SENTENCE_1='This file teaches how to verify in this stack.'
 STACK_SENTENCE_2="It imposes no pattern: which patterns the project uses is the team's decision."
 RULE_IDS=(module-public-api no-service-cycle pure-domain no-sensitive-log migration-via-tool)
-GOLDEN_PATHS=(creating-an-endpoint creating-a-service creating-a-migration creating-an-external-client)
+GOLDEN_PATHS=(handler service migration external-client)
 
 require_file() {
   [ -f "$1" ] && return 0
@@ -99,6 +99,8 @@ test_golden_paths() {
     done
     value=$(rastro_frontmatter_get "$file" id)
     [ "$value" = "$name" ] || _assert_fail "$name.md has id '$value', not the file name"
+    value=$(rastro_frontmatter_get "$file" type)
+    [ "$value" = "$name" ] || _assert_fail "$name.md has type '$value', not the file name: the file is <type>.md"
     value=$(rastro_frontmatter_get "$file" status)
     [ "$value" = current ] || _assert_fail "$name.md has status '$value', not current"
     value=$(rastro_frontmatter_get "$file" verified_by)
@@ -113,11 +115,11 @@ test_golden_paths() {
 }
 
 test_service_cycle_detector() {
-  local file="$paths/creating-a-service.md"
+  local file="$paths/service.md"
   require_file "$file" || return 0
-  grep -qF 'cycle detector' "$file" || _assert_fail "creating-a-service.md does not mention a cycle detector"
+  grep -qF 'cycle detector' "$file" || _assert_fail "service.md does not mention a cycle detector"
   grep -qiE 'without a cycle detector.*`no-service-cycle`.*advisory|`no-service-cycle`.*advisory.*without a cycle detector' "$file" ||
-    _assert_fail "creating-a-service.md does not say, in one sentence, that without a cycle detector no-service-cycle is advisory"
+    _assert_fail "service.md does not say, in one sentence, that without a cycle detector no-service-cycle is advisory"
 }
 
 test_writing_profile() {
@@ -171,7 +173,7 @@ section_of() {
 
 test_boundary_golden_paths() {
   local name file sec ver label
-  for name in creating-an-endpoint creating-an-external-client; do
+  for name in handler external-client; do
     file="$paths/$name.md"
     require_file "$file" || continue
     sec=$(section_of "$file" Security)
