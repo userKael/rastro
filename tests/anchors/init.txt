@@ -54,3 +54,5 @@ When the stack detection names a stack profile, point to it in the closing repor
 and note the stack profile when the detection section names one
 The detection names it as `${CLAUDE_PLUGIN_ROOT}/profiles/stacks/<name>/`, or under `RASTRO_ROOT` for an agent other than Claude Code.
 the CI file comes with the walking skeleton, not with `setup`
+match the stack answer of the interview against the profile folders that the stack detection lists under `Stack profile:`
+the agent install folders (`.agents/`, `.codex/`, `.cursor/`)

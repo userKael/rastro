@@ -26,7 +26,7 @@ Configuration belongs to `setup`. Init hands over answers and never writes `.ras
 
 1. **Only where there is no source code.** Use this definition:
 
-   **Source code** is a file a build, an interpreter or a test runner reads as program text. These are not source code: documentation and prose, a license, ignore and editor files, manifests and lock files, CI workflow files, and what rastro writes (`.rastro/`, `AGENTS.md`, `CLAUDE.md`, `docs/adr/`). When `.rastro/config.yml` sets `verify.source_globs`, source code is a file outside `.rastro/` that matches it. List the files with `git ls-files --cached --others --exclude-standard` in a repository, and with `find . -type f -not -path './.git/*'` outside one. When one file is unclear, name it and ask.
+   **Source code** is a file a build, an interpreter or a test runner reads as program text. These are not source code: documentation and prose, a license, ignore and editor files, manifests and lock files, CI workflow files, the agent install folders (`.agents/`, `.codex/`, `.cursor/`), and what rastro writes (`.rastro/`, `AGENTS.md`, `CLAUDE.md`, `docs/adr/`). When `.rastro/config.yml` sets `verify.source_globs`, source code is a file outside `.rastro/` that matches it. List the files with `git ls-files --cached --others --exclude-standard` in a repository, and with `find . -type f -not -path './.git/*'` outside one. When one file is unclear, name it and ask.
 
 2. One question at a time.
 3. **The person decides, the agent drafts.** An ADR with no human decision behind it is fabricated. An ADR records the person's answer. The agent never supplies a decision, a reason or an alternative. A reason the person did not give appears as `<reason not given>`.
@@ -175,6 +175,7 @@ When `git ls-tree --name-only <project.base_branch> -- .rastro/config.yml` print
 - then run `rastro:init` again, or `breakdown` with the path of the intent;
 - the CI file comes with the walking skeleton, not with `setup`: it is a component of the skeleton, written with the toolchain step, so the first CI run has something to verify;
 - When the stack detection names a stack profile, point to it in the closing report, by the path the detection gives; the profile is read where it is and never copied. The detection names it as `${CLAUDE_PLUGIN_ROOT}/profiles/stacks/<name>/`, or under `RASTRO_ROOT` for an agent other than Claude Code.
+- When the detection names none, which is the case in a directory with no manifest yet, match the stack answer of the interview against the profile folders that the stack detection lists under `Stack profile:`. When the name of one of them matches the answer, name that stack profile in the closing report the same way, by the path the detection gives. When none matches, say nothing about a profile.
 
 When breakdown already ran on the skeleton intent, that is, an item for it exists, stop and follow the next row of the state table instead of invoking breakdown: "No source code yet" stays true until the first PR of the skeleton merges.
 
