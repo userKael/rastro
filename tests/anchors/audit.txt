@@ -22,3 +22,5 @@ Headings, check names and verdicts stay literal in English
 ### Changes since the previous audit
 if it still follows the golden path, nothing changes
 cumulative since the log began
+`instance-missing` is drift
+Exclude the instances listed under `## Known debt` of the golden path

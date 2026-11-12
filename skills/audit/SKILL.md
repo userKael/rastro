@@ -61,6 +61,7 @@ Without a previous report, run it without `--previous`. Read the `## Mechanical 
 
 - A shallow clone, or any `NOT VERIFIED` row, enters the report as the script wrote it. Never turn it into `ok`, `review` or `drift`.
 - The limit for `under-review-age` is `audit.under_review_days`. When it is empty, the script lists the age and sets no limit, and this skill invents none.
+- `instance-missing` is drift: the instance listed in the golden path does not exist. It is never softened into a review.
 - `instances-changed` is a signal for review, never drift, and its verdict is `review`: the golden path may be old, or the instance may have evolved inside the pattern. Say so when you present it. The baseline is the last version change of the golden path, not its last edit.
 
 Keep the script's output whole: the tables, `## Metrics` and `## Changes since the previous audit`. The numbers of `## Metrics` are cumulative since the log began, so present them as a trend over the whole period, not as the result of one run.
@@ -74,6 +75,8 @@ For each golden path in the `architecture.golden_paths` folder whose status is n
 - the `## When to use` section of the golden path, which says what the type is;
 - the name and the folder of the listed instances, which show where components of the type live;
 - `architecture.modules`, which bounds where to look.
+
+Exclude the instances listed under `## Known debt` of the golden path: a major version moved them there on purpose, so they are known debt, never missing from `instances`.
 
 List each candidate with `file:line`. When you can tell, say whether it follows the pattern. When you cannot decide whether a component is of the type, write NOT VERIFIED and why. Never write that none exist unless you searched, and say where.
 
