@@ -41,3 +41,12 @@ When the intent already exists, keep it as it is.
 `git ls-tree --name-only <project.base_branch> -- .rastro/config.yml`
 before the first item
 init asks no execution mode
+Once `.rastro/config.yml` exists, only Step 7 is open.
+including answers read back from accepted ADRs
+only after this run's `git init`
+When no ADR is drafted and no `git init` is needed, skip the gate.
+verify commands, and the CI that runs them when a CI file already exists
+When the intent already exists, skip the question.
+stop and follow the next row of the state table
+`chore(infra): <subject>`
+drafts at most three ADRs (stack, structure, verification)

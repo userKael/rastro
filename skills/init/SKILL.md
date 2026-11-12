@@ -1,6 +1,6 @@
 ---
 name: init
-description: Starts rastro in an empty directory or a repository with no source code yet. It interviews the person one question at a time about the minimum decisions (purpose, stack, modules, layers, boundary types, verify commands, tracker, docs, code host and languages), drafts an ADR for each decision, which the person confirms, rewrites or drops at its gate, hands the answers to setup, and writes the walking skeleton as the intent of the first item, for breakdown. It writes nothing before its gate, never commits, never pushes and never writes a golden path, because golden paths are born from code. Use when the repository has no source code, or when the state table says "No source code yet". Do NOT use in a repository with source code (that is setup), to start work on a request (design-doc, breakdown) or to write code (implement).
+description: Starts rastro in an empty directory or a repository with no source code yet. It interviews the person one question at a time about the minimum decisions (purpose, stack, modules, layers, boundary types, verify commands, tracker, docs, code host and languages), drafts at most three ADRs (stack, structure, verification), which the person confirms, rewrites or drops at its gate, hands the answers to setup, and writes the walking skeleton as the intent of the first item, for breakdown. It writes nothing before its gate, never commits, never pushes and never writes a golden path, because golden paths are born from code. Use when the repository has no source code, or when the state table says "No source code yet". Do NOT use in a repository with source code (that is setup), to start work on a request (design-doc, breakdown) or to write code (implement).
 ---
 
 # init
@@ -41,7 +41,7 @@ Check three things before asking anything.
 
 - **Source code.** Apply rule 1. When it finds source code, say that This repository has source code, point to `${CLAUDE_PLUGIN_ROOT}/skills/setup/SKILL.md`, and stop.
 - **Another repository.** Run `git rev-parse --show-toplevel`, and `git rev-parse --show-prefix`. A non-empty prefix means the current directory is inside another repository; never compare the printed path with the current directory as strings, because git prints forward slashes and the shell may not. Say so, and ask: start a new repository here, with `git init` after the gate, or stop, because the project belongs to the outer repository, where `setup` runs at the root. This is a question, not a gate.
-- **What is already answered.** The values of `.rastro/config.yml`, when it exists, and the accepted ADRs in `docs/adr/` whose `origin` names `init`. Steps 2 to 6 ask, draft, write and hand to `setup` only what is still open. A value read from the config is not drafted again as an ADR. When nothing is open, go to Step 7.
+- **What is already answered.** The values of `.rastro/config.yml`, when it exists, and the accepted ADRs in `docs/adr/` whose `origin` names `init`. Steps 2 to 5 ask, draft and write only what is still open. Step 6 hands `setup` every answer that `.rastro/config.yml` does not hold yet, including answers read back from accepted ADRs: layers, boundary types, the verify commands, `verify.source_globs` and `verify.lint_file`. A value read from the config is not drafted again as an ADR. Once `.rastro/config.yml` exists, only Step 7 is open. An ADR the person dropped is not drafted again on every re-run. When nothing is open, go to Step 7.
 
 ## Step 1 — Detect
 
@@ -81,12 +81,14 @@ Everything else is for `setup`.
 
 Build the files in a temporary directory from `mktemp -d`, outside the repository, from `${CLAUDE_PLUGIN_ROOT}/templates/adr.md`.
 
-- At most three ADRs: the stack; the structure (modules, layers and boundary types); the verification (verify commands and CI).
+- At most three ADRs: the stack; the structure (modules, layers and boundary types); the verification (verify commands, and the CI that runs them when a CI file already exists).
 - Tracker, docs, code host and languages do not become ADRs.
 - Numbering uses the next free number of `docs/adr/`, from `0001`. Init never overwrites an existing file, and a number is never reused.
 - Each ADR has `status: accepted`, `decided_by: <person>` and `origin: init, <YYYY-MM-DD>`.
 
 ## Step 4 — Gate
+
+When no ADR is drafted and no `git init` is needed, skip the gate. There is nothing to approve.
 
 **Gate — decisions of <project.name>: do these ADRs hold, and do I write them?** Class: deliberation. Mode: decision. State:
 
@@ -116,19 +118,21 @@ After the person chose to write:
 
 1. When the directory has no repository of its own, or the person chose a new repository inside another one, run `git init`, now and not before. In the nested case, `git rev-parse --show-toplevel` succeeds before this step, and skipping `git init` would let `setup` write into the outer repository.
 2. Copy the confirmed and rewritten ADRs into `docs/adr/`.
-3. Read the branch with `git symbolic-ref --short HEAD`. It is the answer for `project.base_branch`.
+3. Read the branch with `git symbolic-ref --short HEAD` only after this run's `git init`. It is the answer for `project.base_branch`. Without a `git init` in this run, leave `project.base_branch` to `setup`, which detects it from `origin/HEAD`.
 
 Nothing else is written.
 
 ## Step 6 — Setup
 
-Invoke `${CLAUDE_PLUGIN_ROOT}/skills/setup/SKILL.md` with the answers, one per key: `project.name`, `project.base_branch`, `project.languages.human`, `tracker.kind`, `docs.kind`, `code_host.kind`, `architecture.modules`, `architecture.layers`, `architecture.boundary_types`, and the verify keys of question 6.
+Invoke `${CLAUDE_PLUGIN_ROOT}/skills/setup/SKILL.md` with every answer that `.rastro/config.yml` does not hold yet, one per key, whether it came from this run or from an accepted ADR: `project.name`, `project.base_branch` (only when Step 5 read it), `project.languages.human`, `tracker.kind`, `docs.kind`, `code_host.kind`, `architecture.modules`, `architecture.layers`, `architecture.boundary_types`, and the verify keys of question 6.
 
 `setup` asks only what is missing, raises its own gate, writes, prints its closing report and hands the turn back. When the person stops at the gate of `setup`, init stops too. The ADRs stay, and the next `init` starts again at Step 0.
 
 ## Step 7 — Walking skeleton
 
-Ask one question: the entry point the skeleton carries end to end, and the layers it crosses, in order. The agent proposes both from the purpose and from `architecture.layers`. A layer the skeleton does not cross gets its golden path at its first instance, later.
+First check whether the intent already exists. When the intent already exists, skip the question. The write below keeps it as it is.
+
+Otherwise ask one question: the entry point the skeleton carries end to end, and the layers it crosses, in order. The agent proposes both from the purpose and from `architecture.layers`. A layer the skeleton does not cross gets its golden path at its first instance, later.
 
 Write the intent to `<workspace>/breakdown-walking-skeleton/intent.md`, with `<workspace>` read from the config just written. When the intent already exists, keep it as it is.
 
@@ -164,12 +168,14 @@ New (`new`): <count>
 
 When `git ls-tree --name-only <project.base_branch> -- .rastro/config.yml` prints nothing or fails (an unborn branch right after `git init` fails: an error counts as nothing committed), print the closing report and stop:
 
-- the files to commit, each by its explicit path: the list of `setup` plus each ADR;
+- the files to commit, each by its explicit path: the list of `setup` plus each ADR, with one commit header that passes the default commit-msg format with empty modules, such as `chore(infra): <subject>`;
 - commit on the base branch before the first item, because the reconciliation stamps that branch;
 - with `code_host.kind` other than `none`, add the remote and push the base branch, because `breakdown` and `deliver` need them;
 - then run `init` again, or `breakdown` with the path of the intent.
 
-When the base branch already has the file, invoke `${CLAUDE_PLUGIN_ROOT}/skills/breakdown/SKILL.md` with the intent. `breakdown` asks the execution mode.
+When breakdown already ran on the skeleton intent, that is, an item for it exists, stop and follow the next row of the state table instead of invoking breakdown: "No source code yet" stays true until the first PR of the skeleton merges.
+
+When the base branch already has the file and no item for the skeleton exists, invoke `${CLAUDE_PLUGIN_ROOT}/skills/breakdown/SKILL.md` with the intent. `breakdown` asks the execution mode.
 
 ## What this skill does NOT do
 

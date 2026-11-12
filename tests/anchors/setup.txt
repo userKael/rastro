@@ -30,3 +30,6 @@ The state table has no item rows.
 When `init` invokes this skill, the answers it hands over count as answered
 return to `init` after the closing report
 init runs first and calls setup with its answers
+Run on its own, setup stops after the closing report.
+under `init`, the walking skeleton fills it
+run `init` instead

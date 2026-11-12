@@ -54,7 +54,11 @@ bash "${CLAUDE_PLUGIN_ROOT}/hooks/claude/doctor.sh"
 
 Show its output verbatim. Do not summarize it, rank it or soften it, and never call an installation fine when the output lists a problem or says it could not check something. Then stop: `--doctor` writes nothing.
 
-Without `--doctor`, check whether `.rastro/config.yml` exists. When it does, this is a re-run: its values count as answered, and the steps below ask only what is missing or what the human asked to change.
+Without `--doctor`, check whether `.rastro/config.yml` exists.
+
+When it does not, and `init` did not invoke this skill, check that the directory has source code, as rule 1 of `${CLAUDE_PLUGIN_ROOT}/skills/init/SKILL.md` defines it. In a directory with no source code, run `init` instead, and stop: `init` interviews first and calls this skill with its answers.
+
+When `.rastro/config.yml` exists, this is a re-run: its values count as answered, and the steps below ask only what is missing or what the human asked to change.
 
 When `init` invokes this skill, the answers it hands over count as answered, as the values of an existing config do on a re-run, and Step 2 asks only what is still open. In a repository with no source code, Step 1 finds no manifest and no CI workflow to propose from: that is expected, not a gap to report.
 
@@ -208,14 +212,14 @@ Then print the closing report:
 
 - The files to commit, each by its explicit path. Hooks are staged with `git add --chmod=+x .rastro/git-hooks/<file>`, so the executable bit survives on systems that do not record it.
 - When this run set `core.hooksPath`: each clone runs `git config core.hooksPath .rastro/git-hooks` once.
-- When the CI file was written: the team fills in its toolchain step, the `toolchain:` comment in the file, before the first pipeline runs. When the job must be merged by hand: the job, ready to merge.
+- When the CI file was written: the team fills in its toolchain step, the `toolchain:` comment in the file, before the first pipeline runs; under `init`, the walking skeleton fills it. When the job must be merged by hand: the job, ready to merge.
 - When the block is new: the team replaces the example rule in `## Non-negotiable rules` with its own rules, each by ID. Setup keeps that section on every re-run once it differs from the example.
 - For an agent other than Claude Code: export `RASTRO_ROOT` with the rastro installation directory on each machine that runs it.
 - Every problem the doctor reported, with nothing added and nothing removed.
 
 ## Handoff
 
-Setup stops after the closing report. The state table in the new block says where work starts: an unshaped request goes to `design-doc`, a shaped one to `breakdown`.
+Run on its own, setup stops after the closing report. The state table in the new block says where work starts: an unshaped request goes to `design-doc`, a shaped one to `breakdown`.
 
 When `init` invoked this skill, return to `init` after the closing report: it writes the walking skeleton, the intent of the first item.
 
