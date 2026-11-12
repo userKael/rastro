@@ -4,7 +4,7 @@ A development workflow for coding agents, packaged as a Claude Code plugin: skil
 
 ## What rastro is
 
-rastro is eight skills that take a project from an empty directory, and a change from an unshaped request, to an open pull request, and the files they share.
+rastro is nine skills that take a project from an empty directory, and a change from an unshaped request, to an open pull request, and the files they share.
 
 | Skill | Takes | Produces |
 |---|---|---|
@@ -23,7 +23,7 @@ What ships in the repository:
 
 | Directory | Holds |
 |---|---|
-| `skills/` | the eight skills |
+| `skills/` | the nine skills |
 | `adapters/` | one markdown file per tool, grouped by port, and the contract they follow |
 | `templates/` | the config, the `AGENTS.md` block, the ADR, the work item, the design doc, the plan, the PR description, CI files |
 | `hooks/` | the git hooks and the Claude Code hooks |
@@ -106,7 +106,7 @@ To try a local checkout without installing it:
 claude --plugin-dir <path-to-rastro>
 ```
 
-Claude Code invokes the skills of a plugin as `/<plugin>:<skill>`, so these are `/rastro:init`, `/rastro:setup`, `/rastro:design-doc`, `/rastro:breakdown`, `/rastro:reconcile`, `/rastro:domain-context`, `/rastro:implement` and `/rastro:deliver`.
+Claude Code invokes the skills of a plugin as `/<plugin>:<skill>`, so these are `/rastro:init`, `/rastro:setup`, `/rastro:design-doc`, `/rastro:breakdown`, `/rastro:reconcile`, `/rastro:domain-context`, `/rastro:implement`, `/rastro:deliver` and `/rastro:audit`.
 
 Install the plugin once per machine. Run `/rastro:setup` once per repository, or `/rastro:init` in a directory with no source code yet, which runs `setup` for you.
 

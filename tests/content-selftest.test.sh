@@ -38,7 +38,7 @@ plugin_copy() {
 }
 add_core_skills() {
   local s
-  for s in init setup design-doc breakdown reconcile domain-context implement deliver; do
+  for s in init setup design-doc breakdown reconcile domain-context implement deliver audit; do
     mkdir -p "$1/skills/$s"
     sed "s/^name: alpha/name: $s/" "$1/skills/alpha/SKILL.md" >"$1/skills/$s/SKILL.md"
     cp "$1/tests/anchors/alpha.txt" "$1/tests/anchors/$s.txt"
@@ -476,11 +476,11 @@ test_required_skills() {
   with_mode core expect_fail "core skills required by flag" skills "$r" \
     "required skill 'init' is missing" "required skill 'setup' is missing" "required skill 'design-doc' is missing" "required skill 'breakdown' is missing" \
     "required skill 'reconcile' is missing" "required skill 'domain-context' is missing" "required skill 'implement' is missing" \
-    "required skill 'deliver' is missing"
+    "required skill 'deliver' is missing" "required skill 'audit' is missing"
   r=$(plugin_copy)
-  with_mode default expect_fail "default root requires all eight" skills "$r" "required skill 'setup' is missing" "required skill 'deliver' is missing"
+  with_mode default expect_fail "default root requires all nine" skills "$r" "required skill 'setup' is missing" "required skill 'deliver' is missing" "required skill 'audit' is missing"
   add_core_skills "$r"
-  with_mode default expect_pass "default root with all eight" skills "$r"
+  with_mode default expect_pass "default root with all nine" skills "$r"
   rm -r "$r/skills/deliver"
   with_mode default expect_fail "default root, SKILL.md missing" skills "$r" "required skill 'deliver' is missing"
   c=$(plugin_copy)
@@ -492,7 +492,7 @@ test_required_skills() {
   mv "$c/skills/setup" "$c/skills/tmp-name" && mv "$c/skills/tmp-name" "$c/skills/Setup"
   with_mode default expect_fail "default root, skill directory differs in case" skills "$c" "required skill 'setup' is missing"
   c=$(plugin_copy)
-  with_mode default expect_fail "no argument means all eight are required" skills "$c" "required skill 'implement' is missing"
+  with_mode default expect_fail "no argument means all nine are required" skills "$c" "required skill 'implement' is missing"
 }
 test_required_markers() {
   local r

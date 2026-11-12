@@ -176,9 +176,9 @@ test_golden_path_checks_are_documented() {
 
 test_init_is_documented() {
   [ -f "$readme" ] || return 0
-  need_in_section 'What rastro is' 'rastro is eight skills'
+  need_in_section 'What rastro is' 'rastro is nine skills'
   need_in_section 'What rastro is' '| `init` |'
-  need_in_section 'What rastro is' 'the eight skills'
+  need_in_section 'What rastro is' 'the nine skills'
   need_in_section 'The flow' '| No source code yet, and no item for the walking skeleton | `init` |'
   need_in_section 'The flow' 'empty by construction'
   need_in_section 'Install' '/rastro:init'
@@ -187,7 +187,7 @@ test_init_is_documented() {
   need_in_section 'Configure' 'would be fabricated'
   need_in_section 'Configure' '`init` writes no golden path'
   need_in_section 'Working without an issue tracker or a docs tool' 'The state table has no item rows.'
-  ! grep -qiF 'seven skills' "$readme" || _assert_fail "README.md still counts seven skills"
+  ! grep -qiF 'eight skills' "$readme" || _assert_fail "README.md still counts eight skills"
 }
 
 test_readme_describes_drift_audit() {

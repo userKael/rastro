@@ -1,0 +1,13 @@
+## Step 0 — Requirements and previous report
+## Step 1 — Mechanical checks
+## Step 2 — Judgment checks
+## Step 3 — Report
+${CLAUDE_PLUGIN_ROOT}/hooks/git/audit-drift
+<workspace>/audit/<YYYY-MM-DD>.md
+The report is not versioned.
+The audit changes no golden path, no code and no item: it reports.
+This skill has no gate, so it never asks for an execution mode.
+Revisit if:
+architecture.golden_paths
+audit.under_review_days
+Never mark a judgment check as passed when the code was not read: write NOT VERIFIED and the reason.
