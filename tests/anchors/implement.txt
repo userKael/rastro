@@ -54,6 +54,10 @@ ${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md
 The golden path lands in the same task as its instance
 returns the review-gate rows as text
 the main session raises the review gate before it dispatches the next task
+### Footprint and tier of each task
+When that table says "not measured", every task is `standard` and the plan says the tiers are not calibrated.
+Actual: <n> lines in <k> files
+each task's implementer and reviewer use the model its tier maps to
 For a task that wrote or extended a golden path, raise the golden-path review gate
 the draft starts from that `DT-nn`'s decisions
 A `follows` adds the instance to `instances` when it is absent

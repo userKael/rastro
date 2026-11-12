@@ -190,6 +190,14 @@ test_init_is_documented() {
   ! grep -qiF 'seven skills' "$readme" || _assert_fail "README.md still counts seven skills"
 }
 
+test_readme_describes_drift_audit() {
+  local needle
+  [ -f "$readme" ] || return 0
+  for needle in '### Drift audit' '.rastro/git-hooks/audit-drift' 'audit.under_review_days' 'audit-github.yml' '<workspace>/audit/<YYYY-MM-DD>.md' 'before/after probe'; do
+    grep -qF -e "$needle" "$readme" || _assert_fail "README.md lacks required text" "text: $needle"
+  done
+}
+
 test_readme_has_every_section
 test_agent_support_is_honest
 test_install_and_configure_name_the_real_commands
@@ -205,4 +213,5 @@ test_execution_mode_is_documented
 test_golden_path_checks_are_documented
 test_init_is_documented
 test_readme_describes_stack_profiles
+test_readme_describes_drift_audit
 finish

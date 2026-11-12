@@ -151,7 +151,8 @@ test_plan() {
     '**Goal:**' '**Spec:**' '## Global Constraints' '## Expected test scenarios' \
     '**Given**' '**When**' '**Then**' '[HUMAN]' '**Executor:** human' '**Blocks:** Task' \
     '**Rollback:**' '### Golden paths this item creates or evolves' \
-    'verified by <review | the command>'
+    'verified by <review | the command>' \
+    '**Footprint:**' '**Tier:**' '**Actual:**'
 }
 
 test_config_names_the_env_example_trap() {
@@ -170,6 +171,9 @@ test_calibration() {
     'How many stories have no subtask?' \
     'What is the cancellation rate among those stories?' \
     'What subtask summary format does the team already use?' \
+    'What do the footprint buckets mean in this project?' \
+    'Which tier does each footprint get, and which model runs each tier?' \
+    'Before/after probe' \
     'measure' 'not measured'
 }
 

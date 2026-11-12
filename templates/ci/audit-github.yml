@@ -1,0 +1,34 @@
+# Copy to .github/workflows/rastro-audit.yml.
+name: rastro-audit
+
+on:
+  schedule:
+    # Weekly, on Monday at 06:00 UTC. Change it to the pace of your team.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      # audit-drift reads the git history; a shallow clone hides it.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # toolchain: install bash and git. The audit runs no golden path check, so nothing else is usually needed.
+
+      # The shell is named so that a failing audit is not hidden by tee.
+      - name: Audit golden paths against the code
+        shell: bash
+        run: bash .rastro/git-hooks/audit-drift --fail-on-drift | tee audit-report.md
+
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rastro-audit-report
+          path: audit-report.md

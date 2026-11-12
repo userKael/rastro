@@ -200,6 +200,12 @@ In rastro 0.1.0, `architecture.golden_paths` was a list of files. It now names o
 
 rastro ships no calibration numbers. Where another workflow would quote a figure, the default rulers say "measure". `.rastro/CALIBRATION.md`, from `templates/CALIBRATION.md`, is where you record your own measurements, each with a date and a source.
 
+### Drift audit
+
+The `audit` skill looks for drift between your golden paths and your code, and writes a report to `<workspace>/audit/<YYYY-MM-DD>.md`. Reports stay in the workspace and are never committed: they are derived from the repository, and a committed copy would be out of date the next day. The mechanical checks are one script, `.rastro/git-hooks/audit-drift`, which also runs without an agent: instances changed since their golden path last did, golden paths with no instance, two golden paths for one type, a boundary type with no `## Security` section, and a golden path under review for longer than `audit.under_review_days`. The skill adds two checks that need reading the code: components of a type that has a golden path but is missing from `instances`, and `Revisit if:` conditions that now hold. Each report is compared with the previous one.
+
+The report also prints numbers: first-pass and self-heal of the per-file lint, which the hook records in `<workspace>/metrics/`, and golden paths created, evolved and contradicted, read from git history and the `## History` table of each golden path. `templates/ci/audit-github.yml` and `templates/ci/audit-gitlab-ci.yml` run the script on a schedule; they are optional and you copy one by hand. `.rastro/CALIBRATION.md` also holds the footprint buckets that choose a model for each task of a plan, and the steps of a before/after probe.
+
 ## Working without an issue tracker or a docs tool
 
 You need neither. Each row below is a mode that needs no external tool. Together they cover the tracker, the docs tool, the code host, the database connection and superpowers.
@@ -251,7 +257,7 @@ Until your adapter exists, set the port to its tool-free kind: `local` or `none`
 |---|---|---|
 | 1. Git hooks | `pre-commit` refuses a staged file that matches `conventions.forbidden_paths`. `commit-msg` validates the message against `conventions.commit`. It requires the `[id]` only when the branch name carries an id, and a design doc branch does not | Any agent, and people |
 | 2. CI | `check-changed-paths` fails when a forbidden path is in the change set. `check-pr-title` validates the PR title as a commit message when `code_host.merge` is `squash`. `check-commits` validates the message of every commit of the branch when it is not. `run-verify` runs the `verify.*` commands, and fails when none is configured. Templates ship for GitHub and GitLab in `templates/ci/`, and `setup` offers to write one | Any agent, and people |
-| 3. Agent harness | `guard-git.sh` denies `git add -A`, `git add .`, `git add --all`, `git commit -a` and `--no-verify`, also behind `git -C <dir>`. It also denies any `core.hooksPath` other than `.rastro/git-hooks`, set with `git config` or `git -c`. After each file edit, the hook runs `verify.lint_file` on that file, and tells the agent when the linter is missing. When the agent tries to stop, the hook lints the changed files that match `verify.source_globs` and blocks while the result is red, and lists the `verify.typecheck`, `verify.unit` and `verify.integration` commands that still need to run. At session start, the hook runs the doctor | Claude Code only |
+| 3. Agent harness | `guard-git.sh` denies `git add -A`, `git add .`, `git add --all`, `git commit -a` and `--no-verify`, also behind `git -C <dir>`. It also denies any `core.hooksPath` other than `.rastro/git-hooks`, set with `git config` or `git -c`. After each file edit, the hook runs `verify.lint_file` on that file, and tells the agent when the linter is missing. It also records each lint verdict in the workspace, for the audit's metrics. When the agent tries to stop, the hook lints the changed files that match `verify.source_globs` and blocks while the result is red, and lists the `verify.typecheck`, `verify.unit` and `verify.integration` commands that still need to run. At session start, the hook runs the doctor | Claude Code only |
 
 Four limits:
 

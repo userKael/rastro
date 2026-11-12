@@ -194,6 +194,10 @@ Every task carries `### Expected test scenarios` before its steps, as Given/When
 
 The invariants role feeds the scenarios. Each task also keeps its **Files** block (paths with lines, and the test file), its **Interfaces** block (what it consumes and produces), and steps of 2 to 5 minutes in the cycle: write the test, see it fail, implement, see it pass, commit.
 
+### Footprint and tier of each task
+
+Each task carries a footprint and a tier under its title, in the shape of the plan template: `Footprint: diff <small | medium | large>, read <small | medium | large>` and `Tier: <light | standard | deep>`. The diff bucket is how much the task changes; the read bucket is how much of the codebase the agent has to read to change it safely. The tier comes from the table in `.rastro/CALIBRATION.md`, where the project records what each bucket means in lines and files, and which model runs each tier. When that table says "not measured", every task is `standard` and the plan says the tiers are not calibrated. The footprint is a planning aid inside `plan.md`: never write it to a tracker item, because items carry no estimate. After a task is committed, record its real size next to the prediction, `Actual: <n> lines in <k> files`, from the diff of its commit. The read scope has no recorded actual; the person compares it.
+
 ### Where the plan lives
 
 The plan lives in `<workspace>/<id>/plan.md`. It is not versioned: it feeds execution and is not durable knowledge of the codebase. The repository's docs gain only what outlives the item: an ADR, a pattern, a golden path.
@@ -227,6 +231,8 @@ Use `superpowers:subagent-driven-development` when any of these holds:
 Otherwise, inline execution. Without superpowers, inline execution is the only option, whatever the criterion says.
 
 Announce inline or subagent execution and the criterion that set it. The human may override it at the gate.
+
+When subagents run, each task's implementer and reviewer use the model its tier maps to in `.rastro/CALIBRATION.md`. A task with no mapping uses the session's own model.
 
 The handoff of this skill replaces the branch-finishing step of `superpowers:subagent-driven-development` and `superpowers:executing-plans`. In a continuous run, never enter `superpowers:finishing-a-development-branch`: invoke `deliver`.
 
