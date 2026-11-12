@@ -91,6 +91,50 @@ test_codex_edit_tool_passes_file_path_through() {
   run_adapt "$repo" codex lint-edited-file '{"cwd":"'"$repo"'","tool_name":"Edit","tool_input":{"file_path":"'"$repo"'/src/b.ts"}}'
   assert_status 2 "an Edit payload with file_path is linted as is"
 }
+test_codex_apply_patch_lints_moved_file() {
+  local repo patch
+  repo=$(new_repo)
+  put "$repo" src/new.ts BAD
+  patch='*** Begin Patch\n*** Update File: src/old.ts\n*** Move to: src/new.ts\n@@\n+BAD\n*** End Patch'
+  run_adapt "$repo" codex lint-edited-file '{"cwd":"'"$repo"'","tool_name":"apply_patch","tool_input":{"command":"'"$patch"'"}}'
+  assert_status 2 "the move target is linted"
+  assert_contains "$ERR" "src/new.ts" "names the new path"
+  assert_not_contains "$ERR" "src/old.ts" "the old path is not linted"
+}
+test_codex_cwd_replaces_missing_project_dir() {
+  local repo elsewhere
+  repo=$(new_repo)
+  put "$repo" src/b.ts BAD
+  elsewhere="$RASTRO_TEST_TMP/elsewhere"
+  mkdir -p "$elsewhere"
+  run_cmd bash -c 'cd "$1" && bash "$2" codex lint-edited-file <<<"$3"' _ "$elsewhere" "$ADAPT" \
+    '{"cwd":"'"$repo"'","tool_name":"Edit","tool_input":{"file_path":"src/b.ts"}}'
+  assert_status 2 "the shim moves into the payload cwd, so the project is found"
+}
+test_codex_apply_patch_forwards_session() {
+  local repo patch
+  repo=$(new_repo)
+  put "$repo" src/a.ts ok
+  patch='*** Begin Patch\n*** Update File: src/a.ts\n*** End Patch'
+  run_adapt "$repo" codex lint-edited-file '{"session_id":"sess-42","cwd":"'"$repo"'","tool_name":"apply_patch","tool_input":{"command":"'"$patch"'"}}'
+  assert_status 0 "clean file"
+  assert_contains "$(cat "$repo/.agent/metrics/lint.log")" $'sess-42\tsrc/a.ts\tpass' "lint metric keeps the session"
+}
+test_codex_apply_patch_path_forms() {
+  local repo patch mixed
+  repo=$(new_repo)
+  put "$repo" src/sub/b.ts BAD
+  patch='*** Begin Patch\n*** Add File: src/sub/b.ts\n+BAD\n*** End Patch'
+  run_adapt "$repo" codex lint-edited-file '{"cwd":"'"$repo"'","tool_name":"apply_patch","tool_input":{"command":"'"$patch"'"}}'
+  assert_status 2 "relative path resolved against cwd"
+  assert_contains "$ERR" "src/sub/b.ts" "names the file"
+  run_adapt "$repo" codex lint-edited-file '{"cwd":"'"$RASTRO_TEST_TMP"'","tool_name":"apply_patch","tool_input":{"command":"*** Begin Patch\n*** Add File: '"$repo"'/src/sub/b.ts\n*** End Patch"}}'
+  assert_status 2 "absolute path is not resolved against cwd"
+  command -v cygpath >/dev/null || return 0
+  mixed=$(cygpath -m "$repo")
+  run_adapt "$mixed" codex lint-edited-file '{"cwd":"'"$RASTRO_TEST_TMP"'","tool_name":"apply_patch","tool_input":{"command":"*** Begin Patch\n*** Add File: '"$mixed"'/src/sub/b.ts\n*** End Patch"}}'
+  assert_status 2 "drive-letter absolute path is not resolved against cwd"
+}
 test_codex_session_start_is_plain_text() {
   local repo
   repo=$(make_tmp_repo)
@@ -176,6 +220,8 @@ test_unknown_agent_and_hook_are_refused
 test_codex_guard_denies_wildcard_add; test_codex_guard_allows_status
 test_codex_apply_patch_lints_every_file; test_codex_apply_patch_clean_files_pass
 test_codex_edit_tool_passes_file_path_through
+test_codex_apply_patch_lints_moved_file; test_codex_cwd_replaces_missing_project_dir
+test_codex_apply_patch_forwards_session; test_codex_apply_patch_path_forms
 test_codex_session_start_is_plain_text; test_codex_stop_passes_through
 test_cursor_guard_denies_as_json; test_cursor_guard_allows_in_silence
 test_cursor_after_file_edit_lints

@@ -76,16 +76,23 @@ emit_and_exit() {
 }
 
 patch_files() {
-  local line path
+  local line pending=""
   while IFS= read -r line; do
     line=${line%$'\r'}
     case $line in
-      '*** Add File: '*) path=${line#'*** Add File: '} ;;
-      '*** Update File: '*) path=${line#'*** Update File: '} ;;
-      *) continue ;;
+      '*** Add File: '*)
+        [ -z "$pending" ] || printf '%s\n' "$pending"
+        pending=${line#'*** Add File: '}
+        ;;
+      '*** Update File: '*)
+        [ -z "$pending" ] || printf '%s\n' "$pending"
+        pending=${line#'*** Update File: '}
+        ;;
+      # A rename: the old path no longer exists, only the new one is linted.
+      '*** Move to: '*) pending=${line#'*** Move to: '} ;;
     esac
-    printf '%s\n' "$path"
   done <<<"$1"
+  [ -z "$pending" ] || printf '%s\n' "$pending"
 }
 
 is_absolute() {
@@ -96,8 +103,10 @@ is_absolute() {
 }
 
 codex_lint() {
-  local patch path files
+  local patch path files session session_json=""
   patch=$(rastro_json_string command <<<"$input")
+  session=$(rastro_json_string session_id <<<"$input")
+  [ -z "$session" ] || session_json='"session_id":"'"$(rastro_json_escape "$session")"'",'
   files=$(patch_files "$patch")
   if [ -z "$files" ]; then
     run_hook "$hook" "$input"
@@ -105,15 +114,21 @@ codex_lint() {
   fi
   while IFS= read -r path; do
     is_absolute "$path" || path=${cwd:-$(pwd)}/$path
-    run_hook "$hook" '{"tool_input":{"file_path":"'"$(rastro_json_escape "$path")"'"}}'
+    run_hook "$hook" '{'"$session_json"'"tool_input":{"file_path":"'"$(rastro_json_escape "$path")"'"}}'
     [ "$rc" -eq 0 ] || emit_and_exit
   done <<<"$files"
   exit 0
 }
 
 cursor_stop_input() {
+  local rest
   if grep -Eq '"loop_count"[[:space:]]*:[[:space:]]*[1-9]' <<<"$input"; then
-    printf '{"stop_hook_active":true,%s' "${input#*\{}"
+    rest=${input#*\{}
+    if [[ $rest =~ ^[[:space:]]*\} ]]; then
+      printf '{"stop_hook_active":true%s' "$rest"
+    else
+      printf '{"stop_hook_active":true,%s' "$rest"
+    fi
   else
     printf '%s' "$input"
   fi
