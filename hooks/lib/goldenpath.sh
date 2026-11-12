@@ -34,10 +34,17 @@ rastro_gp_security() {
     !found && /^## Security[ \t]*$/ { found = 1; on = 1; next }
     on && /^##? / { exit }
     on && /[^ \t]/ {
-      if ($0 !~ /^[ \t]*</ && index($0, "<threat>") == 0) text = 1
-      if (index(tolower($0), "none identified")) { text = 1; none = 1 }
+      if ($0 !~ /^[ \t]*</ && index($0, "<threat>") == 0) {
+        # A "none identified" line starts with those words (after a bullet or
+        # emphasis); a threat line that merely mentions them is a threat.
+        l = tolower($0)
+        gsub(/^[ \t*_+-]+/, "", l)
+        if (index(l, "none identified") == 1) none = 1
+        else threat = 1
+        text = 1
+      }
     }
-    END { print (!found ? "missing" : !text ? "empty" : none ? "none" : "ok") }
+    END { print (!found ? "missing" : !text ? "empty" : (none && !threat) ? "none" : "ok") }
   ' "$1"
 }
 

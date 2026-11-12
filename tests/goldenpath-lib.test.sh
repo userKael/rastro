@@ -41,6 +41,12 @@ test_security_states() {
   assert_eq "ok" "$(rastro_gp_security "$F")" "a threat: ok"
   printf -- '# Title\r\n\r\n## Security\r\n\r\n- Injection: parameterised queries\r\n' >"$F"
   assert_eq "ok" "$(rastro_gp_security "$F")" "CRLF heading counts as the section"
+  printf -- '# Title\n\n## Security\n\n- Replay: none identified, tokens are single-use\n' >"$F"
+  assert_eq "ok" "$(rastro_gp_security "$F")" "a threat line that mentions none identified: ok"
+  printf -- '# Title\n\n## Security\n\nNone identified: the processor reads no outside input.\n' >"$F"
+  assert_eq "none" "$(rastro_gp_security "$F")" "none identified with a reason: none"
+  printf -- '# Title\n\n## Security\n\nnone identified\n- Injection: parameterised queries\n' >"$F"
+  assert_eq "ok" "$(rastro_gp_security "$F")" "none identified next to a listed threat: ok"
 }
 test_seen_find() {
   local SEEN=$'processor\tdocs/a.md\nservice\tdocs/b.md\n'
