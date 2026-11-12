@@ -202,7 +202,7 @@ test_readme_adapter_table_lists_new_adapters() {
   [ -f "$readme" ] || return 0
   section_body 'Bring your own adapter' | grep -qF '`jira`, `github`, `github-projects`' ||
     _assert_fail "README.md adapter table lacks github-projects on the tracker row"
-  section_body 'Bring your own adapter' | grep -qF '`notion`, `repo`, `claude`' ||
+  section_body 'Bring your own adapter' | grep -qF '`notion`, `repo`, `claude-docs`' ||
     _assert_fail "README.md adapter table lacks claude on the docs row"
 }
 

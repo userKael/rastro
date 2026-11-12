@@ -1,4 +1,4 @@
-# Adapter: docs/claude
+# Adapter: docs/claude-docs
 
 ## Requirements
 

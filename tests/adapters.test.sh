@@ -6,7 +6,7 @@ root=$(cd "${1:-$tests_dir/..}" && pwd)
 contract="$root/adapters/CONTRACT.md"
 REQUIRED_ADAPTERS=(
   tracker/jira tracker/github tracker/github-projects tracker/local tracker/none
-  docs/notion docs/repo docs/claude
+  docs/notion docs/repo docs/claude-docs
   code-host/github code-host/gitlab code-host/none
   domain-state/db-mcp domain-state/schema-files domain-state/none
   review/none
