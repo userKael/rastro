@@ -335,23 +335,8 @@ if [ "$k_tracker" = local ] && get tracker.local_dir; then
   fi
 fi
 
-# gp_security FILE: prints missing, empty, none or ok for the ## Security section.
-# A section whose lines are all unfilled template placeholders counts as empty.
-gp_security() {
-  awk '
-    { sub(/\r$/, "") }
-    !found && /^## Security[ \t]*$/ { found = 1; on = 1; next }
-    on && /^##? / { exit }
-    on && /[^ \t]/ {
-      if ($0 !~ /^[ \t]*</ && index($0, "<threat>") == 0) text = 1
-      if (index(tolower($0), "none identified")) { text = 1; none = 1 }
-    }
-    END { print (!found ? "missing" : !text ? "empty" : none ? "none" : "ok") }
-  ' "$1"
-}
-
 gp_check() {
-  local file=$1 rel=$2 base key value v s dump id type version status vb origin sup inst path seen_t seen_rel cmd bin
+  local file=$1 rel=$2 base key value s dump id type version status vb origin sup inst path seen_t seen_rel cmd bin
   local has_instances=0 instances="" state
   base=${file##*/}
   base=${base%.md}
@@ -445,7 +430,7 @@ gp_check() {
     case $'\n'"$gp_boundary" in
       *$'\n'"$type"$'\n'*)
         checks=$((checks + 1))
-        state=$(gp_security "$file")
+        state=$(rastro_gp_security "$file")
         case $state in
           missing) problem "golden path $rel: $type is a boundary type and has no ## Security section; list the threats considered, the control for each and how each control is verified" ;;
           empty) problem "golden path $rel: $type is a boundary type and its ## Security section is empty; list the threats considered, the control for each and how each control is verified" ;;
@@ -455,12 +440,8 @@ gp_check() {
     esac
   fi
   if [ -n "$type" ] && [ "$status" != retired ]; then
-    while IFS=$'\t' read -r seen_t seen_rel; do
-      if [ "$seen_t" = "$type" ]; then
-        problem "golden path $rel: type $type already has golden path $seen_rel"
-        break
-      fi
-    done <<<"$gp_seen"
+    seen_rel=$(rastro_gp_seen_find "$gp_seen" "$type") &&
+      problem "golden path $rel: type $type already has golden path $seen_rel"
     gp_seen=$gp_seen$type$'\t'$rel$'\n'
   fi
   [ "$has_instances" -eq 1 ] || return 0
@@ -473,13 +454,7 @@ gp_check() {
     problem "golden path $rel: current with no instance"
   fi
   for inst in ${RASTRO_FM_ITEMS[@]+"${RASTRO_FM_ITEMS[@]}"}; do
-    path=$inst
-    case $path in
-      *:*[0-9])
-        v=${path##*:}
-        case $v in *[!0-9]*) ;; *) path=${path%:*} ;; esac
-        ;;
-    esac
+    path=$(rastro_gp_instance_path "$inst")
     [ -e "$root/$path" ] || problem "golden path $rel: instance $path does not exist"
   done
 }
@@ -517,30 +492,38 @@ if [ -n "$gp_boundary" ]; then
 fi
 
 if get architecture.golden_paths; then
-  gp_dir=${val:-docs/golden-paths/}
-  case $gp_dir in
-    '['*)
-      checks=$((checks + 1))
-      problem "architecture.golden_paths is a list; it now names one folder, such as docs/golden-paths/"
-      ;;
-    *)
-      case $gp_dir in */) ;; *) gp_dir=$gp_dir/ ;; esac
-      if [ -d "$root/$gp_dir" ]; then
-        if ! . "$lib/frontmatter.sh" 2>/dev/null; then
-          checks=$((checks + 1))
-          problem "could not check golden paths: $lib/frontmatter.sh not found"
-        else
-          gp_read_layers
-          gp_seen=""
-          for f in "$root/$gp_dir"*.md; do
-            [ -f "$f" ] || continue
-            [ "${f##*/}" != README.md ] || continue
-            gp_check "$f" "$gp_dir${f##*/}"
-          done
-        fi
+  gp_lib_ok=0
+  if . "$lib/goldenpath.sh" 2>/dev/null; then
+    gp_lib_ok=1
+    gp_dir=$(rastro_gp_folder 2>/dev/null) && s=0 || s=$?
+  else
+    # Without the lib the folder cannot be resolved the shared way; the
+    # problem below says so once the folder turns out to exist.
+    gp_dir=${val:-docs/golden-paths/}
+    case $gp_dir in '['*) s=2 ;; *) s=0 ;; esac
+    case $gp_dir in */) ;; *) gp_dir=$gp_dir/ ;; esac
+  fi
+  if [ "$s" -eq 2 ]; then
+    checks=$((checks + 1))
+    problem "architecture.golden_paths is a list; it now names one folder, such as docs/golden-paths/"
+  else
+    if [ -d "$root/$gp_dir" ]; then
+      if ! . "$lib/frontmatter.sh" 2>/dev/null; then
+        checks=$((checks + 1))
+        problem "could not check golden paths: $lib/frontmatter.sh not found"
+      elif [ "$gp_lib_ok" -eq 0 ]; then
+        checks=$((checks + 1))
+        problem "could not check golden paths: $lib/goldenpath.sh not found"
+      else
+        gp_read_layers
+        gp_seen=""
+        while IFS= read -r f; do
+          [ -n "$f" ] || continue
+          gp_check "$f" "$gp_dir${f##*/}"
+        done <<<"$(rastro_gp_files "$root" "$gp_dir")"
       fi
-      ;;
-  esac
+    fi
+  fi
 fi
 
 drift=0
