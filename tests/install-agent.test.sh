@@ -1,6 +1,9 @@
 . "$(dirname "$0")/lib/assert.sh"
 . "$(dirname "$0")/lib/tmprepo.sh"
+unset RASTRO_ROOT
 INSTALL="$RASTRO_TESTS_DIR/../scripts/install-agent.sh"
+ADAPT="$RASTRO_TESTS_DIR/../hooks/agents/adapt.sh"
+RASTRO_DIR=$(cd "$RASTRO_TESTS_DIR/.." && pwd)
 new_project() {
   mktemp -d "$RASTRO_TEST_TMP/proj.XXXXXX"
 }
@@ -27,8 +30,24 @@ test_install_codex_writes_skills_and_hooks() {
   assert_contains "$(<"$proj/.codex/hooks.json")" 'adapt.sh\" codex stop-check' "stop wired"
   assert_contains "$(<"$proj/.codex/hooks.json")" '"matcher": "apply_patch|Edit|Write"' "edit matcher"
   assert_contains "$OUT" "RASTRO_ROOT" "documents RASTRO_ROOT"
-  assert_contains "$OUT" "/hooks" "says Codex asks to trust the hooks"
+  assert_contains "$OUT" "open /hooks in Codex" "says Codex asks to trust the hooks"
   assert_contains "$OUT" "do not commit" "warns about the absolute path"
+}
+test_codex_hooks_map_each_event_to_a_shim_hook() {
+  local proj body pair
+  proj=$(new_project)
+  run_install codex "$proj"
+  body=$(<"$proj/.codex/hooks.json")
+  assert_contains "$body" '"SessionStart"' "SessionStart"
+  assert_contains "$body" 'codex doctor", "timeout": 30' "doctor on SessionStart"
+  assert_contains "$body" '"matcher": "Bash"' "Bash matcher"
+  assert_contains "$body" 'codex guard-git", "timeout": 10' "guard on PreToolUse"
+  assert_contains "$body" 'codex lint-edited-file", "timeout": 60' "lint on PostToolUse"
+  assert_contains "$body" 'codex stop-check", "timeout": 120' "stop-check on Stop"
+  while IFS= read -r pair; do
+    run_cmd env CLAUDE_PROJECT_DIR="$proj" bash "$ADAPT" $pair <<<'{}'
+    [ "$STATUS" -ne 64 ] || _assert_fail "shim rejects generated command: $pair"
+  done < <(grep -o 'adapt.sh\\" [a-z]* [a-z-]*' "$proj/.codex/hooks.json" | sed 's/.*" //')
 }
 test_install_cursor_writes_skills_and_hooks() {
   local proj body event
@@ -41,7 +60,12 @@ test_install_cursor_writes_skills_and_hooks() {
   for event in sessionStart beforeShellExecution afterFileEdit stop; do
     assert_contains "$body" "\"$event\"" "event $event"
   done
-  assert_contains "$body" 'adapt.sh\" cursor guard-git' "guard wired"
+  local shim="bash \\\"$RASTRO_DIR/hooks/agents/adapt.sh\\\""
+  assert_contains "$body" "\"sessionStart\": [{\"command\": \"$shim cursor doctor\"}]" "sessionStart"
+  assert_contains "$body" "\"beforeShellExecution\": [{\"command\": \"$shim cursor guard-git\"}]" "beforeShellExecution"
+  assert_contains "$body" "\"afterFileEdit\": [{\"command\": \"$shim cursor lint-edited-file\"}]" "afterFileEdit"
+  assert_contains "$body" "\"stop\": [{\"command\": \"$shim cursor stop-check\"}]" "stop"
+  assert_not_contains "$OUT" "open /hooks in Codex" "no Codex warning for Cursor"
   [ ! -e "$proj/.codex" ] || _assert_fail "cursor install wrote .codex"
 }
 test_install_is_idempotent() {
@@ -58,11 +82,13 @@ test_install_refuses_unknown_agent() {
   proj=$(new_project)
   run_install vim "$proj"
   assert_status 2 "unknown agent"
+  assert_contains "$ERR" "unknown agent" "says why"
   [ -z "$(ls -A "$proj")" ] || _assert_fail "wrote into the project"
 }
 test_install_refuses_missing_project() {
   run_install codex "$RASTRO_TEST_TMP/nope"
   assert_status 2 "missing project"
+  assert_contains "$ERR" "project directory not found" "says why"
   [ ! -e "$RASTRO_TEST_TMP/nope" ] || _assert_fail "created the project directory"
 }
 test_install_never_overwrites_foreign_hooks() {
@@ -73,6 +99,46 @@ test_install_never_overwrites_foreign_hooks() {
   assert_status 3 "refuses to merge"
   assert_eq '{"hooks":{}}' "$(<"$proj/.codex/hooks.json")" "file untouched"
   assert_contains "$OUT" "adapt.sh" "prints the block to add"
+}
+test_install_refuses_missing_rastro_root() {
+  local proj
+  proj=$(new_project)
+  FAKE_HOME=$(new_home)
+  run_cmd env HOME="$FAKE_HOME" RASTRO_ROOT="$RASTRO_TEST_TMP/nope" bash "$INSTALL" codex "$proj"
+  assert_status 2 "missing RASTRO_ROOT"
+  assert_contains "$ERR" "RASTRO_ROOT" "says why"
+  [ -z "$(ls -A "$proj")" ] || _assert_fail "wrote into the project"
+}
+test_install_never_deletes_a_foreign_skill() {
+  local proj
+  proj=$(new_project)
+  put "$proj" .agents/skills/setup/SKILL.md "my own setup skill"
+  put "$proj" .agents/skills/setup/notes.md "my notes"
+  run_install codex "$proj"
+  assert_status 3 "foreign skill blocks a clean exit"
+  assert_contains "$ERR" ".agents/skills/setup" "names the skill left alone"
+  assert_eq "my own setup skill" "$(<"$proj/.agents/skills/setup/SKILL.md")" "SKILL.md intact"
+  assert_eq "my notes" "$(<"$proj/.agents/skills/setup/notes.md")" "notes.md intact"
+  [ -f "$proj/.agents/skills/init/SKILL.md" ] || _assert_fail "other skills not installed"
+  run_install codex "$proj"
+  assert_status 3 "still refused on the second run"
+  assert_eq "my notes" "$(<"$proj/.agents/skills/setup/notes.md")" "notes.md intact after rerun"
+}
+test_install_refuses_skills_folder_inside_rastro() {
+  local proj fake
+  proj=$(new_project)
+  fake=$(mktemp -d "$RASTRO_TEST_TMP/rastro.XXXXXX")
+  mkdir -p "$fake/skills/demo" "$fake/hooks/agents" "$proj/.agents"
+  put "$fake" skills/demo/SKILL.md "demo"
+  put "$fake" hooks/agents/adapt.sh "#"
+  ln -s "$fake/skills" "$proj/.agents/skills" 2>/dev/null || true
+  if [ ! -L "$proj/.agents/skills" ]; then
+    return 0
+  fi
+  FAKE_HOME=$(new_home)
+  run_cmd env HOME="$FAKE_HOME" RASTRO_ROOT="$fake" bash "$INSTALL" codex "$proj"
+  assert_status 2 "refuses"
+  assert_eq "demo" "$(<"$fake/skills/demo/SKILL.md")" "rastro skill intact"
 }
 test_install_link_makes_symlinks_or_says_it_could_not() {
   local proj
@@ -97,6 +163,10 @@ test_install_cursor_writes_skills_and_hooks
 test_install_is_idempotent
 test_install_refuses_unknown_agent
 test_install_refuses_missing_project
+test_codex_hooks_map_each_event_to_a_shim_hook
+test_install_refuses_missing_rastro_root
+test_install_never_deletes_a_foreign_skill
+test_install_refuses_skills_folder_inside_rastro
 test_install_never_overwrites_foreign_hooks
 test_install_link_makes_symlinks_or_says_it_could_not
 test_install_does_not_touch_home

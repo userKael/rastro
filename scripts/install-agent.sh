@@ -41,7 +41,10 @@ fi
 project=$(cd "$project" && pwd)
 
 if [ -n "${RASTRO_ROOT:-}" ]; then
-  R=$(cd "$RASTRO_ROOT" && pwd)
+  R=$(cd "$RASTRO_ROOT" 2>/dev/null && pwd) || {
+    printf 'rastro: RASTRO_ROOT is not a directory: %s\n' "$RASTRO_ROOT" >&2
+    exit 2
+  }
 else
   R=$(cd "$(dirname "$0")/.." && pwd)
 fi
@@ -109,13 +112,41 @@ cursor_hooks() {
 EOF
 }
 
+# A skills folder that resolves into the rastro directory would make the
+# replacement below delete rastro's own skills.
+skills_dir=$project/.agents/skills
+if [ -d "$skills_dir" ]; then
+  real_skills=$(cd "$skills_dir" && pwd -P)
+  real_root=$(cd "$R" && pwd -P)
+  case $real_skills in
+    "$real_root" | "$real_root"/*)
+      printf 'rastro: %s resolves into the rastro directory %s; refusing to replace rastro skills with themselves\n' "$skills_dir" "$R" >&2
+      exit 2
+      ;;
+  esac
+fi
+
+manifest=$skills_dir/.rastro-installed
+skills_status=0
+
+# A destination is replaced only when it is a symlink or this script listed it
+# in the manifest; anything else is a skill of the project and stays.
 install_skills() {
-  local dir name dest linked
-  mkdir -p "$project/.agents/skills"
+  local dir name dest linked installed=""
+  mkdir -p "$skills_dir"
   for dir in "$R"/skills/*/; do
     name=$(basename "$dir")
-    dest=$project/.agents/skills/$name
+    dest=$skills_dir/$name
+    if [ -e "$dest" ] || [ -L "$dest" ]; then
+      if [ ! -L "$dest" ] && ! { [ -f "$manifest" ] && grep -qxF -e "$name" "$manifest"; }; then
+        printf 'rastro: %s is not a rastro install, left untouched (rename or remove it to install the rastro skill)\n' "$dest" >&2
+        skills_status=3
+        continue
+      fi
+    fi
     rm -rf "$dest"
+    installed="$installed$name
+"
     linked=0
     if [ "$link" -eq 1 ]; then
       ln -s "${dir%/}" "$dest" 2>/dev/null || true
@@ -131,6 +162,7 @@ install_skills() {
     fi
     [ "$linked" -eq 1 ] || cp -R "${dir%/}" "$dest"
   done
+  printf '%s' "$installed" >"$manifest"
 }
 
 install_skills
@@ -155,16 +187,20 @@ elif [ "$(<"$hooks_file")" = "$expected" ]; then
   :
 else
   status=3
-  printf 'rastro: %s already exists and differs from the rastro hooks, so it was not touched.\n' "$hooks_file"
-  printf 'The skills were installed (that copy is harmless to repeat). Add this block to the file by hand:\n\n'
+  printf 'rastro: %s already exists and differs from the rastro hooks, so it was not touched (an older rastro file counts too).\n' "$hooks_file"
+  printf 'Merge these hooks into the file by hand:\n\n'
   printf '%s\n\n' "$expected"
 fi
+[ "$skills_status" -eq 0 ] || status=3
 
 printf '\nSkills are in %s/.agents/skills/.\n' "$project"
 printf 'Point the agent at the rastro directory, in the shell that starts it:\n\n'
-printf 'export RASTRO_ROOT=%s\n\n' "$R"
+printf 'export RASTRO_ROOT=%q\n\n' "$R"
 if [ "$agent" = codex ]; then
   printf 'Codex runs a project hook only when the .codex/ layer is trusted and the hook is reviewed: open /hooks in Codex and review them.\n'
+fi
+if [ "$agent" = cursor ] && [ "$link" -eq 1 ]; then
+  printf 'NOT VERIFIED: Cursor documents no symlink support for .agents/skills/; if it does not list the skills, run this script again without --link.\n'
 fi
 printf 'The hook file holds an absolute path to this machine, so do not commit it; run this script again in each clone.\n'
 exit "$status"
