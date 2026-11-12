@@ -120,13 +120,26 @@ test_codex_apply_patch_forwards_session() {
   assert_status 0 "clean file"
   assert_contains "$(cat "$repo/.agent/metrics/lint.log")" $'sess-42\tsrc/a.ts\tpass' "lint metric keeps the session"
 }
+test_codex_apply_patch_reports_every_failing_file() {
+  local repo patch log
+  repo=$(new_repo)
+  put "$repo" src/a.ts BAD
+  put "$repo" src/b.ts BAD
+  patch='*** Begin Patch\n*** Add File: src/a.ts\n+BAD\n*** Add File: src/b.ts\n+BAD\n*** End Patch'
+  run_adapt "$repo" codex lint-edited-file '{"cwd":"'"$repo"'","tool_name":"apply_patch","tool_input":{"command":"'"$patch"'"}}'
+  assert_status 2 "both files fail"
+  assert_contains "$ERR" "src/a.ts" "names the first file"
+  assert_contains "$ERR" "src/b.ts" "names the second file"
+  log=$(cat "$repo/.agent/metrics/lint.log")
+  assert_eq 2 "$(printf '%s\n' "$log" | grep -c 'fail$')" "one fail verdict per file"
+}
 test_codex_apply_patch_path_forms() {
   local repo patch mixed
   repo=$(new_repo)
   put "$repo" src/sub/b.ts BAD
-  patch='*** Begin Patch\n*** Add File: src/sub/b.ts\n+BAD\n*** End Patch'
-  run_adapt "$repo" codex lint-edited-file '{"cwd":"'"$repo"'","tool_name":"apply_patch","tool_input":{"command":"'"$patch"'"}}'
-  assert_status 2 "relative path resolved against cwd"
+  patch='*** Begin Patch\n*** Add File: sub/b.ts\n+BAD\n*** End Patch'
+  run_adapt "$repo" codex lint-edited-file '{"cwd":"'"$repo"'/src","tool_name":"apply_patch","tool_input":{"command":"'"$patch"'"}}'
+  assert_status 2 "relative path resolved against cwd (a subfolder of the project)"
   assert_contains "$ERR" "src/sub/b.ts" "names the file"
   run_adapt "$repo" codex lint-edited-file '{"cwd":"'"$RASTRO_TEST_TMP"'","tool_name":"apply_patch","tool_input":{"command":"*** Begin Patch\n*** Add File: '"$repo"'/src/sub/b.ts\n*** End Patch"}}'
   assert_status 2 "absolute path is not resolved against cwd"
@@ -215,13 +228,17 @@ test_cursor_session_start_wraps_doctor_text() {
 }
 test_adapt_marks_what_is_not_verified() {
   assert_contains "$(<"$ADAPT")" "NOT VERIFIED" "unconfirmed behaviour is marked in the shim header"
+  assert_contains "$(<"$ADAPT")" "carries" "the unconfirmed payload fields are listed"
+  assert_contains "$(<"$ADAPT")" "stop_hook_active, and that exit 2 on Stop" "Codex Stop is marked"
+  assert_contains "$(<"$ADAPT")" "Cursor payloads carry session_id" "Cursor session_id is marked"
 }
 test_unknown_agent_and_hook_are_refused
 test_codex_guard_denies_wildcard_add; test_codex_guard_allows_status
 test_codex_apply_patch_lints_every_file; test_codex_apply_patch_clean_files_pass
 test_codex_edit_tool_passes_file_path_through
 test_codex_apply_patch_lints_moved_file; test_codex_cwd_replaces_missing_project_dir
-test_codex_apply_patch_forwards_session; test_codex_apply_patch_path_forms
+test_codex_apply_patch_forwards_session; test_codex_apply_patch_reports_every_failing_file
+test_codex_apply_patch_path_forms
 test_codex_session_start_is_plain_text; test_codex_stop_passes_through
 test_cursor_guard_denies_as_json; test_cursor_guard_allows_in_silence
 test_cursor_after_file_edit_lints

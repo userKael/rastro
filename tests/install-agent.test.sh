@@ -140,6 +140,19 @@ test_install_refuses_skills_folder_inside_rastro() {
   assert_status 2 "refuses"
   assert_eq "demo" "$(<"$fake/skills/demo/SKILL.md")" "rastro skill intact"
 }
+test_install_refuses_project_inside_rastro() {
+  local fake proj
+  fake=$(mktemp -d "$RASTRO_TEST_TMP/rastro.XXXXXX")
+  mkdir -p "$fake/skills/demo" "$fake/hooks/agents"
+  put "$fake" skills/demo/SKILL.md "demo"
+  put "$fake" hooks/agents/adapt.sh "#"
+  proj="$fake/sub"
+  mkdir -p "$proj/.agents/skills"
+  FAKE_HOME=$(new_home)
+  run_cmd env HOME="$FAKE_HOME" RASTRO_ROOT="$fake" bash "$INSTALL" codex "$proj"
+  assert_status 2 "a skills folder under the rastro directory is refused"
+  assert_eq "demo" "$(<"$fake/skills/demo/SKILL.md")" "rastro skill intact"
+}
 test_install_link_makes_symlinks_or_says_it_could_not() {
   local proj
   proj=$(new_project)
@@ -167,6 +180,7 @@ test_codex_hooks_map_each_event_to_a_shim_hook
 test_install_refuses_missing_rastro_root
 test_install_never_deletes_a_foreign_skill
 test_install_refuses_skills_folder_inside_rastro
+test_install_refuses_project_inside_rastro
 test_install_never_overwrites_foreign_hooks
 test_install_link_makes_symlinks_or_says_it_could_not
 test_install_does_not_touch_home

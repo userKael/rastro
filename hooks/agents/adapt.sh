@@ -14,11 +14,16 @@
 #   codex  PostToolUse  lint-edited-file  apply_patch: one file_path per file in the patch
 #   codex  SessionStart doctor            plain text on stdout
 #   codex  Stop         stop-check        passes through. NOT VERIFIED: that the
-#                                         systemMessage JSON printed on exit 0 is accepted
+#                                         systemMessage JSON printed on exit 0 is accepted;
+#                                         NOT VERIFIED: that the Codex Stop payload carries
+#                                         stop_hook_active, and that exit 2 on Stop continues
+#                                         the turn
 #   cursor beforeShellExecution guard-git exit 2 becomes {"permission":"deny",...}, exit 0
 #   cursor afterFileEdit        lint-edited-file passes through (stderr + exit 2).
 #                                         NOT VERIFIED: that the agent sees this output,
 #                                         because the documentation defines none for this event
+#   cursor (all hooks)                    NOT VERIFIED: that Cursor payloads carry session_id;
+#                                         without it, lint metrics are recorded under session -
 #   cursor sessionStart         doctor    text wrapped as {"additional_context":...}
 #   cursor stop                 stop-check exit 2 becomes {"followup_message":...};
 #                                         informative output is dropped; loop_count > 0 is
@@ -112,12 +117,18 @@ codex_lint() {
     run_hook "$hook" "$input"
     emit_and_exit
   fi
+  # Lint every file so each one gets a verdict, then report all failures.
+  local failed_rc=0 failed_err=""
   while IFS= read -r path; do
     is_absolute "$path" || path=${cwd:-$(pwd)}/$path
     run_hook "$hook" '{'"$session_json"'"tool_input":{"file_path":"'"$(rastro_json_escape "$path")"'"}}'
-    [ "$rc" -eq 0 ] || emit_and_exit
+    [ "$rc" -eq 0 ] && continue
+    [ "$failed_rc" -eq 0 ] && failed_rc=$rc
+    failed_err=${failed_err:+$failed_err$'\n'}$err
   done <<<"$files"
-  exit 0
+  [ "$failed_rc" -eq 0 ] && exit 0
+  [ -z "$failed_err" ] || printf '%s\n' "$failed_err" >&2
+  exit "$failed_rc"
 }
 
 cursor_stop_input() {
