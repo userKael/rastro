@@ -33,3 +33,4 @@ init runs first and calls setup with its answers
 Run on its own, setup stops after the closing report.
 under `init`, the walking skeleton fills it
 run `init` instead
+When the stack detection names a stack profile, point to it in the closing report, by the path the detection gives; the profile is read where it is and never copied.

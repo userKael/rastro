@@ -168,6 +168,8 @@ A profile is a markdown file that replaces a default of one skill. Put it at `.r
 
 Writing rules go in `.rastro/profiles/writing.md`, and every skill applies them to the text a person reads. `profiles/examples/writing.md` is a starting point. `profiles/examples/architecture-services/` holds an example set of architecture rules in a bookstore domain, and four example golden paths in the format of `templates/golden-path.md`, with gaps for your stack.
 
+A stack profile is reference material for one stack, kept under `profiles/stacks/`. `profiles/stacks/node-nestjs-typescript/` covers Node.js with NestJS and TypeScript. A stack profile teaches how to verify, with recipes for a module boundary check, tests for a module and a path, and security questions per boundary type. It imposes no pattern and ships no golden path. `setup` points to it when it detects the stack; you read it where it is, and take into your own golden paths only what your team adopts.
+
 `setup` does not create `.rastro/profiles/` or `.rastro/adapters/`, because git does not version an empty directory. Create each one when you have a first file for it.
 
 ### Rules

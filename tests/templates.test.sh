@@ -210,6 +210,26 @@ test_stack_detection_reads_ci() {
   done
 }
 
+test_stack_detection_names_nestjs() {
+  local body needle
+  require_file stack-detection.md || return 0
+  body=$(section stack-detection.md "NestJS")
+  if [ -z "$body" ]; then
+    _assert_fail "templates/stack-detection.md has no section for NestJS"
+    return
+  fi
+  for needle in '`@nestjs/core`' '`nest-cli.json`' '`test:e2e`' '`verify.integration`' \
+    '`verify.integration_when` is still asked' 'profiles/stacks/node-nestjs-typescript/' '"monorepo": true' \
+    '["apps/**/*.ts", "libs/**/*.ts"]'; do
+    case $body in
+      *"$needle"*) ;;
+      *) _assert_fail "templates/stack-detection.md section NestJS lacks required text" "text: $needle" ;;
+    esac
+  done
+  [ -d "$tpl/../profiles/stacks/node-nestjs-typescript" ] ||
+    _assert_fail "templates/stack-detection.md names a stack profile folder that does not exist"
+}
+
 test_adr() {
   local key
   require_all adr.md \
@@ -254,6 +274,7 @@ test_pr_description
 test_calibration
 test_stack_detection
 test_stack_detection_reads_ci
+test_stack_detection_names_nestjs
 test_adr
 test_no_origin_calibration_numbers
 test_config_has_no_mode_key

@@ -126,6 +126,14 @@ test_adapter_section_points_to_the_contract() {
   need_in_section 'Bring your own adapter' 'not verified against live tools'
 }
 
+test_readme_describes_stack_profiles() {
+  local needle
+  [ -f "$readme" ] || return 0
+  for needle in 'profiles/stacks/node-nestjs-typescript/' 'A stack profile teaches how to verify'; do
+    grep -qF -e "$needle" "$readme" || _assert_fail "README.md lacks required text" "text: $needle"
+  done
+}
+
 test_readme_has_no_internal_plan_terms() {
   [ -f "$readme" ] || return 0
   if grep -qE -e '(^|[^A-Za-z])V-[0-9]|Plan [0-9]|Task [0-9]' "$readme"; then
@@ -196,4 +204,5 @@ test_marketplace_manifest_is_exact
 test_execution_mode_is_documented
 test_golden_path_checks_are_documented
 test_init_is_documented
+test_readme_describes_stack_profiles
 finish

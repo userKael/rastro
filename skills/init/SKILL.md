@@ -177,6 +177,8 @@ When breakdown already ran on the skeleton intent, that is, an item for it exist
 
 When the base branch already has the file and no item for the skeleton exists, invoke `${CLAUDE_PLUGIN_ROOT}/skills/breakdown/SKILL.md` with the intent. `breakdown` asks the execution mode.
 
+When the stack detection names a stack profile, point to it in the closing report, by the path the detection gives; the profile is read where it is and never copied.
+
 ## What this skill does NOT do
 
 | Not this skill | Who does it |

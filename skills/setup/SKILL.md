@@ -215,6 +215,7 @@ Then print the closing report:
 - When the CI file was written: the team fills in its toolchain step, the `toolchain:` comment in the file, before the first pipeline runs; under `init`, the walking skeleton fills it. When the job must be merged by hand: the job, ready to merge.
 - When the block is new: the team replaces the example rule in `## Non-negotiable rules` with its own rules, each by ID. Setup keeps that section on every re-run once it differs from the example.
 - For an agent other than Claude Code: export `RASTRO_ROOT` with the rastro installation directory on each machine that runs it.
+- When the stack detection names a stack profile, point to it in the closing report, by the path the detection gives; the profile is read where it is and never copied.
 - Every problem the doctor reported, with nothing added and nothing removed.
 
 ## Handoff

@@ -50,6 +50,19 @@ Detect: `scripts` in `package.json`, `tsconfig.json`, and an ESLint configuratio
 | `verify.lint_file` | `npx eslint {file}` | an ESLint configuration exists |
 | `verify.source_globs` | `["src/**/*.ts", "src/**/*.tsx"]` | `tsconfig.json` exists; use `.js` and `.jsx` otherwise |
 
+## NestJS
+
+Detect: `@nestjs/core` in the `dependencies` of `package.json`, or a `nest-cli.json` file. A repository that matches also matches `## package.json`: take its proposals first, then these.
+
+| Key | Proposal | When |
+|---|---|---|
+| `verify.integration` | `npm run test:e2e` | a `test:e2e` script exists |
+| `verify.source_globs` | `["apps/**/*.ts", "libs/**/*.ts"]` | `nest-cli.json` has `"monorepo": true`; otherwise the `## package.json` proposal stands |
+
+`verify.integration` is proposed only when a `test:e2e` script exists; `verify.integration_when` is still asked. With no `test:e2e` script, `verify.integration` stays empty.
+
+Stack profile: `profiles/stacks/node-nestjs-typescript/` in the rastro installation. It teaches how to verify in this stack and imposes no pattern. Name it in the closing report; it is read where it is and never copied.
+
 ## pyproject.toml
 
 Detect: the tables `[tool.ruff]`, `[tool.mypy]` and `[tool.pytest.ini_options]` in `pyproject.toml`, and a `tests/` folder.

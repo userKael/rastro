@@ -50,3 +50,4 @@ When the intent already exists, skip the question.
 stop and follow the next row of the state table
 `chore(infra): <subject>`
 drafts at most three ADRs (stack, structure, verification)
+When the stack detection names a stack profile, point to it in the closing report, by the path the detection gives; the profile is read where it is and never copied.
