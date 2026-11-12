@@ -96,3 +96,4 @@ adds a row to `## History`, rewrites `## Verification` to name the command, and 
 When the type of a component has a golden path with real-system scenarios, the report lists them as the manual test to run.
 When `.rastro/CALIBRATION.md` is absent or its tier table is unfilled, every task is `standard`.
 The walking-skeleton item, whose `## Sources` lists ADRs and marks none as the source of truth, is an item with no design doc.
+`"automated: <command>"` (quoted, because the unquoted form is not valid YAML)

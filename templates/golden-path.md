@@ -10,7 +10,7 @@ origin: <item id>, <branch>, <YYYY-MM-DD>
 
 # Golden path: <type>
 
-> **Template.** Delete this note when filling in. The headings and the frontmatter keys and values stay literal in English, because skills find sections by them; write the text under them in `project.languages.human`. The first instance of a component type writes this file, in the same change as the instance, and names it after the type. `status` is `current`, `under-review` or `retired`; a retired golden path adds `superseded_by: <id>`. `verified_by` is `review` until a check enforces the golden path, then `automated: <command>`. A type listed in `architecture.boundary_types` crosses a trust boundary: `## Security` and `## Verification` say what more it needs. `instances` points to real code by `file:line` and never copies it.
+> **Template.** Delete this note when filling in. The headings and the frontmatter keys and values stay literal in English, because skills find sections by them; write the text under them in `project.languages.human`. The first instance of a component type writes this file, in the same change as the instance, and names it after the type. `status` is `current`, `under-review` or `retired`; a retired golden path adds `superseded_by: <id>`. `verified_by` is `review` until a check enforces the golden path, then `"automated: <command>"`, quoted, because an unquoted value with a colon and a space is not valid YAML. A type listed in `architecture.boundary_types` crosses a trust boundary: `## Security` and `## Verification` say what more it needs. `instances` points to real code by `file:line` and never copies it.
 
 ## When to use
 

@@ -241,7 +241,7 @@ test_stack_profile_verification_recipe() {
   local needle f="$stack/verification.md"
   require_file "$f" || return 0
   for needle in 'dependency-cruiser' 'eslint-plugin-boundaries' '.dependency-cruiser.js' 'depcruise' \
-    'verified_by: automated:' '`verify.lint`' 'exits non-zero' 'Breaks' 'Fix:' \
+    'verified_by: "automated: <command>"' '`verify.lint`' 'exits non-zero' 'Breaks' 'Fix:' \
     'plant' 'undo' 'a check that never fails' '## Not verified' \
     'npx dependency-cruiser --init' 'npx depcruise <source folder> --config .dependency-cruiser.js' \
     'must resolve on PATH' '`npm run lint && npx depcruise' 'may call the rule `boundaries/element-types`' \

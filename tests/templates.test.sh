@@ -44,7 +44,7 @@ test_golden_path() {
   require_all golden-path.md \
     'version: 1.0.0' 'status: current' 'verified_by: review' 'instances: [' 'origin:' \
     'superseded_by' 'under-review' 'retired' 'origin: <item id>, <branch>, <YYYY-MM-DD>' \
-    'stay literal in English' \
+    'stay literal in English' 'then `"automated: <command>"`, quoted' \
     '## When to use' '## Decisions' 'Why:' 'Revisit if:' '## Checklist' '## Security' \
     'none identified' '## Verification' '## Known debt' '## History' \
     '| Version | Date | Item | Change |' \

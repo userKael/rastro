@@ -4,11 +4,11 @@ This file teaches how to verify in this stack. It imposes no pattern: which patt
 
 ## What this file is for
 
-How to move a golden path from `verified_by: review` to `verified_by: automated: <command>` in this stack, following the check contract of `templates/golden-path.md`: the command exits non-zero when an instance breaks the golden path, prints one line per violation, and runs in `verify.lint` so CI runs it too. Do this only after the second instance exists and there is a pattern to verify; when to do it is a rule of the core, not of this file.
+How to move a golden path from `verified_by: review` to `verified_by: "automated: <command>"` in this stack, following the check contract of `templates/golden-path.md`: the command exits non-zero when an instance breaks the golden path, prints one line per violation, and runs in `verify.lint` so CI runs it too. Do this only after the second instance exists and there is a pattern to verify; when to do it is a rule of the core, not of this file.
 
 ## Module boundary check: main recipe
 
-Tool: dependency-cruiser. It reads the whole import graph, finds cycles, and runs as a single command, which fits `verified_by: automated:`.
+Tool: dependency-cruiser. It reads the whole import graph, finds cycles, and runs as a single command, which fits `verified_by: "automated: <command>"`.
 
 1. Install it as a development dependency, then run `npx dependency-cruiser --init`. It asks a few questions and writes its config file in the current folder; the default name is `.dependency-cruiser.js`, so check the file `--init` created.
 2. Add one rule to the `forbidden` list for the boundary that a decision of the golden path forbids. The shape, with placeholders:
@@ -60,7 +60,7 @@ Where to put it in each tool:
 - dependency-cruiser: the `comment` of the rule, shown by the `err-long` reporter (`--output-type err-long`).
 - eslint-plugin-boundaries: the `message` of the policy.
 
-Fallback, when the reporter does not print the line in that format: a script of the project runs the command, reads its output, and prints the line in the format. The script is the command named in `verified_by: automated:`, and `verify.lint` runs it.
+Fallback, when the reporter does not print the line in that format: a script of the project runs the command, reads its output, and prints the line in the format. The script is the command named in `verified_by: "automated: <command>"`, and `verify.lint` runs it.
 
 ## Prove the check
 
@@ -70,7 +70,7 @@ A check that was never seen failing proves nothing. Before changing `verified_by
 2. Plant a real violation: import, across modules, what the decision forbids.
 3. Run it again and see a non-zero exit code and a message with the `file:line`, `Breaks` and `Fix:`.
 4. Then undo the violation with `git restore <file>` or `git checkout -- <file>`, and confirm the command exits 0 again.
-5. Only then change `verified_by` to `automated: <command>` and raise the minor version of the golden path.
+5. Only then change `verified_by` to `"automated: <command>"`, quoted and raise the minor version of the golden path.
 
 Beware of a check that never fails: a rule whose path matches nothing stays green forever, and only the planted violation shows it.
 
