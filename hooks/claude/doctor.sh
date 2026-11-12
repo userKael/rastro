@@ -43,7 +43,7 @@ fi
 framework=${RASTRO_ROOT:-${CLAUDE_PLUGIN_ROOT:-$(dirname "$0")/../..}}
 
 cfg=$(rastro_config_path) || {
-  printf 'rastro doctor: no .rastro/config.yml found. Run the setup skill.\n'
+  printf 'rastro doctor: no .rastro/config.yml found. Run the setup skill, or rastro:init in a directory with no source code.\n'
   exit 0
 }
 RASTRO_CONFIG=$cfg
@@ -229,6 +229,23 @@ for key in project.name project.languages.human tracker.kind code_host.kind; do
     code_host.kind) k_code_host=$val ;;
   esac
 done
+
+if [ "$k_tracker" = github-projects ]; then
+  checks=$((checks + 1))
+  if get tracker.project && [ -z "$val" ]; then
+    problem "tracker.project is not set; the github-projects tracker needs the number of the Project. Run the setup skill to set it."
+  fi
+fi
+
+if get audit.under_review_days; then
+  case $val in
+    "") ;;
+    *[!0-9]*)
+      checks=$((checks + 1))
+      problem "audit.under_review_days must be a whole number of days, not $val; the drift audit cannot check the age of a golden path under review"
+      ;;
+  esac
+fi
 
 checks=$((checks + 1))
 verify_set=0

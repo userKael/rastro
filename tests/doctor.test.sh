@@ -481,12 +481,55 @@ test_doctor_boundary_types_block_list() {
   assert_eq 1 "$(count_lines_containing "$OUT" "boundary_types")" "boundary types block list: reported once"
 }
 
+test_doctor_projects_without_project_number() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put "$repo" .rastro/adapters/tracker/github-projects.md $'# Adapter: tracker/github-projects\n\n## Requirements\n\nREQUIRED: none'
+  edit_config "$repo" 's/kind: fake/kind: github-projects/'
+  run_doctor "$repo"
+  assert_status 0 "projects without number: status"
+  assert_contains "$OUT" "- PROBLEM: tracker.project is not set; the github-projects tracker needs the number of the Project" "projects without number: problem"
+  assert_closing 1 "projects without number"
+  edit_config "$repo" 's/^  key: W/  key: W\n  project: 7/'
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "tracker.project is not set" "projects with a number: silent"
+  assert_closing 0 "projects with a number"
+  edit_config "$repo" 's/kind: github-projects/kind: fake/'
+  edit_config "$repo" '/^  project: 7/d'
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "tracker.project" "other tracker kind: silent"
+}
+test_doctor_under_review_days_not_a_number() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  gp_config "$repo" "layers: [processor]"
+  printf 'audit:\n  under_review_days: 30d\n' >>"$repo/.rastro/config.yml"
+  run_doctor "$repo"
+  assert_status 0 "under_review_days 30d: status"
+  assert_contains "$OUT" "- PROBLEM: audit.under_review_days must be a whole number of days, not 30d" "under_review_days 30d: problem"
+  assert_closing 1 "under_review_days 30d"
+  edit_config "$repo" 's/under_review_days: 30d/under_review_days: 30/'
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "audit.under_review_days" "under_review_days 30: silent"
+  assert_closing 0 "under_review_days 30"
+}
+test_doctor_golden_path_check_quoted_verified_by() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  gp_sed "$repo" 's|^verified_by: .*|verified_by: "automated: rastro-no-such-check --all"|'
+  run_doctor "$repo"
+  assert_contains "$OUT" "- PROBLEM: golden path $GP_FILE: verified_by runs rastro-no-such-check, which is not on PATH" "quoted verified_by: read like the unquoted form"
+  assert_not_contains "$OUT" "neither review nor automated" "quoted verified_by: not rejected"
+  assert_closing 1 "quoted verified_by"
+}
+
 test_doctor_without_config() {
   local repo
   repo=$(make_tmp_repo)
   run_doctor "$repo"
   assert_status 0 "no config: status"
-  assert_eq "rastro doctor: no .rastro/config.yml found. Run the setup skill." "$OUT" "no config: single line"
+  assert_eq "rastro doctor: no .rastro/config.yml found. Run the setup skill, or rastro:init in a directory with no source code." "$OUT" "no config: single line"
   assert_eq "" "$ERR" "no config: silent stderr"
 }
 test_doctor_ok() {
@@ -980,6 +1023,9 @@ test_doctor_missing_lib_never_blocks() {
 
 test_doctor_without_config
 test_doctor_ok
+test_doctor_projects_without_project_number
+test_doctor_under_review_days_not_a_number
+test_doctor_golden_path_check_quoted_verified_by
 test_doctor_missing_required_key
 test_doctor_requires_a_verify_command
 test_doctor_missing_adapter
