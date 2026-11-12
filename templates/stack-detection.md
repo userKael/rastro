@@ -61,7 +61,7 @@ Detect: `@nestjs/core` in the `dependencies` of `package.json`, or a `nest-cli.j
 
 `verify.integration` is proposed only when a `test:e2e` script exists; `verify.integration_when` is still asked. With no `test:e2e` script, `verify.integration` stays empty.
 
-Stack profile: `profiles/stacks/node-nestjs-typescript/` in the rastro installation. It teaches how to verify in this stack and imposes no pattern. Name it in the closing report; it is read where it is and never copied.
+Stack profile: `${CLAUDE_PLUGIN_ROOT}/profiles/stacks/node-nestjs-typescript/` in the rastro installation, or under `RASTRO_ROOT` for an agent other than Claude Code. It teaches how to verify in this stack and imposes no pattern. Name it in the closing report; it is read where it is and never copied.
 
 ## pyproject.toml
 

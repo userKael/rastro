@@ -51,3 +51,5 @@ stop and follow the next row of the state table
 `chore(infra): <subject>`
 drafts at most three ADRs (stack, structure, verification)
 When the stack detection names a stack profile, point to it in the closing report, by the path the detection gives; the profile is read where it is and never copied.
+and note the stack profile when the detection section names one
+The detection names it as `${CLAUDE_PLUGIN_ROOT}/profiles/stacks/<name>/`, or under `RASTRO_ROOT` for an agent other than Claude Code.

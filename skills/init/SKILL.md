@@ -50,7 +50,7 @@ Print one report, a two-column table, with no decision in it:
 - whether the directory is a repository of its own, and the current branch, from `git symbolic-ref --short HEAD`. Inside another repository, these rows and the remote row describe the outer repository: do not read them until after `git init`, and ignore them before;
 - the output of `git remote -v`;
 - the files present, and why none of them is source code;
-- the CI files and manifests, read as the `## CI workflows` section and the manifest sections of `${CLAUDE_PLUGIN_ROOT}/templates/stack-detection.md` describe, with the proposals for the verify commands;
+- the CI files and manifests, read as the `## CI workflows` section and the manifest sections of `${CLAUDE_PLUGIN_ROOT}/templates/stack-detection.md` describe, with the proposals for the verify commands, and note the stack profile when the detection section names one;
 - the ADRs already in `docs/adr/`, and the next free number;
 - `AGENTS.md` and `CLAUDE.md`, which stay for `setup`.
 
@@ -171,13 +171,12 @@ When `git ls-tree --name-only <project.base_branch> -- .rastro/config.yml` print
 - the files to commit, each by its explicit path: the list of `setup` plus each ADR, with one commit header that passes the default commit-msg format with empty modules, such as `chore(infra): <subject>`;
 - commit on the base branch before the first item, because the reconciliation stamps that branch;
 - with `code_host.kind` other than `none`, add the remote and push the base branch, because `breakdown` and `deliver` need them;
-- then run `init` again, or `breakdown` with the path of the intent.
+- then run `init` again, or `breakdown` with the path of the intent;
+- When the stack detection names a stack profile, point to it in the closing report, by the path the detection gives; the profile is read where it is and never copied. The detection names it as `${CLAUDE_PLUGIN_ROOT}/profiles/stacks/<name>/`, or under `RASTRO_ROOT` for an agent other than Claude Code.
 
 When breakdown already ran on the skeleton intent, that is, an item for it exists, stop and follow the next row of the state table instead of invoking breakdown: "No source code yet" stays true until the first PR of the skeleton merges.
 
 When the base branch already has the file and no item for the skeleton exists, invoke `${CLAUDE_PLUGIN_ROOT}/skills/breakdown/SKILL.md` with the intent. `breakdown` asks the execution mode.
-
-When the stack detection names a stack profile, point to it in the closing report, by the path the detection gives; the profile is read where it is and never copied.
 
 ## What this skill does NOT do
 

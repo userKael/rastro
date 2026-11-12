@@ -220,7 +220,8 @@ test_stack_detection_names_nestjs() {
   fi
   for needle in '`@nestjs/core`' '`nest-cli.json`' '`test:e2e`' '`verify.integration`' \
     '`verify.integration_when` is still asked' 'profiles/stacks/node-nestjs-typescript/' '"monorepo": true' \
-    '["apps/**/*.ts", "libs/**/*.ts"]'; do
+    '["apps/**/*.ts", "libs/**/*.ts"]' '`${CLAUDE_PLUGIN_ROOT}/profiles/stacks/node-nestjs-typescript/`' \
+    'or under `RASTRO_ROOT` for an agent other than Claude Code'; do
     case $body in
       *"$needle"*) ;;
       *) _assert_fail "templates/stack-detection.md section NestJS lacks required text" "text: $needle" ;;
