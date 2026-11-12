@@ -8,6 +8,10 @@ arch="$ex/architecture-services"
 rules="$arch/rules.md"
 paths="$arch/golden-paths"
 writing="$ex/writing.md"
+stack="$root/profiles/stacks/node-nestjs-typescript"
+STACK_FILES=(README verification)
+STACK_SENTENCE_1='This file teaches how to verify in this stack.'
+STACK_SENTENCE_2="It imposes no pattern: which patterns the project uses is the team's decision."
 RULE_IDS=(module-public-api no-service-cycle pure-domain no-sensitive-log migration-via-tool)
 GOLDEN_PATHS=(creating-an-endpoint creating-a-service creating-a-migration creating-an-external-client)
 
@@ -183,6 +187,64 @@ test_boundary_golden_paths() {
   grep -qF 'architecture.boundary_types' "$rules" || _assert_fail "rules.md does not name architecture.boundary_types"
 }
 
+test_stack_profile_files() {
+  local name
+  for name in "${STACK_FILES[@]}"; do
+    require_file "$stack/$name.md"
+  done
+}
+
+test_stack_profile_no_golden_paths() {
+  local f hits
+  [ ! -e "$stack/golden-paths" ] || _assert_fail "the stack profile has a golden-paths folder: a profile never ships patterns"
+  for f in "$stack"/*.md; do
+    [ -f "$f" ] || continue
+    [ "$(head -n 1 "$f")" != '---' ] || _assert_fail "${f#"$root"/} starts with frontmatter: it looks like a golden path"
+    hits=$(grep -nE '^(id|type|version|status|verified_by|instances|origin|superseded_by):' "$f")
+    [ -z "$hits" ] || _assert_fail "${f#"$root"/} has golden path frontmatter keys" "$hits"
+    hits=$(grep -nxE '## (Decisions|Checklist|Known debt|When to use)' "$f")
+    [ -z "$hits" ] || _assert_fail "${f#"$root"/} has golden path headings" "$hits"
+  done
+}
+
+test_stack_profile_teaches_verification_only() {
+  local f
+  for f in "$stack"/*.md; do
+    [ -f "$f" ] || continue
+    grep -qF -e "$STACK_SENTENCE_1" "$f" || _assert_fail "${f#"$root"/} does not say it teaches how to verify"
+    grep -qF -e "$STACK_SENTENCE_2" "$f" || _assert_fail "${f#"$root"/} does not say it imposes no pattern"
+  done
+}
+
+test_stack_profile_english_and_lf() {
+  local f hits
+  for f in "$stack"/*.md; do
+    [ -f "$f" ] || continue
+    hits=$(grep -nE '[ÀÁÂÃÇÉÊÍÓÔÕÚàáâãçéêíóôõú]' "$f")
+    [ -z "$hits" ] || _assert_fail "${f#"$root"/} has non-English letters" "$hits"
+    [ -z "$(tr -cd '\r' <"$f")" ] || _assert_fail "${f#"$root"/} has CRLF line endings"
+  done
+}
+
+test_stack_profile_readme() {
+  local needle
+  require_file "$stack/README.md" || return 0
+  for needle in 'verification.md' 'testing.md' 'security-questions.md' 'profiles/stacks/node-nestjs-typescript/' \
+    'is read where it is' '`@nestjs/core`' '`nest-cli.json`'; do
+    grep -qF -e "$needle" "$stack/README.md" || _assert_fail "stack profile README.md lacks required text" "text: $needle"
+  done
+}
+
+test_stack_profile_verification_recipe() {
+  local needle f="$stack/verification.md"
+  require_file "$f" || return 0
+  for needle in 'dependency-cruiser' 'eslint-plugin-boundaries' '.dependency-cruiser.js' 'depcruise' \
+    'verified_by: automated:' '`verify.lint`' 'exits non-zero' 'Breaks' 'Fix:' \
+    'plant' 'undo' 'a check that never fails' '## Not verified'; do
+    grep -qF -e "$needle" "$f" || _assert_fail "stack profile verification.md lacks required text" "text: $needle"
+  done
+}
+
 test_rules_file
 test_rules_layers
 test_rules_cycle_is_advisory
@@ -193,4 +255,10 @@ test_writing_names_its_destination
 test_writing_has_no_origin_measurement
 test_profiles_are_english_lf_and_neutral
 test_boundary_golden_paths
+test_stack_profile_files
+test_stack_profile_no_golden_paths
+test_stack_profile_teaches_verification_only
+test_stack_profile_english_and_lf
+test_stack_profile_readme
+test_stack_profile_verification_recipe
 finish
