@@ -108,6 +108,47 @@ test_audit_review_baseline_is_version_change() {
   run_audit "$repo"
   assert_contains "$OUT" "$(row instances-changed "$GP:$INSTANCE" ok)" "baseline: a version change resets it"
 }
+test_audit_added_instance_baseline() {
+  local repo second="src/workers/send-invoice.processor.ts"
+  repo=$(new_repo)
+  put_gp "$repo"
+  commit_all "$repo" "init"
+  put "$repo" "$second" "export class SendInvoiceProcessor {}"
+  sed -i "s#^instances: \[\(.*\)\]#instances: [\1, $second:1]#" "$repo/$GP"
+  commit_all "$repo" "add a follows instance"
+  run_audit "$repo"
+  assert_contains "$OUT" "$(row instances-changed "$GP:$second" ok)" "added instance: ok from the day it is added"
+  assert_contains "$OUT" "$(row instances-changed "$GP:$INSTANCE" ok)" "added instance: the first one is unaffected"
+  put "$repo" "$second" "export class SendInvoiceProcessor { run() {} }"
+  commit_all "$repo" "change the added instance"
+  run_audit "$repo"
+  assert_contains "$OUT" "$(row instances-changed "$GP:$second" review) 1 commit" "added instance: a later change is review"
+  assert_contains "$OUT" "$(row instances-changed "$GP:$INSTANCE" ok)" "added instance: the other stays ok"
+}
+test_audit_invalid_status() {
+  local repo
+  repo=$(new_repo)
+  mkdir -p "$repo/docs/golden-paths"
+  sed 's#^status:.*#status: Current#' "$GP_FIXTURE" >"$repo/$GP"
+  commit_all "$repo" "init"
+  run_audit "$repo"
+  assert_contains "$OUT" "$(row status "$GP" drift) status Current is not current, under-review or retired" "status typo: drift"
+}
+test_audit_quoted_verified_by() {
+  local repo plain
+  repo=$(new_repo)
+  mkdir -p "$repo/docs/golden-paths"
+  sed 's#^verified_by:.*#verified_by: automated: true#' "$GP_FIXTURE" >"$repo/$GP"
+  put "$repo" "$INSTANCE" "x"
+  commit_all "$repo" "init"
+  run_audit "$repo"
+  plain=$OUT
+  sed -i 's#^verified_by:.*#verified_by: "automated: true"#' "$repo/$GP"
+  commit_all "$repo" "quote it"
+  run_audit "$repo"
+  assert_status 0 "quoted verified_by: status 0"
+  assert_eq "$(printf '%s\n' "$plain" | grep '^| ' | cut -d'|' -f2-4)" "$(printf '%s\n' "$OUT" | grep '^| ' | cut -d'|' -f2-4)" "quoted verified_by: same rows as the unquoted form"
+}
 test_audit_instance_not_committed() {
   local repo
   repo=$(new_repo)
@@ -158,7 +199,7 @@ test_audit_instance_gone() {
   git -C "$repo" rm -q "$INSTANCE"
   commit_all "$repo" "remove"
   run_audit "$repo"
-  assert_contains "$OUT" "$(row instances-changed "$GP:$INSTANCE" drift) instance does not exist" "gone: drift"
+  assert_contains "$OUT" "$(row instance-missing "$GP:$INSTANCE" drift) instance does not exist" "gone: drift"
 }
 test_audit_instance_path_with_space() {
   local repo
@@ -234,7 +275,7 @@ test_audit_under_review_age() {
   sed -i 's#under_review_days: 40#under_review_days: 45#' "$repo/.rastro/config.yml"
   sed -i 's#under_review_days: 45#under_review_days: soon#' "$repo/.rastro/config.yml"
   run_audit "$repo"
-  assert_contains "$OUT" "$(row under-review-age "$GP" ok) age 40 days, no limit set" "age: non numeric counts as empty"
+  assert_contains "$OUT" "$(row under-review-age "$GP" "NOT VERIFIED") audit.under_review_days is not a whole number (soon); age not checked" "age: non numeric is not verified"
 }
 test_audit_current_has_no_age_row() {
   local repo
@@ -458,6 +499,9 @@ test_audit_no_golden_paths
 test_audit_clean
 test_audit_instance_changed
 test_audit_review_baseline_is_version_change
+test_audit_added_instance_baseline
+test_audit_invalid_status
+test_audit_quoted_verified_by
 test_audit_instance_not_committed
 test_audit_no_frontmatter
 test_audit_old_list_form

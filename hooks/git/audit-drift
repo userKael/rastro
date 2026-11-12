@@ -63,8 +63,10 @@ fi
 now=${RASTRO_NOW:-$(date +%s)}
 
 limit=$(rastro_config_get audit.under_review_days 2>/dev/null) || limit=""
+limit_bad=""
 case $limit in
-  "" | *[!0-9]*) limit="" ;;
+  "") ;;
+  *[!0-9]*) limit_bad=$limit; limit="" ;;
 esac
 
 boundary=$(rastro_config_list architecture.boundary_types 2>/dev/null) || boundary=""
@@ -116,7 +118,7 @@ gp_lifecycle() {
 
 gp_audit() {
   local file=$1 rel=$2 dump key value type="" status="" instances="" has_instances=0
-  local s inst path sha n ct age existing=0 detail
+  local s inst path sha base_sha add_sha n ct age existing=0 detail
   if ! dump=$(rastro_frontmatter_dump "$file" 2>/dev/null); then
     found=1
     row frontmatter "$rel" "NOT VERIFIED" "no frontmatter; not audited"
@@ -132,31 +134,47 @@ gp_audit() {
   found=1
   gp_lifecycle "$file" "$rel"
 
+  case $status in
+    "" | current | under-review | retired) ;;
+    *) row status "$rel" drift "status $status is not current, under-review or retired" ;;
+  esac
+
   if [ "$status" != retired ]; then
     # Baseline: the commit that last changed the version line; the last commit of the file when none did.
-    sha=$(git log -1 --format=%H -G '^version:' -- "$rel" 2>/dev/null) || sha=""
-    [ -n "$sha" ] || sha=$(git log -1 --format=%H -- "$rel" 2>/dev/null) || sha=""
+    base_sha=$(git log -1 --format=%H -G '^version:' -- "$rel" 2>/dev/null) || base_sha=""
+    [ -n "$base_sha" ] || base_sha=$(git log -1 --format=%H -- "$rel" 2>/dev/null) || base_sha=""
     if [ "$has_instances" -eq 1 ]; then
       rastro_frontmatter_split "$instances" && s=0 || s=$?
       if [ "$s" -eq 0 ]; then
         for inst in ${RASTRO_FM_ITEMS[@]+"${RASTRO_FM_ITEMS[@]}"}; do
           path=$(rastro_gp_instance_path "$inst")
           if [ ! -e "$root/$path" ]; then
-            row instances-changed "$rel:$path" drift "instance does not exist"
+            row instance-missing "$rel:$path" drift "instance does not exist"
           elif [ "$nohist" = true ]; then
             row instances-changed "$rel:$path" "NOT VERIFIED" "$nohist_why"
           elif [ -z "$(git log -1 --format=%H -- "$path" 2>/dev/null)" ]; then
             row instances-changed "$rel:$path" "NOT VERIFIED" "instance not committed yet"
-          elif [ -z "$sha" ]; then
-            row instances-changed "$rel:$path" ok "golden path not committed yet"
           else
-            n=$(git log --format=%h "$sha..HEAD" -- "$path" 2>/dev/null | grep -c . || true)
-            if [ "$n" -gt 0 ]; then
-              detail="$n commits touched it since the version of $rel last changed (${sha:0:7})"
-              [ "$n" -ne 1 ] || detail="1 commit touched it since the version of $rel last changed (${sha:0:7})"
-              row instances-changed "$rel:$path" review "$detail"
+            # Per instance, the baseline is the later of the version change and the
+            # commit that last added this path to the golden path file.
+            sha=$base_sha
+            add_sha=$(git log -1 --format=%H -S"$path" -- "$rel" 2>/dev/null) || add_sha=""
+            if [ -n "$add_sha" ] && [ "$add_sha" != "$sha" ]; then
+              if [ -z "$sha" ] || git merge-base --is-ancestor "$sha" "$add_sha" 2>/dev/null; then
+                sha=$add_sha
+              fi
+            fi
+            if [ -z "$sha" ]; then
+              row instances-changed "$rel:$path" ok "golden path not committed yet"
             else
-              row instances-changed "$rel:$path" ok "no commit touched it since the version of $rel last changed (${sha:0:7})"
+              n=$(git log --format=%h "$sha..HEAD" -- "$path" 2>/dev/null | grep -c . || true)
+              if [ "$n" -gt 0 ]; then
+                detail="$n commits touched it since the version of $rel last changed (${sha:0:7})"
+                [ "$n" -ne 1 ] || detail="1 commit touched it since the version of $rel last changed (${sha:0:7})"
+                row instances-changed "$rel:$path" review "$detail"
+              else
+                row instances-changed "$rel:$path" ok "no commit touched it since the version of $rel last changed (${sha:0:7})"
+              fi
             fi
           fi
         done
@@ -202,7 +220,9 @@ gp_audit() {
       row under-review-age "$rel" ok "golden path not committed yet"
     else
       age=$(((now - ct) / 86400))
-      if [ -z "$limit" ]; then
+      if [ -n "$limit_bad" ]; then
+        row under-review-age "$rel" "NOT VERIFIED" "audit.under_review_days is not a whole number ($limit_bad); age not checked"
+      elif [ -z "$limit" ]; then
         row under-review-age "$rel" ok "age $age days, no limit set"
       elif [ "$age" -gt "$limit" ]; then
         row under-review-age "$rel" drift "age $age days, limit $limit"
