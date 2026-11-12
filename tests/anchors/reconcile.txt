@@ -51,7 +51,7 @@ as recommended?** Class: deliberation. Mode: decision.
 after <sha7>?** Class: deliberation. Mode: decision.
 Called on its own, it asks no mode
 a reconciliation with no `D-n` counts as a confirmation
-(template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`), for a project whose AGENTS.md block predates the section
+(template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`). In a continuous run, a reconciliation with no `D-n` counts as a confirmation
 Step 5 rule below for a reconciliation with no open `D-n`
 whose header says `origin: init`
 each type with no golden path gets its `no golden path` row

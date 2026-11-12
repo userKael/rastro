@@ -60,7 +60,7 @@ Collect and print these fields before anything else:
 
 With `tracker: none`, the item is `<workspace>/<slug>/item.md`. With `tracker: local`, `read_item` reads the item file.
 
-Once the item and its parent are read, read the execution mode, as `## Execution mode` in the AGENTS.md block says (template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`), for a project whose AGENTS.md block predates the section: the top item is the parent, or the item itself when it has no parent.
+Once the item and its parent are read, read the execution mode, as `## Execution mode` in the AGENTS.md block says (template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`). For a project whose AGENTS.md block predates the section, the top item is the parent, or the item itself when it has no parent.
 
 The branch is pushed when `git ls-remote --heads origin <branch>` prints it. A PR is open when the human, or an earlier run of this skill, gives its URL. When that is not known, the gate below asks. When the branch is pushed and the PR URL is not known, the gate needs the person's input and stops even in a continuous run.
 

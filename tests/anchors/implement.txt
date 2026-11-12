@@ -79,7 +79,7 @@ In a continuous run, never enter `superpowers:finishing-a-development-branch`: i
 Execution starts only after the plan is approved at the gate below, by the person or, in a continuous run, by the choice made at the start.
 reviewed at the plan gate by the person or, in a continuous run, by the choice made at the start
 A check marked as a gate that fails makes the recommended option of its gate "adjust", so that gate stops even in a continuous run.
-(template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`), for a project whose AGENTS.md block predates the section
+(template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`). For a project whose AGENTS.md block predates the section
 how it is verified, `review` or the command
 writes `## Security` from the reference the template names and a real-system scenario in `## Verification`
 "none identified" does not serve it
@@ -95,3 +95,4 @@ the draft starts from that `DT-nn`'s decisions and `## Security` from its threat
 adds a row to `## History`, rewrites `## Verification` to name the command, and makes `verify.lint` run the command
 When the type of a component has a golden path with real-system scenarios, the report lists them as the manual test to run.
 When `.rastro/CALIBRATION.md` is absent or its tier table is unfilled, every task is `standard`.
+The walking-skeleton item, whose `## Sources` lists ADRs and marks none as the source of truth, is an item with no design doc.

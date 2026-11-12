@@ -360,7 +360,7 @@ Write it from `${CLAUDE_PLUGIN_ROOT}/templates/work-item.md`, in `project.langua
 
 - **Context:** 2 to 4 lines on why the item exists. It points to the source and never repeats the design doc.
 - **Observer and assertion:** H1 and H2.
-- **Scope:** H4, plus the declared scope of the reconciliation, with the paths of its `exists` and `changes` items. `implement` filters the delta revalidation by this list.
+- **Scope:** H4, plus the declared scope of the reconciliation, with the paths of its `exists` and `changes` items. `implement` filters the delta revalidation by this list. For the walking skeleton, whose modules are "none yet", the list is the paths the skeleton creates, one per component, so the delta revalidation has a path and `implement` never stops to ask for one.
 - **Sources:** the design doc reference, version and capture date, marked as the source of truth; the violated contract for a bug; the separate intents found in 2.1; the reconciliation stamp `<base_branch>@<sha7>` and its date; for the walking skeleton, each ADR it builds on, by path, none of them marked as the source of truth.
 - **`## Reconciliation`:** the five sections of `reconciliation.md`, as tables.
 
