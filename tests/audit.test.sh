@@ -89,7 +89,66 @@ test_audit_instance_changed() {
   put "$repo" "$INSTANCE" "export class SendReceiptProcessor { run() {} }"
   commit_all "$repo" "evolve"
   run_audit "$repo"
-  assert_contains "$OUT" "$(row instances-changed "$GP:$INSTANCE" drift) 1 commit" "changed: drift with count"
+  assert_contains "$OUT" "$(row instances-changed "$GP:$INSTANCE" review) 1 commit" "changed: review with count"
+  assert_not_contains "$OUT" "| drift |" "changed: not drift"
+}
+test_audit_review_baseline_is_version_change() {
+  local repo
+  repo=$(new_repo)
+  put_gp "$repo"
+  commit_all "$repo" "init"
+  put "$repo" "$INSTANCE" "export class SendReceiptProcessor { run() {} }"
+  commit_all "$repo" "evolve"
+  printf '\nA typo fixed.\n' >>"$repo/$GP"
+  commit_all "$repo" "typo in the golden path"
+  run_audit "$repo"
+  assert_contains "$OUT" "$(row instances-changed "$GP:$INSTANCE" review) 1 commit" "baseline: a typo commit does not reset it"
+  sed -i 's#^version: 1.0.0#version: 1.1.0#' "$repo/$GP"
+  commit_all "$repo" "new version"
+  run_audit "$repo"
+  assert_contains "$OUT" "$(row instances-changed "$GP:$INSTANCE" ok)" "baseline: a version change resets it"
+}
+test_audit_instance_not_committed() {
+  local repo
+  repo=$(new_repo)
+  put_gp "$repo"
+  git -C "$repo" add "$GP" .rastro
+  git -C "$repo" commit -q -m "golden path only"
+  run_audit "$repo"
+  assert_contains "$OUT" "$(row instances-changed "$GP:$INSTANCE" "NOT VERIFIED") instance not committed yet" "uncommitted instance: not verified"
+}
+test_audit_no_frontmatter() {
+  local repo
+  repo=$(new_repo)
+  mkdir -p "$repo/docs/golden-paths"
+  printf '# Golden path: processor\n\nNo frontmatter here.\n' >"$repo/$GP"
+  commit_all "$repo" "init"
+  run_audit "$repo"
+  assert_status 0 "no frontmatter: status"
+  assert_contains "$OUT" "$(row frontmatter "$GP" "NOT VERIFIED") no frontmatter; not audited" "no frontmatter: row"
+  assert_not_contains "$OUT" "No golden paths." "no frontmatter: it is a golden path"
+}
+test_audit_old_list_form() {
+  local repo
+  repo=$(new_repo)
+  printf 'project:\n  name: shelf\nworkspace: .agent/\narchitecture:\n  layers: [processor]\n  golden_paths: [docs/a.md]\n' >"$repo/.rastro/config.yml"
+  commit_all "$repo" "init"
+  run_audit "$repo"
+  assert_status 0 "list form: status"
+  assert_contains "$OUT" "$(row config architecture.golden_paths "NOT VERIFIED") old list form" "list form: row"
+  assert_not_contains "$OUT" "No golden paths." "list form: not no golden paths"
+}
+test_audit_outside_git() {
+  local repo
+  repo="$RASTRO_TEST_TMP/no-git"
+  mkdir -p "$repo/.rastro"
+  cp "$(new_repo)/.rastro/config.yml" "$repo/.rastro/config.yml"
+  put_gp "$repo"
+  run_audit "$repo"
+  assert_status 0 "outside git: status"
+  assert_contains "$OUT" "$(row instances-changed "$GP:$INSTANCE" "NOT VERIFIED") not a git repository" "outside git: instances"
+  assert_not_contains "$OUT" "| drift |" "outside git: no invented drift"
+  assert_not_contains "$OUT" "$(row instances-changed "$GP:$INSTANCE" ok)" "outside git: nothing claimed ok from history"
 }
 test_audit_instance_gone() {
   local repo
@@ -169,6 +228,10 @@ test_audit_under_review_age() {
   sed -i 's#under_review_days: 30#under_review_days: 45#' "$repo/.rastro/config.yml"
   run_audit "$repo"
   assert_contains "$OUT" "$(row under-review-age "$GP" ok) age 40 days, limit 45" "age: under the limit is ok"
+  sed -i 's#under_review_days: 45#under_review_days: 40#' "$repo/.rastro/config.yml"
+  run_audit "$repo"
+  assert_contains "$OUT" "$(row under-review-age "$GP" ok) age 40 days, limit 40" "age: equal to the limit is ok"
+  sed -i 's#under_review_days: 40#under_review_days: 45#' "$repo/.rastro/config.yml"
   sed -i 's#under_review_days: 45#under_review_days: soon#' "$repo/.rastro/config.yml"
   run_audit "$repo"
   assert_contains "$OUT" "$(row under-review-age "$GP" ok) age 40 days, no limit set" "age: non numeric counts as empty"
@@ -208,6 +271,12 @@ test_audit_fail_on_drift() {
   put "$repo" "$INSTANCE" "changed"
   commit_all "$repo" "evolve"
   run_audit "$repo" --fail-on-drift
+  assert_status 0 "review only: option exits 0"
+  assert_contains "$OUT" "| review |" "review only: the row is there"
+  sed 's#^instances:.*#instances: []#' "$repo/$GP" >"$repo/gp.tmp"
+  mv "$repo/gp.tmp" "$repo/$GP"
+  commit_all "$repo" "drop the instance"
+  run_audit "$repo" --fail-on-drift
   assert_status 1 "drift: option exits 1"
   run_audit "$repo"
   assert_status 0 "drift: no option exits 0"
@@ -223,7 +292,53 @@ test_audit_first_run_has_no_previous() {
   run_audit "$repo" --previous "$RASTRO_TEST_TMP/does-not-exist.md"
   assert_contains "$OUT" "No previous audit." "missing previous file"
 }
+test_audit_previous_needs_a_file() {
+  local repo
+  repo=$(new_repo)
+  run_audit "$repo" --previous
+  assert_status 2 "--previous alone: status 2"
+  assert_contains "$ERR" "--previous needs a file" "--previous alone: message"
+}
+test_audit_previous_resolved_from_project_root() {
+  local repo
+  repo=$(new_repo)
+  put_gp "$repo"
+  commit_all "$repo" "init"
+  run_audit "$repo"
+  printf '%s\n' "$OUT" >"$repo/prev.md"
+  run_audit "$repo" --previous prev.md
+  assert_contains "$OUT" "## Changes since the previous audit (" "relative previous: found from the project root"
+}
 test_audit_compare_previous() {
+  local repo prev
+  repo=$(new_repo)
+  mkdir -p "$repo/docs/golden-paths"
+  sed 's#^instances:.*#instances: []#' "$GP_FIXTURE" >"$repo/$GP"
+  put "$repo" "$INSTANCE" "x"
+  commit_all "$repo" "init"
+  run_audit "$repo"
+  prev="$RASTRO_TEST_TMP/prev.md"
+  printf '%s\n' "$OUT" >"$prev"
+  assert_contains "$OUT" "$(row no-instance "$GP" drift)" "previous run has drift"
+  cp "$GP_FIXTURE" "$repo/$GP"
+  commit_all "$repo" "list the instance"
+  put "$repo" "$INSTANCE" "changed"
+  commit_all "$repo" "evolve the instance"
+  run_audit "$repo" --previous "$prev"
+  assert_contains "$OUT" "## Changes since the previous audit (" "compare: titled with the previous date"
+  assert_contains "$OUT" "- resolved: no-instance $GP" "compare: resolved"
+  assert_contains "$OUT" "- new review: instances-changed $GP:$INSTANCE" "compare: new review"
+  assert_contains "$OUT" "- unchanged: 0 drift(s), 0 review(s)" "compare: unchanged counts"
+  printf '%s\n' "$OUT" >"$prev"
+  run_audit "$repo" --previous "$prev"
+  assert_not_contains "$OUT" "- new review:" "compare: a review seen before is not new"
+  assert_contains "$OUT" "- unchanged: 0 drift(s), 1 review(s)" "compare: review unchanged"
+  sed -i 's#^version: 1.0.0#version: 1.1.0#' "$repo/$GP"
+  commit_all "$repo" "new version"
+  run_audit "$repo" --previous "$prev"
+  assert_contains "$OUT" "- resolved review: instances-changed $GP:$INSTANCE" "compare: review resolved"
+}
+test_audit_compare_never_resolves_unverified() {
   local repo prev
   repo=$(new_repo)
   put_gp "$repo"
@@ -231,23 +346,43 @@ test_audit_compare_previous() {
   put "$repo" "$INSTANCE" "changed"
   commit_all "$repo" "evolve"
   run_audit "$repo"
-  prev="$RASTRO_TEST_TMP/prev.md"
+  prev="$RASTRO_TEST_TMP/prev-nv.md"
+  sed 's#| review |#| drift |#' <<<"$OUT" >"$prev"
+  git -C "$repo" clone -q --depth 1 "file://$repo" "$RASTRO_TEST_TMP/shallow-cmp" 2>/dev/null
+  run_audit "$RASTRO_TEST_TMP/shallow-cmp" --previous "$prev"
+  assert_contains "$OUT" "- not verified: instances-changed $GP:$INSTANCE" "unverified: reported as not verified"
+  assert_not_contains "$OUT" "- resolved:" "unverified: never resolved"
+}
+test_audit_compare_no_longer_checked() {
+  local repo prev
+  repo=$(new_repo)
+  put_gp "$repo"
+  commit_all "$repo" "init"
+  run_audit "$repo"
+  prev="$RASTRO_TEST_TMP/prev-gone.md"
   printf '%s\n' "$OUT" >"$prev"
-  assert_contains "$OUT" "$(row instances-changed "$GP:$INSTANCE" drift)" "previous run has drift"
-  sed 's#^instances:.*#instances: []#' "$repo/$GP" >"$repo/gp.tmp"
-  mv "$repo/gp.tmp" "$repo/$GP"
-  commit_all "$repo" "drop the instance"
+  git -C "$repo" rm -q "$GP"
+  commit_all "$repo" "remove the golden path"
   run_audit "$repo" --previous "$prev"
-  assert_contains "$OUT" "## Changes since the previous audit (" "compare: titled with the previous date"
-  assert_contains "$OUT" "- resolved: instances-changed $GP:$INSTANCE" "compare: resolved"
-  assert_contains "$OUT" "- new: no-instance $GP" "compare: new"
-  assert_contains "$OUT" "- unchanged: 0 drift(s)" "compare: unchanged count"
+  assert_contains "$OUT" "- no longer checked: instances-changed $GP:$INSTANCE" "gone: no longer checked"
+  assert_not_contains "$OUT" "- resolved:" "gone: not resolved"
 }
 
 put_history() {
   local repo=$1
   shift
   { printf '\n## History\n\n| Version | Date | Item | Change |\n|---|---|---|---|\n'; printf '%s\n' "$@"; } >>"$repo/$GP"
+}
+test_audit_history_placeholder_and_extra_cells() {
+  local repo
+  repo=$(new_repo)
+  put_gp "$repo"
+  printf '\n## History  \n\n| Version | Date | Item | Change |\n|---|---|---|---|\n| 1.0.0 | 2026-01-01 | <item id> | Created |\n| 1.1.0 | 2026-02-01 | W-004 | Added | extra |\n' >>"$repo/$GP"
+  commit_all "$repo" "init"
+  run_audit "$repo"
+  assert_not_contains "$OUT" "| <item id> |" "history: placeholder item skipped"
+  assert_contains "$OUT" "| processor | 1 | 0 |" "history: placeholder row not counted, heading with trailing spaces read"
+  assert_contains "$OUT" "| W-004 | 0 | 1 |" "history: a row with extra cells counts"
 }
 test_metrics_summary() {
   local log out
@@ -272,6 +407,7 @@ test_audit_metrics_without_data() {
   assert_contains "$OUT" "- first-pass: no data" "no data: first-pass"
   assert_contains "$OUT" "- self-heal: no data" "no data: self-heal"
   assert_not_contains "$OUT" "%" "no data: no percentage"
+  assert_contains "$OUT" "All numbers are cumulative: the lint figures since the log began" "no data: cumulative note"
 }
 test_audit_metrics_golden_path_lifecycle() {
   local repo
@@ -321,6 +457,11 @@ test_audit_bad_option
 test_audit_no_golden_paths
 test_audit_clean
 test_audit_instance_changed
+test_audit_review_baseline_is_version_change
+test_audit_instance_not_committed
+test_audit_no_frontmatter
+test_audit_old_list_form
+test_audit_outside_git
 test_audit_instance_gone
 test_audit_instance_path_with_space
 test_audit_no_instance
@@ -332,7 +473,12 @@ test_audit_current_has_no_age_row
 test_audit_shallow_clone
 test_audit_fail_on_drift
 test_audit_first_run_has_no_previous
+test_audit_previous_needs_a_file
+test_audit_previous_resolved_from_project_root
 test_audit_compare_previous
+test_audit_compare_never_resolves_unverified
+test_audit_compare_no_longer_checked
+test_audit_history_placeholder_and_extra_cells
 test_metrics_summary
 test_audit_metrics_without_data
 test_audit_metrics_golden_path_lifecycle
