@@ -15,7 +15,7 @@ need_text() {
 
 test_docs_adapters_render_collapsed_mark() {
   local rel
-  for rel in adapters/docs/notion.md adapters/docs/repo.md; do
+  for rel in adapters/docs/notion.md adapters/docs/repo.md adapters/docs/claude.md; do
     need_text "$rel" '{collapsed}'
     need_text "$rel" 'Strip `{collapsed}` from the heading text.'
   done
@@ -23,7 +23,7 @@ test_docs_adapters_render_collapsed_mark() {
 
 test_optional_reading_phrase_is_one_phrase() {
   local rel
-  for rel in adapters/docs/notion.md adapters/docs/repo.md adapters/code-host/none.md templates/design-doc.md; do
+  for rel in adapters/docs/notion.md adapters/docs/repo.md adapters/docs/claude.md adapters/code-host/none.md templates/design-doc.md; do
     need_text "$rel" ' (optional reading)'
   done
 }
@@ -51,7 +51,7 @@ test_jira_item_url() {
 
 test_unverified_command_names_are_flagged() {
   local rel
-  for rel in adapters/docs/notion.md adapters/code-host/github.md adapters/code-host/gitlab.md; do
+  for rel in adapters/docs/notion.md adapters/docs/claude.md adapters/code-host/github.md adapters/code-host/gitlab.md; do
     need_text "$rel" 'unverified against the live tool — verify before relying on it'
   done
 }
@@ -116,7 +116,17 @@ test_github_projects_config_keys_exist() {
   grep -q '^  project_owner:' "$root/templates/config.yml" || _assert_fail "templates/config.yml lacks tracker.project_owner"
 }
 
+test_docs_claude_adapter_text() {
+  local rel=adapters/docs/claude.md needle
+  for needle in 'REQUIRED MCP: claude-docs' 'Status: draft' 'Status: approved by <person> on <date>' \
+    'only when the person says so' 'batch' 'export' 'markdown' 'never delete discussion' \
+    'comment threads' 'sharing with the team is a human step' 'durability' 'NOT VERIFIED'; do
+    need_text "$rel" "$needle"
+  done
+}
+
 test_docs_adapters_render_collapsed_mark
+test_docs_claude_adapter_text
 test_optional_reading_phrase_is_one_phrase
 test_github_projects_adapter_text
 test_github_projects_config_keys_exist
