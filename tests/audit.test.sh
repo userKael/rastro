@@ -192,6 +192,10 @@ test_audit_invalid_discovery() {
   run_audit "$repo" --fail-on-drift
   assert_status 0 "invalid discovery supplies no evidence of drift"
   assert_contains "$OUT" "$(row discovery "$GP" "NOT VERIFIED")" "invalid discovery is reported"
+  sed -i 's#^discovery:.*#discovery: ["src/a,b/**/*.ts"]#' "$repo/$GP"
+  run_audit "$repo" --fail-on-drift
+  assert_status 0 "comma in quoted discovery supplies no evidence of drift"
+  assert_contains "$OUT" "$(row discovery "$GP" "NOT VERIFIED")" "comma in quoted discovery is reported"
 }
 
 test_audit_invalid_status() {

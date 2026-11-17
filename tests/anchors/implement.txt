@@ -101,3 +101,5 @@ The walking-skeleton item, whose `## Sources` lists ADRs and marks none as the s
 Every code prerequisite is confirmed on base
 Legacy items.
 A display ordinal can locate a card but does not authorize a new stack.
+A code slice whose linked PR is merged and whose resulting change is confirmed on the project base is complete; do not dispatch it again.
+For an in-progress slice this refreshes its target for `deliver`; it does not authorize another branch or worker

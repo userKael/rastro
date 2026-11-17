@@ -9,3 +9,4 @@ Never let a worker take a new content decision.
 Only the coordinator continues publication
 A verified branch without an open PR is reported as prepared.
 No worker merges a PR or executes a `[HUMAN]` task.
+Exclude completed and in-progress slices from fresh dispatch

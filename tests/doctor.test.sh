@@ -218,6 +218,9 @@ test_doctor_golden_path_discovery() {
   sed -i 's#^discovery:.*#discovery: ["/etc/**"]#' "$repo/$GP_FILE"
   run_doctor "$repo"
   assert_contains "$OUT" "- PROBLEM: golden path $GP_FILE: discovery" "absolute discovery pattern is invalid"
+  sed -i 's#^discovery:.*#discovery: ["src/a,b/**/*.ts"]#' "$repo/$GP_FILE"
+  run_doctor "$repo"
+  assert_contains "$OUT" "- PROBLEM: golden path $GP_FILE: discovery" "comma in quoted discovery is invalid"
 }
 
 test_doctor_golden_path_instances_not_a_list() {

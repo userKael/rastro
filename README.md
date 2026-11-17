@@ -4,7 +4,7 @@ A development workflow for coding agents, packaged as a Claude Code plugin: skil
 
 ## What rastro is
 
-rastro is nine skills that take a project from an empty directory, and a change from an unshaped request, to an open pull request, and the files they share.
+rastro is ten skills that take a project from an empty directory, and a change from an unshaped request, to an open pull request, and the files they share.
 
 | Skill | Takes | Produces |
 |---|---|---|
@@ -15,6 +15,7 @@ rastro is nine skills that take a project from an empty directory, and a change 
 | `reconcile` | an intent file and a scope | `reconciliation.md`, with `file:line` evidence |
 | `domain-context` | a domain question | the real state of the domain: schema, rules, constraints |
 | `implement` | a work item id | a branch with verified commits |
+| `implement-multiple` | several published, ready slices | coordinated worktrees and a delivery report |
 | `deliver` | that branch | a PR that is open and linked to its item |
 | `audit` | the golden paths and the code | a drift report in the workspace, compared with the previous one |
 
@@ -24,9 +25,9 @@ What ships in the repository:
 
 | Directory | Holds |
 |---|---|
-| `skills/` | the nine skills |
+| `skills/` | the ten skills |
 | `adapters/` | one markdown file per tool, grouped by port, and the contract they follow |
-| `templates/` | the config, the `AGENTS.md` block, the ADR, the work item, the design doc, the plan, the PR description, the reconciliation file, the golden path, the stack detection, `CALIBRATION.md`, the marker list, CI files |
+| `templates/` | the config, the `AGENTS.md` block, the ADR, the work item, the design doc, the plan, the PR description, the reconciliation file, the golden path, the layout guide, the stack detection, `CALIBRATION.md`, the marker list, CI files |
 | `hooks/` | the git hooks, the Claude Code hooks and the shim for Codex CLI and Cursor (not tested) |
 | `profiles/` | `examples/`: an example architecture profile and an example set of writing rules. `stacks/`: stack profiles, which teach how to verify in a stack and impose no pattern |
 | `scripts/` | the agent installer and the checks the repository runs on itself |
@@ -48,6 +49,8 @@ Five stages, in this order:
 5. Review of the open PR: automatic when `review.kind` is not `none`, human always.
 
 `reconcile` and `domain-context` run inside the stages. `breakdown` and `implement` call `reconcile`, which compares the intent with the code in both directions: what the intent says that the code contradicts, and what the code does that the intent ignores. It calls `domain-context` to read the real schema. Zero findings in the second direction is treated as suspect, not as success. The exception is a repository with no source code yet: there the second direction is empty by construction, and the gate says so.
+
+`breakdown` records each delivery under `## Delivery dependencies`, with a stable slice key, acceptance check, prerequisites and branch target. Independent slices target the project base. A slice that needs one other branch can stack on it; a slice that needs several predecessors waits for them to land on the base. The complete item bodies are previewed before publication. The tracker adapter records each published card and pending step so a partial publication can resume without creating duplicate cards. `implement-multiple` optionally coordinates ready slices in separate worktrees, keeps human gates in the coordinating session and reports each branch and blocker. A single item still uses `implement`.
 
 No skill drives the flow. The position follows from the artifacts: read the tracker and git, and the next step is in this table. `setup` writes the table into your `AGENTS.md`, with "item" worded for your tracker.
 
@@ -107,13 +110,13 @@ To try a local checkout without installing it:
 claude --plugin-dir <path-to-rastro>
 ```
 
-Claude Code invokes the skills of a plugin as `/<plugin>:<skill>`, so these are `/rastro:init`, `/rastro:setup`, `/rastro:design-doc`, `/rastro:breakdown`, `/rastro:reconcile`, `/rastro:domain-context`, `/rastro:implement`, `/rastro:deliver` and `/rastro:audit`.
+Claude Code invokes the skills of a plugin as `/<plugin>:<skill>`, so these are `/rastro:init`, `/rastro:setup`, `/rastro:design-doc`, `/rastro:breakdown`, `/rastro:reconcile`, `/rastro:domain-context`, `/rastro:implement`, `/rastro:implement-multiple`, `/rastro:deliver` and `/rastro:audit`.
 
 Install the plugin once per machine. Run `/rastro:setup` once per repository, or `/rastro:init` in a directory with no source code yet, which runs `setup` for you.
 
 ## Configure
 
-Run `/rastro:setup` in your repository. It detects before it asks: the git remote, the stack manifest and the CI workflow files, the MCP servers in `.mcp.json` and `~/.claude.json`, an existing `AGENTS.md` or `CLAUDE.md`, and any linter or commit-message tool. It asks the rest one question at a time, shows the diff of every file, and stops for your approval. It writes nothing before that and it never commits. A command that your CI already runs comes first among the proposals for the `verify` commands, because it is the one that really runs.
+Run `/rastro:setup` in your repository. It detects before it asks: the git remote, the stack manifest and the CI workflow files, the MCP servers in `.mcp.json` and `~/.claude.json`, an existing `AGENTS.md` or `CLAUDE.md`, existing naming and folder conventions, and any linter or commit-message tool. It asks about card, document and change-request destinations by capability, then applicable verification and architecture choices. It shows the diff of every file and stops for your approval. It writes nothing before that and it never commits. A command that your CI already runs comes first among the proposals for the `verify` commands, because it is the one that really runs.
 
 On approval, it writes:
 
@@ -124,6 +127,7 @@ On approval, it writes:
 | `CLAUDE.md` | the line `@AGENTS.md`, created or added, because Claude Code reads `AGENTS.md` only when no `CLAUDE.md` exists |
 | `.gitignore` | the workspace |
 | `.rastro/git-hooks/`, `.rastro/lib/` | the git hooks, wired through `core.hooksPath` or through the hook manager already in place |
+| `.rastro/layout.md` | optional guide to naming, folders, pages and test placement, only when you choose to create it |
 | CI file, `.rastro/CALIBRATION.md` | only when you say yes; under `rastro:init`, the CI file comes with the walking skeleton instead |
 
 `setup` is idempotent: a second run with the same answers changes nothing. `/rastro:setup --doctor` prints the health of the installation and writes nothing.
@@ -150,6 +154,8 @@ verify:
 Required: `project.name`, `project.languages.human`, `tracker.kind`, `tracker.key` unless the kind is `none`, `code_host.kind`, and at least one `verify` command. `templates/config.yml` lists every key with its default and a comment. A key left out takes that default, so the config above still refuses `.env*`, `*.bak` and `.agent/` at commit time, and still validates the PR title as with `squash`. An explicit empty list, `[]`, stays empty. Lists are written inline (`[a, b]`), because the hooks read nothing else.
 
 The default pattern `.env*` also refuses `.env.example`. Negation is not supported: to commit `.env.example`, list exact names in `conventions.forbidden_paths` instead, such as `[.env, .env.local, "*.bak"]`.
+
+`tracker.kind` chooses where cards are published. `tracker.site` can select a Jira site when an account has several; `tracker.project` selects a GitHub Project when using that adapter. With no site configured, setup or breakdown resolves the only accessible site or asks when the choice is ambiguous. `conventions.layout` optionally names a tracked, repository-relative guide; setup can draft `.rastro/layout.md` from observed code and `templates/layout-guide.md`. The guide informs design, breakdown and audit without imposing a framework-specific folder tree on other repositories. These keys do not change the per-run gate mode.
 
 ### Starting from an empty directory
 
@@ -189,9 +195,9 @@ Skills cite a rule by its ID, never by its position. `deliver` generates its sel
 
 ### Golden paths
 
-A golden path is how the project builds one type of component: a file in the `architecture.golden_paths` folder, by default `docs/golden-paths/`, in the format of `templates/golden-path.md`. rastro ships none, and `setup` does not create the folder. The first instance of a type writes its golden path in the same change and points to its own code by `file:line`. Later items classify each component against it as `follows`, `extends`, `contradicts` or `no golden path`. A golden path starts verified by review, and `verified_by` names a command once a check enforces it. The doctor reports a golden path whose instance no longer exists or whose fields are missing.
+A golden path is how the project builds one type of component: a file in the `architecture.golden_paths` folder, by default `docs/golden-paths/`, in the format of `templates/golden-path.md`. rastro ships none, and `setup` does not create the folder. The first instance of a type writes its golden path in the same change and points to its own code by `file:line`. Later items classify each component against it as `follows`, `extends`, `contradicts` or `no golden path`. `instances` holds a few canonical examples, not an inventory: a component that follows the pattern leaves the golden-path file untouched. A semantic extension or contradiction changes its version and History at the appropriate gate. Optional `discovery` globs identify candidate files for audit. Existing golden paths remain readable without a migration. The doctor reports a canonical example that no longer exists or missing fields.
 
-A check that enforces a golden path exits non-zero when an instance breaks it, and prints one line per violation: what is wrong, at its `file:line`; why, by the id of the golden path and the decision it breaks; and how to fix it. `templates/golden-path.md` shows the shape. rastro ships no check: you write it in your stack, name it in `verified_by: "automated: <command>"`, and make `verify.lint` run it, so CI runs it too. A check written against the first instance freezes its accidents, so `deliver` suggests one only when a golden path verified by review has two or more instances: a note at its continuity gate, never a block. The doctor reports a check whose command is not on PATH, and never runs it.
+A check that enforces a golden path exits non-zero when a component breaks it, and prints one line per violation: what is wrong, at its `file:line`; why, by the id of the golden path and the decision it breaks; and how to fix it. `templates/golden-path.md` shows the shape. rastro ships no check: you write it in your stack, name it in `verified_by: "automated: <command>"`, and make `verify.lint` run it, so CI runs it too. A check written against the first example freezes its accidents, so `deliver` suggests one only after a second compatible component is verified from the examples or project conventions: a note at its continuity gate, never a block. The doctor reports a check whose command is not on PATH, and never runs it.
 
 `architecture.boundary_types` lists the component types that cross a trust boundary: an exposed service, an external client, an integration, a queue consumer. It is empty by default. The golden path of a boundary type fills `## Security` with the threats considered, each cited by its item in a public reference such as the OWASP ASVS or the OWASP API Security Top 10, the control for each and how each control is verified; "none identified" is not accepted. Its `## Verification` holds at least one scenario against the real system, without mocks: context, steps, success criteria and what to do when blocked. `design-doc` asks for the threats and `implement` writes both. The doctor reports a boundary type whose `## Security` section is missing, empty or says "none identified", and a boundary type that is not in `architecture.layers`.
 
@@ -203,7 +209,7 @@ rastro ships no calibration numbers. Where another workflow would quote a figure
 
 ### Drift audit
 
-The `audit` skill looks for drift between your golden paths and your code, and writes a report to `<workspace>/audit/<YYYY-MM-DD>.md`. Reports stay in the workspace and are never committed: they are derived from the repository, and a committed copy would be out of date the next day. The mechanical checks are one script, `.rastro/git-hooks/audit-drift`, which also runs without an agent: instances changed since their baseline (the later of the golden path's last version change and the commit that listed the instance), a listed instance that no longer exists, golden paths with no instance, two golden paths for one type, a boundary type with no `## Security` section, and a golden path under review for longer than `audit.under_review_days`. The skill adds two checks that need reading the code: components of a type that has a golden path but is missing from `instances`, and `Revisit if:` conditions that now hold. Each report is compared with the previous one. A row has one of four verdicts: `ok`, `review`, `drift` or `NOT VERIFIED`. A changed instance (`instances-changed`) is a `review`, never `drift`, because the golden path may be old or the instance may have evolved inside the pattern. A listed instance that does not exist (`instance-missing`) is `drift`; `--fail-on-drift` counts only `drift`. Treat a `review` row as a request to look at that instance: if it still follows the golden path, nothing changes and the row stays as information until the golden path's next version; if it no longer follows, the normal flow applies, so the next item that touches it classifies it, and a contradiction goes through the golden path gate of `implement`. What the audit could not check is `NOT VERIFIED` (a shallow clone, no git history, a golden path without frontmatter), and the comparison never reports it as resolved.
+The `audit` skill looks for drift between your golden paths and your code, and writes a report to `<workspace>/audit/<YYYY-MM-DD>.md`. Reports stay in the workspace and are never committed. The mechanical script `.rastro/git-hooks/audit-drift` checks canonical examples against their baseline (the later of the last version change and the commit that listed the example), missing examples, duplicate types, boundary security sections and age under review by `audit.under_review_days`. When a golden path has `discovery` globs, it also reports changed candidate files that are not examples. The skill reads the code to judge whether those candidates follow the pattern and whether a `Revisit if:` condition now holds. It may use the optional layout guide and project conventions to find candidates without globs. Each report is compared with the previous one. Treat a `review` row as a request for judgment; `drift` is reserved for a proven mechanical violation such as a missing canonical example; `NOT VERIFIED` means the check could not be completed, for example with shallow history. `--fail-on-drift` counts only `drift`. An actual contradiction returns to the golden-path gate of `implement`.
 
 The report also prints numbers, cumulative since the log began: first-pass and self-heal of the per-file lint, which the hook records in `<workspace>/metrics/`, and golden paths created, evolved and contradicted, read from git history and the `## History` table of each golden path. `templates/ci/audit-github.yml` and `templates/ci/audit-gitlab-ci.yml` run the script on a schedule; they are optional and you copy one by hand. `.rastro/CALIBRATION.md` also holds the footprint buckets that choose a model for each task of a plan, and the steps of a before/after probe.
 
@@ -214,7 +220,7 @@ You need neither. Each row below is a mode that needs no external tool. Together
 | Setting | What the flow does | What you lose |
 |---|---|---|
 | `tracker: local` | An item is a markdown file in `tracker.local_dir` (default `work/`), with frontmatter and the same sections as a tracker item. There is no status field: the state table reads the branch and the PR | An item exists for other clones only after its PR merges into the base branch |
-| `tracker: none` | The item lives in the conversation and in the workspace. The reconciliation goes to the PR description | The work cannot be resumed before the PR exists. The state table has no item rows. `setup` says so before it accepts `none` |
+| `tracker: none` | The item lives in the conversation and in the workspace. The reconciliation goes to the PR description | The same workspace can resume it, but the first durable record outside it is the PR. The state table has no item rows. `setup` says so before it accepts `none` |
 | `docs: repo` | `design-doc` creates the branch `docs/design-<slug>` and opens a PR with `docs/design/<slug>.md`. The PR is where the team discusses, and its merge is the approval. The publication gate opens the PR and never merges it | The version is a commit sha, not a counter. With `code_host: none` there is no PR, so there is no place for the discussion |
 | `code_host: none` | `deliver` audits the branch and writes the PR description to `<workspace>/<id>/pr-description.md` | A person pushes the branch and opens the PR. There is no URL, no CI state and no automatic link between item and PR |
 | `domain_state: none` | `domain-context` reads the migrations and the ORM schema | Every claim about the live database is marked `NOT VERIFIED` |

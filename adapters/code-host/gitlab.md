@@ -22,7 +22,7 @@ Write the body to a file first and pass it through `cat`, so line breaks survive
 
 The default description template is `.gitlab/merge_request_templates/Default.md`. When `code_host.template` is set, it names the template instead.
 
-For a stacked change request, set `--target-branch` to the branch of the previous merge request, not to `project.base_branch`.
+Use the exact `<target>` supplied and verified by `deliver`. For a stacked change request, that is the declared code prerequisite's MR head branch, even if another sibling MR opened more recently. Do not infer a target from MR order.
 
 The source branch must already exist on the remote. Pushing is the caller's step, after its own gate. If the branch is not on the remote, report that and do not push.
 

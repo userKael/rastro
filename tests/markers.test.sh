@@ -10,6 +10,8 @@ root=$(cd "${1:-$tests_dir/..}" && pwd)
 markers_file="$root/templates/MARKERS.md"
 CORE_MARKERS=(
   '## Reconciliation'
+  '## Delivery dependencies'
+  'Rastro-Publication:'
   'reconciliation.md'
   'NOT VERIFIED'
   'follows'

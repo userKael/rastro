@@ -86,8 +86,22 @@ rastro_gp_list_has() {
 # rastro_gp_discovery VALUE: populate RASTRO_GP_PATHSPECS from a discovery list.
 # An empty list opts out. Only project-relative globs are accepted.
 rastro_gp_discovery() {
-  local pattern
+  local pattern quote="" char i
   RASTRO_GP_PATHSPECS=()
+  # The shared inline-list splitter separates on every comma, including one
+  # inside quotes. Reject that form rather than silently auditing wrong paths.
+  for ((i = 0; i < ${#1}; i++)); do
+    char=${1:i:1}
+    case $char in
+      '"' | "'")
+        if [ -z "$quote" ]; then quote=$char
+        elif [ "$quote" = "$char" ]; then quote=""
+        fi
+        ;;
+      ,) [ -z "$quote" ] || return 1 ;;
+    esac
+  done
+  [ -z "$quote" ] || return 1
   rastro_frontmatter_split "$1" || return 1
   for pattern in ${RASTRO_FM_ITEMS[@]+"${RASTRO_FM_ITEMS[@]}"}; do
     case $pattern in

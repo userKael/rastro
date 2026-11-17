@@ -72,6 +72,15 @@ test_github_adapter_names_default_pr_template() {
   need_text adapters/code-host/github.md 'When `code_host.template` is set, it names the template instead.'
 }
 
+test_code_host_uses_declared_target() {
+  local rel
+  for rel in adapters/code-host/github.md adapters/code-host/gitlab.md; do
+    need_text "$rel" 'Use the exact `<target>` supplied and verified by `deliver`.'
+    need_text "$rel" 'Do not infer a target from'
+  done
+  need_text adapters/CONTRACT.md 'Never infer a target from opening order.'
+}
+
 offset_of() {
   grep -boF -e "$2" "$root/$1" | head -n 1 | cut -d: -f1
 }
@@ -163,4 +172,5 @@ test_jira_item_url
 test_unverified_command_names_are_flagged
 test_adapters_name_no_plan_terms
 test_github_adapter_names_default_pr_template
+test_code_host_uses_declared_target
 finish

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- `breakdown` records a dependency graph for complete delivery slices and previews full cards before publication. Tracker adapters identify cards by a stable marker and report partial steps for recovery.
+- `implement` and `deliver` use declared prerequisites to choose branch targets. Independent slices start from the base; a multi-parent slice waits until its prerequisites land. New `implement-multiple` coordinates ready slices in isolated worktrees while keeping human gates with the coordinator.
+- `setup` offers card, document and change-request destinations by capability and can draft an optional versioned layout guide for project naming and folders.
+- Golden paths keep canonical examples instead of a growing inventory. Optional discovery globs let audit report changed candidate components without editing the golden path for each follower.
+- PR descriptions begin with a reviewer summary and actual dependency state.
+
 ## 0.2.0
 
 The harness now grows with the project: golden paths are written from the first instance of a component type, a project can start from an empty directory, and drift is audited over time.
