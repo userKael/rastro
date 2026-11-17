@@ -265,6 +265,16 @@ test_config_has_no_mode_key() {
   [ -z "$hits" ] || _assert_fail "templates/config.yml has a mode key; the execution mode is chosen per run" "$hits"
 }
 
+test_layout_guide() {
+  require_all config.yml '  layout:' '  site:'
+  require_all layout-guide.md '## Naming' '## Source and test layout' '## Documentation and pages' \
+    '## Discovery' 'file:line'
+  grep -qF 'templates/layout-guide.md' "$root/skills/setup/SKILL.md" ||
+    _assert_fail "setup does not reference the layout guide template"
+}
+
+test_layout_guide
+
 test_golden_path
 test_markers_file
 test_reconciliation

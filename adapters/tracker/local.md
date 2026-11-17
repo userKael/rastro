@@ -51,6 +51,14 @@ Writes nothing. The link is the item id in the change request title.
 
 The framework names are used as they are: `bug`, `task`, `story`, `subtask`. They are recorded in the item's `type` key. There is nothing to look up.
 
+### publication
+
+- Publication destination: `tracker.local_dir` in the adopter repository, with `project.base_branch` as the merge target. With no code host the merge is manual.
+- Parent relationship: store the parent id in frontmatter.
+- Dependency representation: delivery dependencies and slice ids are item body text, after the frontmatter.
+- Recovery: look up the exact marker in the current packet's working copy, on its item branch, and on the base and fetched refs under `tracker.local_dir`. Treat the same item appearing on multiple refs as one item. Block conflicting ids, parent fields or paths. Reuse an already assigned id and path. Reserve and record the missing numeric ids before writing, using the allocation from `create_item`. Before creating files, confirm the reserved ids and paths are still free in the working copy and current refs. Never overwrite an existing file.
+- Use one branch and one commit for the packet, named as in `create_item` from its top card. Resume the recorded branch or recognize the already merged files by their markers. Commit only the approved card files and reuse a matching existing commit. Verify the remote branch before retrying a push. Look up an existing change request for that branch and base before opening one. When the code host cannot verify a prior open attempt, report it as pending and ask for confirmation. The receipt includes the item files and branch plus the change request URL when known. Until the files reach the base branch, report them as pending merge even if the adapter has completed its publication steps.
+
 ## Known limits
 
 - An item exists for other clones only after its change request is merged into `project.base_branch`. Until then it is on the branch.

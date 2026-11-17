@@ -43,6 +43,13 @@ Check that the body of the change request has the line. If it does not, add it w
 
 GitHub issues carry the framework type as a label with the same name: `bug`, `task`, `story`, `subtask`. Check the labels with `gh label list`. A label that does not exist is named at the gate, and is created with `gh label create` only after the human says yes.
 
+### publication
+
+- Publication destination: the GitHub repository resolved from the adopter's `origin` URL. Record its host and `OWNER/REPO` in the packet and pass the repository explicitly with `--repo` to issue commands.
+- Parent relationship: the approved child body starts with `Parent: GH-<n>` and the parent body contains the child in a task list.
+- Dependency representation: delivery dependencies and slice ids are body text.
+- Recovery: check the recorded issue directly or enumerate the approved repository's issues with `gh api --hostname <host> --paginate 'repos/<owner>/<repo>/issues?state=all&per_page=100'`. Inspect all pages, including closed issues, excluding results with `pull_request`. Compare the standalone marker line exactly. Then create with `create_item`'s issue command when allowed by the contract. Verify the child's parent line and add the child once to the parent's task list after rereading it. If the child is already present, reuse that link and preserve its checkbox state. Record the issue id before editing the parent. A failed parent update leaves a partial result that can be resumed using the same issue.
+
 ## Known limits
 
 - Hierarchy is a convention in text. The parent's task list and the child's `Parent:` line are kept in step by this adapter and by nothing else, and ticking a box in the task list does not close the child.
