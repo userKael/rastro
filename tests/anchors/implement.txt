@@ -60,7 +60,7 @@ Actual: <n> lines in <k> files
 each task's implementer and reviewer use the model its tier maps to
 For a task that wrote or extended a golden path, raise the golden-path review gate
 the draft starts from that `DT-nn`'s decisions
-A `follows` adds the instance to `instances` when it is absent
+A `follows` leaves the golden path file unchanged, including `instances`, version and History
 the same commit adds it to `.rastro/config.yml`
 all hold as drafted
 execute it as announced?** Class: fork. Mode: confirmation.
@@ -97,3 +97,7 @@ When the type of a component has a golden path with real-system scenarios, the r
 When `.rastro/CALIBRATION.md` is absent or its tier table is unfilled, every task is `standard`.
 The walking-skeleton item, whose `## Sources` lists ADRs and marks none as the source of truth, is an item with no design doc.
 `"automated: <command>"` (quoted, because the unquoted form is not valid YAML)
+## Delivery dependencies
+Every code prerequisite is confirmed on base
+Legacy items.
+A display ordinal can locate a card but does not authorize a new stack.
