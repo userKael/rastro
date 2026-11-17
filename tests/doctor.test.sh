@@ -208,6 +208,18 @@ test_doctor_golden_path_without_frontmatter() {
   assert_contains "$OUT" "- PROBLEM: golden path $GP_FILE: no frontmatter" "gp no frontmatter"
   assert_eq 1 "$(count_lines_containing "$OUT" "golden path")" "gp no frontmatter: one line"
 }
+test_doctor_golden_path_discovery() {
+  local repo
+  repo=$(new_repo doctor-ok)
+  put_gp "$repo"
+  sed -i '/^instances:/a discovery: ["src/workers/**/*.ts"]' "$repo/$GP_FILE"
+  run_doctor "$repo"
+  assert_not_contains "$OUT" "golden path $GP_FILE: discovery" "valid discovery needs no findings"
+  sed -i 's#^discovery:.*#discovery: ["/etc/**"]#' "$repo/$GP_FILE"
+  run_doctor "$repo"
+  assert_contains "$OUT" "- PROBLEM: golden path $GP_FILE: discovery" "absolute discovery pattern is invalid"
+}
+
 test_doctor_golden_path_instances_not_a_list() {
   local repo
   repo=$(new_repo doctor-ok)
@@ -1075,6 +1087,7 @@ test_doctor_golden_paths_skip_readme
 test_doctor_golden_paths_list_form
 test_doctor_golden_path_crlf
 test_doctor_golden_path_without_frontmatter
+test_doctor_golden_path_discovery
 test_doctor_golden_path_instances_not_a_list
 test_doctor_golden_path_lib_missing_never_blocks
 test_doctor_golden_path_shared_lib_missing_never_blocks

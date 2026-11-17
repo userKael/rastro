@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Audits the golden paths for drift against the code. It runs the mechanical checks of the audit script, adds two checks that need reading the code (components of a type that are missing from `instances`, and `Revisit if:` conditions that now hold), compares the result with the previous report and writes it to the workspace. Use it on a schedule or before reviewing the architecture, to learn where the code and the golden paths have drifted apart and how first-pass, self-heal and the golden path lifecycle are moving. Do not use it to fix a drift: that is implement. It has no gate, writes only its report and never changes a golden path, code or an item.
+description: Audits the golden paths for drift against the code. It runs the mechanical checks of the audit script, adds two checks that need reading the code (conformance of components discovered through project conventions and changed files, and `Revisit if:` conditions that now hold), compares the result with the previous report and writes it to the workspace. Use it on a schedule or before reviewing the architecture, to learn where the code and the golden paths have drifted apart and how first-pass, self-heal and the golden path lifecycle are moving. Do not use it to fix a drift: that is implement. It has no gate, writes only its report and never changes a golden path, code or an item.
 ---
 
 # audit
@@ -62,7 +62,8 @@ Without a previous report, run it without `--previous`. Read the `## Mechanical 
 - A shallow clone, or any `NOT VERIFIED` row, enters the report as the script wrote it. Never turn it into `ok`, `review` or `drift`.
 - The limit for `under-review-age` is `audit.under_review_days`. When it is empty, the script lists the age and sets no limit, and this skill invents none.
 - `instance-missing` is drift: the instance listed in the golden path does not exist. It is never softened into a review.
-- `instances-changed` is a signal for review, never drift, and its verdict is `review`: the golden path may be old, or the instance may have evolved inside the pattern. Say so when you present it. The baseline of each instance is the later of the golden path's last version change and the commit that listed the instance, never a plain edit of the golden path.
+- `instances-changed` flags a canonical example touched by a commit after its baseline or by uncommitted changes. The baseline is the later of the golden path's last version change and the commit that listed the example. Use `review` to check whether the example still follows the pattern.
+- With optional `discovery` globs, `component-candidate` flags matching files outside `instances` that differ from the golden path's last committed version or are untracked and unignored. For a legacy file with no version change in history, the script uses its last commit. A path match is a `review` signal. Compare the component to the pattern in Step 2.
 
 Keep the script's output whole: the tables, `## Metrics` and `## Changes since the previous audit`. The numbers of `## Metrics` are cumulative since the log began, so present them as a trend over the whole period, not as the result of one run.
 
@@ -70,15 +71,14 @@ Keep the script's output whole: the tables, `## Metrics` and `## Changes since t
 
 For each golden path in the `architecture.golden_paths` folder whose status is not `retired`, run two checks.
 
-**(a) Components missing from `instances`.** Find components of the golden path's type that exist in the code and are not listed in `instances`. Look through:
+**(a) Component conformance.** Find components of the type and compare them to `## Decisions`, `## Checklist` and `## Security` where applicable. Use:
 
-- the `## When to use` section of the golden path, which says what the type is;
-- the name and the folder of the listed instances, which show where components of the type live;
-- `architecture.modules`, which bounds where to look.
+- the candidate and changed-example rows from Step 1;
+- the project conventions in the layout guide named by `layout` under `conventions` in the config, if present, including its `## Discovery` section if it has one;
+- `## When to use`, the names and folders of canonical examples, and the module paths in `architecture.modules`;
+- relevant added and modified files in the diff from the previous report's commit to `HEAD`, if available, and the staged and unstaged diffs. Without a usable previous commit, use the last committed golden-path version as the baseline. Search the relevant project paths when history or the layout guide is unavailable.
 
-Exclude the instances listed under `## Known debt` of the golden path: a major version moved them there on purpose, so they are known debt, never missing from `instances`.
-
-List each candidate with `file:line`. When you can tell, say whether it follows the pattern. When you cannot decide whether a component is of the type, write NOT VERIFIED and why. Never write that none exist unless you searched, and say where.
+Use `## Known debt` to recognize documented exceptions. Record an `ok` finding for verified conformance and `drift` for a demonstrated violation, citing the decision or checklist item and the source evidence at `file:line`. Use `NOT VERIFIED` when the component's type or conformance cannot be determined. Report the scope searched even when it yields no candidates. A component can conform regardless of whether it appears in `instances`. For a catalog, check its invariant rules and treat source or schema as the inventory of values.
 
 **(b) `Revisit if:` conditions.** Each decision in `## Decisions` of the golden path ends with a `Revisit if:` line. For each one, decide:
 
@@ -88,14 +88,14 @@ List each candidate with `file:line`. When you can tell, say whether it follows 
 
 Never mark a judgment check as passed when the code was not read: write NOT VERIFIED and the reason.
 
-This skill does not edit `instances` or a decision. Either is a change to a golden path, and it goes through the golden path gate of an item.
+Record findings in the audit report. Route any pattern evolution through the item workflow and its golden-path gate.
 
 ## Step 3 — Report
 
 1. Write `<workspace>/audit/<YYYY-MM-DD>.md`, named from the script's `Date:` line. A second run on the same day overwrites that day's file. The file holds the script's output, then `## Judgment checks`, with one subsection per golden path for (a) and (b). Each judgment finding is a row in the same shape as the script's, `| <check> | <subject> | <verdict> | <detail> |`, with the `file:line` or the commit in the detail.
 2. End `## Judgment checks` with its own `### Changes since the previous audit`. When there is a previous report, compare its `## Judgment checks` with this one and list each finding by key (check and subject) as new, resolved, not verified or unchanged. A finding that is NOT VERIFIED now is never listed as resolved. The script already compared the mechanical rows.
 3. Print a summary: the drifts and reviews per check, the numbers of `## Metrics`, and what changed since the previous audit. Do not repeat the whole report.
-4. Close with the next steps, as text. A `review` row asks the person to look at that instance: if it still follows the golden path, nothing changes (the row stays as information until the golden path's next version); if it no longer follows, the normal flow applies: the next item that touches it classifies it, and a contradiction goes through the golden path gate of `implement`. A drift the person wants to treat becomes an item through `breakdown`, and a change to a golden path happens through `implement`. This skill creates no item.
+4. Close with the next steps, as text. A `review` row identifies a file to inspect. Record verified conformance in the judgment checks. The next item that touches a nonconforming component classifies it, and a contradiction goes through the golden path gate of `implement`. A drift the person wants to treat becomes an item through `breakdown`, and a change to a golden path happens through `implement`. This skill creates no item.
 
 The report is not versioned. Do not stage it and do not cite its path outside the workspace.
 

@@ -45,8 +45,12 @@ cd "$root"
 rows=""
 drifts=0
 row() {
-  local detail=${4//|//}
-  rows=$rows"| $1 | $2 | $3 | $detail |"$'\n'
+  local pipe_entity="&#124;" subject detail=${4//|//}
+  subject=${2//|/$pipe_entity}
+  subject=${subject//$'\n'/\\n}
+  subject=${subject//$'\r'/\\r}
+  subject=${subject//$'\t'/\\t}
+  rows=$rows"| $1 | $subject | $3 | $detail |"$'\n'
   [ "$3" != drift ] || drifts=$((drifts + 1))
 }
 
@@ -116,9 +120,41 @@ gp_lifecycle() {
   gp_metrics=$gp_metrics"| ${name%.md} | $versions | $contra | $commits |"$'\n'
 }
 
+# Discover changed files from repository conventions, even when they are absent
+# from instances. Only the judgment check can tell whether a candidate conforms.
+gp_candidates() {
+  local rel=$1 discovery=$2 base=$3 examples=$4 path complete=0
+  if ! rastro_gp_discovery "$discovery"; then
+    row discovery "$rel" "NOT VERIFIED" "discovery must be an inline list of project-relative Git globs"
+  elif [ -n "${RASTRO_GP_PATHSPECS[0]-}" ]; then
+    if [ "$nohist" = true ] || [ -z "$base" ]; then
+      row discovery "$rel" "NOT VERIFIED" "${nohist_why:-no committed golden path baseline}"
+      return 0
+    fi
+    while IFS= read -r -d '' path; do
+      # Git never emits an empty path. This marker confirms both commands succeeded.
+      if [ -z "$path" ]; then
+        complete=1
+        break
+      fi
+      [ -f "$path" ] || continue
+      rastro_gp_list_has "$examples" "$path" && continue
+      row component-candidate "$rel:$path" review "changed since the pattern baseline ${base:0:7}; compare with the golden path"
+    done < <(
+      git diff --relative --name-only --no-renames --diff-filter=d -z "$base" -- "${RASTRO_GP_PATHSPECS[@]}" &&
+      git ls-files --others --exclude-standard -z -- "${RASTRO_GP_PATHSPECS[@]}" &&
+      printf '\0'
+    )
+    if [ "$complete" -eq 0 ]; then
+      row discovery "$rel" "NOT VERIFIED" "could not read changed files using discovery"
+    fi
+  fi
+}
+
 gp_audit() {
   local file=$1 rel=$2 dump key value type="" status="" instances="" has_instances=0
   local s inst path sha base_sha add_sha n ct age existing=0 detail
+  local has_discovery=0 discovery="" examples=""
   if ! dump=$(rastro_frontmatter_dump "$file" 2>/dev/null); then
     found=1
     row frontmatter "$rel" "NOT VERIFIED" "no frontmatter; not audited"
@@ -129,6 +165,7 @@ gp_audit() {
       type) type=$value ;;
       status) status=$value ;;
       instances) has_instances=1; instances=$value ;;
+      discovery) has_discovery=1; discovery=$value ;;
     esac
   done <<<"$dump"
   found=1
@@ -148,6 +185,7 @@ gp_audit() {
       if [ "$s" -eq 0 ]; then
         for inst in ${RASTRO_FM_ITEMS[@]+"${RASTRO_FM_ITEMS[@]}"}; do
           path=$(rastro_gp_instance_path "$inst")
+          examples=$examples$path$'\n'
           if [ ! -e "$root/$path" ]; then
             row instance-missing "$rel:$path" drift "instance does not exist"
           elif [ "$nohist" = true ]; then
@@ -172,13 +210,20 @@ gp_audit() {
                 detail="$n commits touched it since its baseline ${sha:0:7}, the later of the last version change of $rel and the commit that listed it"
                 [ "$n" -ne 1 ] || detail="1 commit touched it since its baseline ${sha:0:7}, the later of the last version change of $rel and the commit that listed it"
                 row instances-changed "$rel:$path" review "$detail"
-              else
+              elif git --literal-pathspecs diff --quiet HEAD -- "$path"; then
                 row instances-changed "$rel:$path" ok "no commit touched it since its baseline ${sha:0:7}, the later of the last version change of $rel and the commit that listed it"
+              elif [ "$?" -eq 1 ]; then
+                row instances-changed "$rel:$path" review "uncommitted changes to the canonical example"
+              else
+                row instances-changed "$rel:$path" "NOT VERIFIED" "could not read uncommitted changes"
               fi
             fi
           fi
         done
       fi
+    fi
+    if [ "$has_discovery" -eq 1 ]; then
+      gp_candidates "$rel" "$discovery" "$base_sha" "$examples"
     fi
   fi
 
