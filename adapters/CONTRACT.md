@@ -70,6 +70,20 @@ Work items and their hierarchy. The item types the framework uses are `bug`, `ta
 - `link_change_request`: `(id, url)`. Links the item to a change request. Idempotent: it checks for an existing link first. When the tool cannot create the link, the adapter says so and gives the path that exists. It never reports a link that was not created.
 - `item_types`: the map from `bug`, `task`, `story` and `subtask` to the names the tool uses. The adapter says how to read the names from the tool when they are not fixed.
 
+- `publication`: read-only destination and capability resolution, exact-card lookup, and creation or recovery using the approved packet and its recorded results. Returns the item id and URL or path when known, the state (`complete`, `partial` or `blocked`), and pending steps.
+
+### Tracker publication
+
+The adapter's `### publication` subsection declares its publication destination, parent relationship, dependency representation and recovery method. The caller supplies an approved packet with the resolved destination, stable `publication_id`, and for each card a unique `card_key`, type, title, complete body and optional parent reference. Generate a fresh, random `publication_id` for each new packet, independent of the slug, date, item title or branch; use at least 128 bits of randomness and persist the id before preview so retries reuse it. Use ASCII letters, digits, hyphens or underscores in the identifiers. Keep the destination and identifiers on every attempt, with one publisher writing each packet. A parent reference to another card in the packet is resolved using that card's recorded id.
+
+Each adapter writes the exact standalone line `Rastro-Publication: <publication_id>/<card_key>` as part of the initial card write. Keep it outside headed sections so later section edits preserve it. A text rendering must preserve the parent card's `## Delivery dependencies` section and the child card's `**Slice:** S-xx` line. Those fields carry the canonical dependency graph. Native hierarchy, a Project board, and task lists can mirror relationships without becoming sources for delivery order.
+
+For each card, verify a recorded id directly or look up the exact marker in the approved destination. A single match reuses the id only after checking its destination, type, title, parent and immutable identity fields (`## Delivery dependencies` or `**Slice:**` and the source reference) against the approved packet. A mismatch blocks recovery; never overwrite the remote card to make it match. Proceed only with missing steps. Once a card is complete, verify its id without resetting any workflow state. Multiple matches, conflicting parent relationships, destination mismatches and unreadable lookup results block writes for the affected card. Create only after a successful absence check and with a fresh card or a confirmed prior rejection. Persist a create attempt before making the call. A timeout or interrupted write leaves an unknown outcome: recover by exact match or explicit destination-side confirmation before any retry. A missing result from a stale or incomplete index cannot confirm rejection.
+
+Record the result before starting another card. Report `complete` only when all applicable steps have been verified, `partial` when a card exists with steps pending, and `blocked` when lookup or creation cannot proceed. Recheck state before retrying any secondary write. Report workspace-only files as workspace-only and repo items pending merge as pending merge.
+
+An existing custom adapter can still use the original port capabilities. When it has no `publication` subsection, automated creation through the recovery protocol is unavailable. The caller can prepare the approved packet for a person to publish or wait for the adapter to implement the capability.
+
 ## Port: docs (config: docs)
 
 Design documents. `docs.location` says where they live.
@@ -83,7 +97,7 @@ Design documents. `docs.location` says where they live.
 
 Change requests: pull requests or merge requests.
 
-- `open_change_request`: `(branch, target, title, body)`. Opens the change request and returns its URL. The target is the base branch, or the branch of the previous change request for a stacked one.
+- `open_change_request`: `(branch, target, title, body)`. Opens the change request and returns its URL. Use the exact target supplied by `deliver`: the project base for an independent slice, or the declared code prerequisite's branch for a stack. Never infer a target from opening order.
 - `update_body`: `(change_request, body)`. Replaces the description.
 - `ci_status`: `(change_request)`. Returns the state of the pipeline or checks, or says it is unavailable. An absent pipeline is never reported as passing.
 - `collapsible`: whether the description renders collapsed blocks. Supported or not supported.

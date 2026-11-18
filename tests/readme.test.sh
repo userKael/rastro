@@ -177,7 +177,7 @@ test_golden_path_checks_are_documented() {
   need_in_section 'Configure' 'exits non-zero'
   need_in_section 'Configure' 'make `verify.lint` run it'
   need_in_section 'Configure' 'and never runs it'
-  need_in_section 'Configure' 'two or more instances'
+  need_in_section 'Configure' 'second compatible component'
   need_in_section 'Configure' 'architecture.boundary_types'
   need_in_section 'Configure' 'OWASP API Security Top 10'
   need_in_section 'Configure' 'without mocks'
@@ -187,12 +187,12 @@ test_golden_path_checks_are_documented() {
 
 test_init_is_documented() {
   [ -f "$readme" ] || return 0
-  need_in_section 'What rastro is' 'rastro is nine skills'
+  need_in_section 'What rastro is' 'rastro is ten skills'
   need_in_section 'What rastro is' '| `init` |'
-  need_in_section 'What rastro is' 'the nine skills'
+  need_in_section 'What rastro is' 'the ten skills'
   need_in_section 'What rastro is' '| `profiles/` | `examples/`:'
   need_in_section 'What rastro is' '`stacks/`: stack profiles'
-  need_in_section 'What rastro is' 'the golden path, the stack detection, `CALIBRATION.md`'
+  need_in_section 'What rastro is' 'the golden path, the layout guide, the stack detection, `CALIBRATION.md`'
   need_in_section 'The flow' '| No source code yet, and no item for the walking skeleton | `rastro:init` (not the built-in `/init`) |'
   need_in_section 'The flow' 'empty by construction'
   need_in_section 'Install' '/rastro:init'

@@ -55,14 +55,17 @@ Collect and print these fields before anything else:
 | Design doc | provenance header of `<workspace>/<id>/design-doc.md`, the frozen copy: link, version, capture date | when there is one |
 | Plan | `<workspace>/<id>/plan.md` | yes |
 | Reconciliation | `<workspace>/<id>/reconciliation.md`, or the parent's `## Reconciliation` | when there was one |
-| Position in the stack | PR <k> of <n>, and the branch of the previous PR | when stacked |
+| Slice and dependencies | item graph and `<workspace>/<id>/delivery.md` | for graph items |
+| Target and evidence | recorded target, current ref and prerequisite state | yes |
 | Branch state | Not pushed, Pushed, no PR, or Pushed with a PR open | yes |
 
 With `tracker: none`, the item is `<workspace>/<slug>/item.md`. With `tracker: local`, `read_item` reads the item file.
 
-Once the item and its parent are read, read the execution mode, as `## Execution mode` in the AGENTS.md block says (template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`). For a project whose AGENTS.md block predates the section, the top item is the parent, or the item itself when it has no parent.
+Once the item and its parent are read, read the execution mode, as `## Execution mode` in the AGENTS.md block says (template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`). For a project whose AGENTS.md block predates the section, the top item is the parent, or the item itself when it has no parent. For a flat graph use the publication id.
 
 The branch is pushed when `git ls-remote --heads origin <branch>` prints it. A PR is open when the human, or an earlier run of this skill, gives its URL. When that is not known, the gate below asks. When the branch is pushed and the PR URL is not known, the gate needs the person's input and stops even in a continuous run.
+
+Refresh readiness and target using `implement` § Resolve readiness and target. Record the actual target of an open PR. If its prerequisite moved, merged or closed, re-evaluate it. For a changed target or head, show the diff and ancestry against the intended target and resolve drift before Step 1. In particular, a squash merge may require cleaning the branch comparison before retargeting. Do not rewrite an open PR's history. Take any target or scope change to a decision gate. Use the code-host adapter to retarget when supported, otherwise request the manual retarget or an approved replacement. Verify the actual target and run scope, commit and final verification against it before handoff. If the necessary evidence or a clean comparison is unavailable, pause the delivery.
 
 - The plan is not versioned. What lasts is its content, transposed into the PR description in Step 5. If `<workspace>/<id>/plan.md` does not exist, stop. Either the execution did not go through `implement`, or the workspace was deleted too early, and without the plan there is nothing to transpose.
 - The Context section of the PR carries only links that outlive the workspace: the item, and the design doc with its version and date.
@@ -79,7 +82,7 @@ The branch is pushed when `git ls-remote --heads origin <branch>` prints it. A P
 | Reconciliation | <where it was read>, or none |
 | Branch state | <Not pushed, Pushed, no PR, or Pushed with a PR open> |
 
-When the PR is stacked, the position goes in one note below the table: `Stack: PR <k> of <n>, after <branch of the previous PR>.`
+Add a row showing the effective target. When stacked, add one note with the declared prerequisite slice, linked PR and target branch.
 
 Then ask with the structured question tool, recommended option first: confirm, or correct a field. Without that tool, end the turn with the question.
 
@@ -93,7 +96,7 @@ git diff --stat
 git diff --stat <target>...HEAD
 ```
 
-`<target>` is `project.base_branch`, or the branch of the previous PR when this PR is stacked.
+`<target>` is the refreshed effective target from Step 0. Use the resolved ref for all local comparisons and its branch name for the code host.
 
 Compare every file, uncommitted or already on the branch, with the scope of the item from Step 0. A file that does not serve the item does not enter the PR.
 
@@ -162,7 +165,7 @@ Many commits out of format means the convention does not reach whoever commits. 
 
 ## Step 4 — PR title
 
-The title is written in `project.languages.machine`. A stack ordinal such as `PR 2 of 4` goes in `## Context` of the body, never in the title, because the title outlives the stack.
+The title is written in `project.languages.machine`. Keep any slice or legacy stack ordinal in `## Context` of the body. The title outlives the delivery order.
 
 When `code_host.merge` is `squash`, the title becomes the commit message on the base branch, and no local hook sees it. Validate it as a commit: the format in `conventions.commit`, a valid type and scope, a non-empty subject, no trailing period, and at most 100 characters. Print the character count. When the git hooks are installed, run the check the CI runs:
 
@@ -176,24 +179,26 @@ bash .rastro/git-hooks/check-pr-title "<title>" "<branch>"
 
 Fill the template from Requirements: every section it does not mark optional. When `.rastro/profiles/deliver.md` has a `## PR description` section, its sections replace the template's. Write in `project.languages.human`. Markers and identifiers stay literal: `## Reconciliation`, `[HUMAN]`, `D-n`, `DT-nn`, rule IDs.
 
-The framework template has two optional sections that exist only for this skill. `## Rule self-check` is used only when Step 6 leaves a ⚠. `## Reconciliation` is used only with `tracker: none`, where the PR description holds the reconciliation. When the project's own template lacks a section that applies, add it at the end.
+Use `## Rule self-check` only when Step 6 leaves a ⚠. With a custom template, place the reviewer summary and dependency state at the top, after any blocking human action. Add other required sections where the template leaves room.
 
 Rules by section:
 
 - **Pending human execution.** From the `[HUMAN]` tasks of the plan: per environment, what already ran and what has not. Write that a step ran only when the person who ran it confirmed it. When the merge depends on a step not yet run, this section goes at the top, because it decides whether the PR can merge. Remove it whole when the plan had no `[HUMAN]` task.
+- **Reviewer summary.** Lead with the outcome and what reviewers should focus on, plus the verification result and any merge blocker. Keep it to three short bullets. A blocking human action remains at the top.
+- **Dependency state.** Show the effective target and the declared prerequisites with links or evidence, including any unmerged code or human steps. Retain the summary and dependency state at the top even when a project profile customizes later sections.
 - **Context.** The Step 0 fields, with no placeholder and no "to be defined". The design doc enters as link, version and date, never as content. The plan enters as content in the collapsed block at the end, never as a path. When this PR adds or changes a design doc, Context also carries three counts of that document: required sections, optional sections and `DT-nn`. Each count comes with the count of the previous version, both taken from the materialized markdown.
 - **What this PR delivers.** The contract and its edge: changed signatures, new fields, error statuses. When the error contract of the design doc differs from what the code maps, the implementation wins, and the divergence is recorded here.
 - **Closed decisions.** By ID. A decision taken during implementation that is not in the design doc is marked new.
 - **Risks and rollback.** The order that cannot be inverted, the compensation, and what happens when the change fails halfway.
 - **Verification.** The exact numbers from Step 8, never a checkbox.
-- **Next PRs.** With the `Depends on` column.
-- **Reconciliation.** Only with `tracker: none`, where the PR description is the home of the reconciliation.
+- **Next PRs.** Only directly related slices that are ready or waiting. Show their actual prerequisite keys and current state.
+- **Reconciliation.** Link to the holder when a tracker publishes it. With `tracker: none`, include the five tables and any reviewed human-execution blocks here. Collapse the full content when supported.
 - **Divergences from the design doc.** Transposed from `reconciliation.md`. Without it the reviewer rereads the design doc and concludes the PR is wrong.
 - **Recorded debt.** What was left out on purpose: the branch name divergence of Step 2, the commits Step 3 could not rewrite, a red check proven pre-existing in Step 8, and every ⚠ of Step 6 that was not fixed.
 - **Golden paths created or evolved.** Only when the branch created a golden path or changed its version. One row per golden path, from its `## History`.
 - **Rule self-check.** Only when Step 6 left a ⚠.
 - **Agent rulings.** From Step 7. Removed whole when Step 7 writes no row.
-- **Executed plan.** The whole content of `plan.md`. Collapsed when the `collapsible` capability of the code-host adapter says supported, otherwise a plain section marked optional in its title. When the plan dominates the description, cut the tasks delivered by earlier PRs of the stack and say they were cut.
+- **Executed plan.** The whole content of `plan.md`. Collapsed when the `collapsible` capability of the code-host adapter says supported, otherwise a plain section marked optional in its title. When the plan dominates the description, cut the tasks already delivered by prerequisite PRs and say they were cut.
 
 The numbers stay in sync. After each commit that answers a review, rerun Step 8 and update the description with `update_body` in the same push. A test added during review without that update leaves one PR with several counts, and the description is the only source of the numbers.
 
@@ -218,7 +223,7 @@ Run here every check of `## Additional checks` that names this step.
 
 Then check the golden paths. For each `new` or `changes` component of the branch whose type has a golden path in the `architecture.golden_paths` folder, check each item of its `## Checklist` and its `## Security` against the diff. A golden path whose `verified_by` is `automated: <command>` is checked by running the command, never by reading. Add one row per golden path to the table, named by its id: ✅, or ⚠ with the `file:line`. When the rules table was skipped because no rules are defined, the golden-path rows form the table on their own. A ⚠ follows the rule above: a fix before the push, or a line in `## Recorded debt`. A component that contradicts a golden path with no decision is not debt: it goes back to `implement`, to its golden-path gate.
 
-A golden path of that check whose `status` is `current`, whose `verified_by` is `review` and whose `instances`, with those this branch adds, lists 2 or more entries is a candidate for an automated check: a later instance confirmed what the first one fixed. It goes to the continuity gate as an observation, never as a ⚠ and never as a gate of its own.
+A current golden path with `verified_by: review` is a candidate for an automated check when at least two compatible components have been verified. Find them from the canonical examples and from the relevant conventions and diff, then check their actual code against the pattern. The components need not both appear in `instances`. It goes to the continuity gate as an observation, never as a ⚠ and never as a gate of its own.
 
 ## Step 7 — Agent rulings
 
@@ -254,11 +259,13 @@ With every gate green, print the delivery block:
 ```
 Branch: <branch>
 Title:  <title>   (<n> characters)
-Target: <project.base_branch> | <branch of the previous PR>
+Target: <effective branch from Step 0>
 Body:   <the full description, ready to paste>
 ```
 
-A stacked PR targets the branch of the previous PR in the stack, never the base branch.
+A stacked PR targets the open PR head of its declared code prerequisite. After that prerequisite lands, the effective target is base when the diff is clean and Step 0 confirms it.
+
+When preparing delivery in a batch, stop at each unresolved gate before taking its action and return its state to the coordinator. A batch worker returns this delivery block, the exact verified commit and check output to the coordinator before any push, PR update or tracker write. The coordinator validates the head, target and current evidence, then resumes the publication gates. A failed hard check returns a blocker.
 
 The branch must be on the remote before the PR opens. The push is `git push -u origin <branch>`, with `--force-with-lease` added when Step 3 rewrote history. Step 3 rewrites only while no PR is open.
 
@@ -292,7 +299,7 @@ Ask with the structured question tool, recommended option first: push and run th
 After the PR exists:
 
 - Call `ci_status` and confirm the pipeline ran. An absent pipeline is never reported as passing.
-- When the PR is stacked, confirm its target is the branch of the previous PR.
+- Confirm the open PR target matches the resolved target. When stacked, report the linked prerequisite and confirm the merge order.
 
 ## Step 10 — Item ↔ PR link
 
@@ -306,6 +313,8 @@ Never pretend the link exists. The report names the path that produced the resul
 
 ## Gate — continuity
 
+Refresh the graph and readiness from `implement` Stage 1 after recording this PR. Classify each remaining slice as ready, waiting or in progress. A PR opened in this run can unlock a stack only when it meets the declared prerequisite's conditions. A ready sibling can start even when another sibling is blocked. A ready `[no PR]` slice is handed to its human executor. In a single-item continuous run, choose the lowest stable key among ready agent-executed slices as the tie-break. For a batch, return this information to the coordinator and let its scheduler choose from the ready set.
+
 Print the title, then the state only:
 
 **Gate — PR <ref> open: stop for review or continue to <next id>?** Class: fork. Mode: confirmation.
@@ -313,7 +322,9 @@ Print the title, then the state only:
 | | |
 |---|---|
 | PR | <link> — <title> |
-| Item | <id>, with <n> items left under <parent> |
+| Item | <id>, with <n> items left under <parent or publication> |
+| Ready slices | <ids and effective targets> |
+| Waiting slices | <ids and dependency blockers> |
 | Item ↔ PR link | <linked, commented and pending, id in the title, or no tracker> |
 | Human execution | <none, done in some environments, or all pending> |
 | CI | <state from `ci_status`, or unavailable> |
@@ -335,9 +346,9 @@ Then ask with the structured question tool, without repeating the options in the
 | Stop here (recommended when the run stops at every gate) | Hands the PR to review: automatic through the review port when `review.kind` is not `none`, and human always. The run ends, and `<workspace>/mode` is deleted |
 | Next item <id> (recommended in a continuous run) | Starts `implement` on that item: once the review of this PR is addressed, or, in a continuous run, at once, after the PR is handed to review |
 
-The default is to stop. A stack of PRs takes days and involves other people, and this skill does not pretend to run it in one go. A continuous run is the person's choice, made at the start, to go on: the line of this gate goes to `<workspace>/<next id>/rulings.md`, so it reaches the next PR. Under **Next item**, a continuous run hands this PR to review, as **Stop here** does, before it starts the next item.
+The default is to stop. A continuous run is the person's choice, made at the start, to go on: the line of this gate goes to `<workspace>/<next id>/rulings.md`, so it reaches the next PR. Under **Next item**, a continuous run hands this PR to review, as **Stop here** does, before it starts the next item.
 
-When no item is left under the parent, or the item has no parent, there is nothing to choose: print the gate title without the "continue to" question, and the state, hand the PR to review as **Stop here** does, end the run by deleting `<workspace>/mode`, and stop without asking.
+When no agent-executed slice is ready, there is nothing to choose. Show the evidence needed to unblock the waiting slices and report any pending human work, then print the gate title without the "continue to" question, and the state, hand the PR to review as **Stop here** does, end the run by deleting `<workspace>/mode`, and stop without asking.
 
 A subagent never raises a gate of this skill. It returns the state as text and ends; the session that dispatched it asks the human.
 
@@ -360,7 +371,7 @@ A subagent never raises a gate of this skill. It returns the state as text and e
 ## Handoff
 
 - Stop: the PR goes to review. A review that asks for changes is answered by fix commits, and this skill runs again from Step 1. It is idempotent: the link, the description and the numbers are checked before they are written.
-- Next item: `implement`, with the id of the next item.
+- Next item: `implement`, with the id of the selected ready item.
 
 ## What this skill does NOT do
 

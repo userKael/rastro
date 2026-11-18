@@ -6,7 +6,9 @@ created_on: <YYYY-MM-DD>
 sources: [<design doc reference>, <other source>]
 ---
 
-> **Template.** Delete this note when filling in. With `tracker: local` this file lives in `tracker.local_dir`, frontmatter included. With another tracker there is no frontmatter: the tracker holds id, type and parent, and the sections below are the item description. The item has no status field, because the state comes from the artifacts (the state table in `AGENTS.md`) and a status field would be a second source. Write the headings in `project.languages.human`; `## Reconciliation` and `## Acceptance criteria` stay literal, because the state table and the `read_item` capability of the tracker adapters find them by title. The example ids use the default key `W` and 3 digits: the id of an item is `<tracker.key>-<nnn>`. Never cite a workspace path anywhere in the item.
+> **Template.** Delete this note when filling in. With `tracker: local` this file lives in `tracker.local_dir`, frontmatter included. With another tracker there is no frontmatter: the tracker holds id, type and parent, and the sections below are the item description. The item has no status field, because the state comes from the artifacts (the state table in `AGENTS.md`) and a status field would be a second source. Write the headings in `project.languages.human`; `## Reconciliation`, `## Acceptance criteria` and `## Delivery dependencies` stay literal, so skills and adapters can find the sections by title. The example ids use the default key `W` and 3 digits: the id of an item is `<tracker.key>-<nnn>`. Never cite a workspace path anywhere in the item.
+
+Rastro-Publication: <publication_id>/<card_key>
 
 ## Context
 
@@ -25,6 +27,16 @@ Assertion: <the sentence the observer will be able to say>
 ## Acceptance criteria
 
 - <a criterion the observer can check without reading the code>
+
+## Delivery dependencies
+
+> Keep the table on the story, standalone item, or every flat card. Give each slice card its own **Slice:** key. Each edge has a prerequisite evidenced by the reconciliation. Keep a stable key when the display order changes.
+
+| Slice | Outcome | Acceptance check | depends_on | Branch target |
+|---|---|---|---|---|
+| S-01 | <first independently reviewable result> | <check> | [] | base |
+| S-02 | <second independently reviewable result> | <check> | [] | base |
+| S-03 | <result requiring the code of S-01> | <check> | [S-01] | S-01 |
 
 ## Sources
 
@@ -80,7 +92,7 @@ CREATE UNIQUE INDEX books_isbn_key ON catalog.books (isbn);
 
 ---
 
-Subtask shape. A subtask is short: four fields, and it does not repeat the reconciliation, which lives in the parent.
+Subtask shape. The delivery graph and reconciliation are in the parent.
 
 ```markdown
 ---
@@ -91,11 +103,23 @@ created_on: <YYYY-MM-DD>
 sources: [<design doc reference>]
 ---
 
-**Unblocks:** <what this subtask makes possible, or the next subtask>
+**Slice:** S-01
+
+Rastro-Publication: <publication_id>/<card_key>
+
+**Unblocks:** <outcome and any slices that depend on it>
 
 **Anchor:** `<file:line>` where the change lands
 
 **Applicable decisions:** <D-n and DT-nn that bind this subtask>
 
-**Revert:** <how to undo this subtask alone>
+**Revert:** <how to undo this subtask after rolling back its dependents, if any>
+
+## Scope
+
+<repository-relative write paths for this slice>
+
+## Acceptance criteria
+
+- <the acceptance check from this slice's graph row>
 ```

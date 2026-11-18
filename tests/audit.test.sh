@@ -125,6 +125,79 @@ test_audit_added_instance_baseline() {
   assert_contains "$OUT" "$(row instances-changed "$GP:$second" review) 1 commit" "added instance: a later change is review"
   assert_contains "$OUT" "$(row instances-changed "$GP:$INSTANCE" ok)" "added instance: the other stays ok"
 }
+test_audit_discovers_changed_candidates() {
+  local repo second="src/workers/team a/send-invoice.processor.ts"
+  local third="src/workers/refund.processor.ts" unchanged="src/workers/pickup.processor.ts"
+  local untracked="src/workers/dispatch.processor.ts" unrelated="src/services/checkout.ts"
+  local edited="src/workers/cancel.processor.ts"
+  repo=$(new_repo)
+  put_gp "$repo"
+  sed -i '/^instances:/a discovery: ["src/workers/**/*.processor.ts"]' "$repo/$GP"
+  put "$repo" "$unchanged" "existing processor"
+  put "$repo" "$edited" "unchanged before audit"
+  commit_all "$repo" "pattern"
+  put "$repo" "$second" "new processor"
+  put "$repo" "$unrelated" "new service"
+  commit_all "$repo" "branch delivery"
+  put "$repo" "$third" "staged processor"
+  git -C "$repo" add "$third"
+  put "$repo" "$untracked" "local processor"
+  put "$repo" "$edited" "unstaged edit"
+  run_audit "$repo" --fail-on-drift
+  assert_status 0 "candidates alone leave strict audit green"
+  assert_contains "$OUT" "$(row component-candidate "$GP:$second" review)" "discover nested committed file with spaces"
+  assert_contains "$OUT" "$(row component-candidate "$GP:$third" review)" "discover staged file"
+  assert_contains "$OUT" "$(row component-candidate "$GP:$untracked" review)" "discover untracked file"
+  assert_contains "$OUT" "$(row component-candidate "$GP:$edited" review)" "discover unstaged edit"
+  assert_not_contains "$OUT" "$unchanged" "ignore files unchanged since the pattern"
+  assert_not_contains "$OUT" "$unrelated" "ignore changes outside the convention"
+  assert_eq "" "$(git -C "$repo" diff HEAD -- "$GP")" "discovery needs no golden path update"
+  sed -i 's/^version: 1.0.0$/version: 1.1.0/' "$repo/$GP"
+  commit_all "$repo" "extend pattern"
+  run_audit "$repo"
+  assert_not_contains "$OUT" "| component-candidate |" "a semantic version resets the candidate baseline"
+}
+
+test_audit_canonical_uncommitted_change() {
+  local repo
+  repo=$(new_repo)
+  put_gp "$repo"
+  sed -i '/^instances:/a discovery: ["src/workers/**/*.processor.ts"]' "$repo/$GP"
+  commit_all "$repo" "pattern"
+  put "$repo" "$INSTANCE" "local edit"
+  run_audit "$repo" --fail-on-drift
+  assert_contains "$OUT" "$(row instances-changed "$GP:$INSTANCE" review)" "canonical edit is still reviewed"
+  assert_not_contains "$OUT" "| component-candidate |" "canonical example produces one signal"
+}
+
+test_audit_empty_discovery() {
+  local repo
+  repo=$(new_repo)
+  put_gp "$repo"
+  sed -i '/^instances:/a discovery: []' "$repo/$GP"
+  commit_all "$repo" "pattern"
+  put "$repo" "src/workers/new.processor.ts" "untracked processor"
+  run_audit "$repo" --fail-on-drift
+  assert_status 0 "empty discovery opts out"
+  assert_not_contains "$OUT" "| discovery |" "empty discovery is valid"
+  assert_not_contains "$OUT" "| component-candidate |" "empty discovery has no matching files"
+}
+
+test_audit_invalid_discovery() {
+  local repo
+  repo=$(new_repo)
+  put_gp "$repo"
+  sed -i '/^instances:/a discovery: ["../other/**"]' "$repo/$GP"
+  commit_all "$repo" "pattern"
+  run_audit "$repo" --fail-on-drift
+  assert_status 0 "invalid discovery supplies no evidence of drift"
+  assert_contains "$OUT" "$(row discovery "$GP" "NOT VERIFIED")" "invalid discovery is reported"
+  sed -i 's#^discovery:.*#discovery: ["src/a,b/**/*.ts"]#' "$repo/$GP"
+  run_audit "$repo" --fail-on-drift
+  assert_status 0 "comma in quoted discovery supplies no evidence of drift"
+  assert_contains "$OUT" "$(row discovery "$GP" "NOT VERIFIED")" "comma in quoted discovery is reported"
+}
+
 test_audit_invalid_status() {
   local repo
   repo=$(new_repo)
@@ -500,6 +573,10 @@ test_audit_clean
 test_audit_instance_changed
 test_audit_review_baseline_is_version_change
 test_audit_added_instance_baseline
+test_audit_discovers_changed_candidates
+test_audit_canonical_uncommitted_change
+test_audit_empty_discovery
+test_audit_invalid_discovery
 test_audit_invalid_status
 test_audit_quoted_verified_by
 test_audit_instance_not_committed

@@ -16,6 +16,7 @@ No skill drives the flow. The position follows from the artifacts: read the trac
 | No source code yet, and no item for the walking skeleton | `rastro:init` (not the built-in `/init`) |
 {{state_table_first_row}}
 | A {{tracker_item}} exists, without `## Reconciliation` in its description | `implement`, which calls `reconcile` |
+| Published graph with multiple slices to coordinate on request | `implement-multiple` |
 | A {{tracker_item}} with `## Reconciliation`, no branch | `implement` |
 | A branch with verified commits, no PR | `deliver` |
 | A PR is open | Review: automatic when `review.kind` is not `none`; human always |
@@ -115,16 +116,16 @@ Three prohibitions:
 
 Every gate declares its class and its mode on its title line, as in `Class: fork. Mode: confirmation.`, and `## Execution mode` defines the modes. The skill that prints the gate is its authority.
 
-A subagent never asks the human. A subagent that meets a constraint returns the finding as text and ends its task; the session that dispatched it raises the gate. If there is no structured question tool, end the turn with the question.
+For a multi-slice run, the coordinator owns mode, gate answers, publication and dependency decisions. Each worker has one slice and an isolated worktree. A subagent never asks the human. A subagent that meets a constraint returns the finding as text and ends its task; the session that dispatched it raises the gate. If there is no structured question tool, end the turn with the question.
 
 ## Execution mode
 
 At the start of each run, the person chooses how the gates of that run behave: stop at every gate, the default, or continuous. The choice holds for that run only and is never a config key.
 
-- **Who asks.** `breakdown`, `implement` and `deliver`, before their first gate, when no mode is recorded for the top item of the work: the parent of the item, or the item itself when it has no parent. `design-doc`, `init`, `setup`, and `reconcile` called on its own never ask, and their gates stop.
+- **Who asks.** `breakdown`, `implement`, `deliver` and the coordinator in `implement-multiple`, before their first gate, when no mode is recorded for the top item of the work: the parent of the item, or the item itself when it has no parent. `design-doc`, `init`, `setup`, and `reconcile` called on its own never ask, and their gates stop.
 - **The question.** **Execution mode for <top item>: stop at every gate or continuous?** Ask with the structured question tool. **Stop at every gate** comes first and is recommended: every gate waits for an answer. **Continuous**: the confirmation gates take the recommended option and the PR lists them, while the decision and team gates still stop. Without that tool, end the turn with the question.
 - **Where it lives.** `<workspace>/mode`, in three lines: `mode: stop` or `mode: continuous`, then `item: <top item id>`, then `date: <YYYY-MM-DD>`. A file for another top item, or written on an earlier day, does not count: ask again and overwrite it.
-- **When it ends.** The run ends when the person stops at a gate, when a skill stops and sends the request elsewhere, or when the continuity gate of `deliver` finds no next item. Delete `<workspace>/mode` then, so a forgotten continuous mode never reaches the next run.
+- **When it ends.** The run ends when the person stops at a gate, when a skill stops and sends the request elsewhere, or when the continuity gate of `deliver` finds no ready item. In a multi-slice run only the coordinator deletes the shared mode. Delete `<workspace>/mode` then, so a forgotten continuous mode never reaches the next run.
 - **Reusing it.** When a skill reuses a recorded mode, it prints one line: `Execution mode: <stop at every gate | continuous>, chosen <date> for <top item>.`
 
 Every gate declares its mode next to its class. The mode says what a continuous run does at that gate.

@@ -64,8 +64,8 @@ The direction matters. Tracing from a design doc to its item is weak: a design d
 
 ### Steps
 
-1. Read the item with `read_item`: title, description, children, and the real parent. Read the parent with `read_item` too. Then read the execution mode, as `## Execution mode` in the AGENTS.md block says (template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`). For a project whose AGENTS.md block predates the section, the top item is the parent, or the item itself when it has no parent.
-2. Extract the acceptance criteria from the item. An item without them yields the first finding of the reconciliation.
+1. Read the item with `read_item`: title, description, children, and the real parent. Read the parent with `read_item` too. Then read the execution mode, as `## Execution mode` in the AGENTS.md block says (template: `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`). For a project whose AGENTS.md block predates the section, the top item is the parent, or the item itself when it has no parent. For a flat graph use the publication id.
+2. Resolve readiness and target as described below. Stop at intake when the requested slice is waiting. For a ready `[no PR]` slice, show the reviewed artifact and hand it to its human executor. Extract the acceptance criteria from the item. An item without them yields the first finding of the reconciliation.
 3. Find the design doc in `## Sources` of the parent when the item has one, otherwise of the item itself: the item that holds, or will hold, `## Reconciliation`. When the parent has no `## Sources`, fall back to the item's own. With `tracker: local`, the sources may sit in the `sources:` frontmatter field instead of a section. Otherwise look for a design doc link in the description. Otherwise stop and ask the human which design doc applies. When the human says there is none, the item description is the intent: materialize it in place of the design doc, at the same path and with the same header.
    - A bug with no design doc: its root cause is the intent. Skip the role mapping: `reconcile` runs in root-cause mode.
    - The walking-skeleton item, whose `## Sources` lists ADRs and marks none as the source of truth, is an item with no design doc. Do not stop to ask for one: the ADRs are its sources, and its description is the intent.
@@ -74,6 +74,29 @@ The direction matters. Tracing from a design doc to its item is weak: a design d
 5. Expand everything that was collapsed. Collapsing tells a person what to read first, never what the agent may skip. Check that the copy has one deliberation per `DT-nn` and that no section arrived with only its title. An empty section is a capture failure. A capture gap becomes a false `Not sized` finding, which is a whole PR of invented work.
 6. Write the provenance header at the top of the copy, with the frozen-copy notice below.
 7. Map the semantic roles below, by content, and fail loudly on each role that is missing.
+
+### Resolve readiness and target
+
+Resolve the slice and its dependency evidence at intake. This procedure also supplies readiness for `deliver` and `implement-multiple`.
+
+1. Read the literal `## Delivery dependencies` from the item or its real parent. Match the item's `**Slice:**` key to one row. For a nested story, read siblings from the parent's children using `read_item`; for flat cards, resolve peers by exact publication id and slice key using the publication receipt or adapter lookup, with explicit item links from the human if discovery is unavailable. Verify any recovered mapping by reading the cards. With `tracker: none`, use the publication receipt and readable workspace items. Treat inconsistencies, missing rows, unknown dependencies and partial publication as blockers. Validate the graph using `breakdown` §4.8.
+2. Refresh the project base ref before checking state. Use git history and the linked PR evidence, through the code-host adapter when it supports lookup or links confirmed by the human. An item title, a tracker status, a merely pushed branch, and a missing check do not prove merge or verification. A squash merge can satisfy the dependency when the linked PR shows it merged and its resulting change is present on base, even though the source commit is not an ancestor. Count human executions as satisfied only with the confirmation required by the reviewed artifact.
+3. Classify the slice itself before placing it in the ready set. A code slice whose linked PR is merged and whose resulting change is confirmed on the project base is complete; do not dispatch it again. A `[no PR]` slice is complete only when its reviewed human execution evidence is confirmed. A slice merged only into an upstream branch remains in progress, waiting for that chain to reach the project base; do not create a replacement branch. An open PR or an existing worktree is in progress and resumes by its own id. A closed, unmerged PR is blocked for a new decision, not automatically ready. Record the evidence and exclude complete or in-progress slices from fresh scheduling.
+4. Resolve the branch point and comparison target together for a slice that is eligible to start or is in progress. For an in-progress slice this refreshes its target for `deliver`; it does not authorize another branch or worker:
+
+   | Graph target | Ready when | Effective target |
+   |---|---|---|
+   | `base`, no prerequisites | The published card and a current base ref are available | `project.base_branch` |
+   | `base`, with prerequisites | Every code prerequisite is confirmed on base and every human prerequisite is confirmed complete | `project.base_branch` |
+   | One declared prerequisite | Its code is confirmed on base | `project.base_branch` |
+   | One declared prerequisite, code outside base | Its linked PR is open against the declared graph, verified on its current head, and the exact remote head is available. Its branch contains only changes in the declared dependency chain. Any blocking human execution required to use it has completed | That prerequisite's PR head branch |
+   | `none` | The prerequisites are satisfied | Human execution, without a branch |
+
+   A draft local branch, a closed unmerged PR, a missing head, or an unverified prerequisite leaves the slice waiting. Record the item, blocker, and evidence to check when resuming. Resume an in-progress slice by its own id and do not create a second branch.
+
+5. Record the resolved slice key, prerequisite states with evidence, target branch and starting commit in `<workspace>/<id>/delivery.md`. Resume against that record and refresh the evidence before branching or handing off. Use the graph's publication id as the execution-mode key for flat cards. When facts change, follow `deliver` Step 0. A root that is ready can start even when a lower-numbered slice is blocked.
+
+**Legacy items.** For a card with no delivery graph, a standalone item still branches from base. For an existing stack honor its explicit predecessor and observed target. For a grouped legacy card with ambiguous dependencies, take the predecessor and target to a decision gate with the available evidence. A display ordinal can locate a card but does not authorize a new stack. Do not rewrite cards on read. When the team chooses to migrate, preview stable keys, verified edges, and branch targets; after explicit approval add the graph and keys without changing tracker ids, links or current branch targets.
 
 Why materialize: a subagent reads local files and has no MCP connection. A design doc that exists only in a docs tool is out of its reach. The file must be reachable, not versioned. What lasts is the PR description, which carries the design doc's link, version and date.
 
@@ -105,7 +128,7 @@ Match each role by what a section holds, never by its title. Titles vary between
 | invariants | rules that always hold, transaction boundaries, compensation | the Given/When/Then scenarios and their assertions |
 | code flow | components, order of effects, transaction owners | the seed of the plan's file map: type, module and boundary bind; a new component's name is a suggestion |
 | risks | what can go wrong | the risk section of the PR |
-| slicing | the candidate slicing | the seed of the PR stack; a draft, never authority |
+| slicing | the candidate slicing | a seed for the delivery graph; a draft, never authority |
 
 These absences recur and must be listed when they occur: acceptance criteria, state diagram, rollout plan, feature flag, test strategy, monitoring, code flow.
 
@@ -146,6 +169,7 @@ The design doc was written before the code existed, and the code is what runs. T
    The range ends at the base branch, not at `HEAD`: the question is what landed on the base since the stamp, and the commits of this branch are not that. When neither names a path, stop and ask the human for the scope. Never run the command without a path: it would list every commit since the stamp.
 3. Empty output: accept the reconciliation as it is. That is the common case.
 4. Non-empty output: run `reconcile` in revalidation mode, with the identifier and the directory listed below, passing the items whose files appear in the log. A closed `D-n` does not reopen, unless the delta contradicts it. Then `reconcile` raises its deliberation gate again, citing the `D-n` and the commit.
+5. For a stacked slice, also inspect the declared prerequisite's scoped diff against its merge base with `project.base_branch`. Check the prerequisite contract on the recorded starting commit. If its changes invalidate a closed decision, bring the commit and `D-n` back to the deliberation gate before planning. Keep the shared reconciliation's base stamp on the project base; record prerequisite-specific evidence in the slice workspace.
 
 **It has none.** The item was written by hand, or before the project adopted rastro. Run `reconcile` in full:
 
@@ -156,9 +180,9 @@ The design doc was written before the code existed, and the code is what runs. T
 
 The gate belongs to `reconcile`. Never write the plan before every `D-n` carries `Decided (<YYYY-MM-DD>):`. "Approved as is" closes only the decisions whose executor is the agent. A decision with a human executor stays open until the human says whether, when and where it runs.
 
-After the gate, write `## Reconciliation` where this stage looked for it, on the parent or on the item itself, with `write_section`: tables only, in the form `${CLAUDE_PLUGIN_ROOT}/templates/work-item.md` gives, plus the human-execution block of each `D-n` with a human executor, never a workspace path.
+When reconciliation is newly produced or materially changes, write `## Reconciliation` where this stage looked for it, on the parent or on the item itself, with `write_section`: tables only, in the form `${CLAUDE_PLUGIN_ROOT}/templates/work-item.md` gives, plus the human-execution block of each `D-n` with a human executor, never a workspace path.
 
-- With `tracker: local`, create the implementation branch first, named as `### Branch and commits` says. Then write the section into the holder's file, and commit that file alone as the first commit of the branch.
+- With `tracker: local`, create the implementation branch first, named as `### Branch and commits` says. Then write the section into the holder's file, and commit that file alone as the first commit of the branch. In a batch this file belongs to the slice writing it. Resolve potential overlap with the coordinator before editing. With a remote tracker the coordinator checks the holder for intervening edits and writes the approved section.
 - With `tracker: none`, it does not go to the item: `deliver` puts the reconciliation in the PR description.
 
 ## Stage 3 — PLAN
@@ -224,14 +248,14 @@ Execution starts only after the plan is approved at the gate below, by the perso
 
 Use `superpowers:subagent-driven-development` when any of these holds:
 
-- the parent's stack has 2 or more PRs, that is, `<n>` in `PR <k> of <n>` is 2 or more. An item with no parent is a stack of one;
+- there are 2 or more PRs in the delivery graph, counting only code slices. For legacy items use the known sibling count;
 - the plan has 6 or more tasks;
 - the plan touches 2 or more modules of `architecture.modules`;
 - the plan includes a migration.
 
 Otherwise, inline execution. Without superpowers, inline execution is the only option, whatever the criterion says.
 
-Announce inline or subagent execution and the criterion that set it. The human may override it at the gate.
+In a batch worker run, execute the tasks of the assigned slice inline. The batch already allocates one agent and worktree per slice. The coordinator owns all gates. Announce inline or subagent execution and the criterion that set it. The human may override it at the gate.
 
 When subagents run, each task's implementer and reviewer use the model its tier maps to in `.rastro/CALIBRATION.md`. A task with no mapping uses the session's own model.
 
@@ -242,7 +266,7 @@ The handoff of this skill replaces the branch-finishing step of `superpowers:sub
 | | |
 |---|---|
 | Tasks | <n>, of which <k> are `[HUMAN]` |
-| PRs in the parent's stack | <n> |
+| Code slices | <n> |
 | Modules touched | <names> |
 | Migration | <yes or no> |
 | Execution | <subagents or inline>, because <criterion> |
@@ -269,7 +293,7 @@ Whoever executes the task commits it: the subagent, or this skill inline. `deliv
 The commit convention lives in the AGENTS.md block, which reaches every subagent as project instruction. The Global Constraints repeat it for the reviewer, who receives only that block. Confirm both copies before executing.
 
 - One branch per PR, named by `conventions.branch` with the id of the item the PR delivers and a slug in `project.languages.machine`.
-- A stacked PR branches from the previous PR's branch and targets it, never the base branch.
+- Branch from the recorded starting commit and target the branch selected in Stage 1. Stacking is permitted only for the recorded code prerequisite. For a `[no PR]` slice, hand the work to the human and record their verified completion.
 - Every commit follows `conventions.commit`, with a body that says why and cites the `DT-nn` or `D-n` it implements. When `conventions.co_author_trailer` is `true`, every commit carries the trailer naming the real model of the session.
 - Domain identifiers are never translated.
 - With squash merge, the PR title becomes the commit on the base branch, and no local hook validates it. That title belongs to `deliver`.
@@ -288,7 +312,7 @@ The task that delivers the first instance of a type writes its golden path. The 
 - Fill `## Security` for every type: the threats considered, the control for each and how it is verified, or "none identified" with the reason. A type in `architecture.boundary_types`, or one that its `DT-nn` says crosses a trust boundary (the same `DT-nn` that adds the layer), is a boundary type, and "none identified" does not serve it: draw its threats from the public reference that `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md` names, one line per threat with its control and how the control is verified, and give `## Verification` at least one scenario against the real system, without mocks, in the shape the template gives.
 - When the type is not yet in `architecture.layers`, the same commit adds it to `.rastro/config.yml`, as the decided `DT-nn` says, and to `architecture.boundary_types` when that `DT-nn` says the type crosses a trust boundary.
 
-An `extends` raises the minor version, adds the instance to `instances` and a row to `## History`. A `contradicts` decided for the golden path raises the major version, moves every instance that no longer follows it to `## Known debt`, and adds a row to `## History`. A `follows` adds the instance to `instances` when it is absent, in the same commit as the instance, with no version change and no review gate.
+An `extends` changes a semantic rule, raises the minor version and adds a row to `## History`. A `contradicts` decided for the golden path raises the major version, moves canonical examples that no longer follow it to `## Known debt`, and adds a row to `## History`. Keep `instances` to a few canonical examples and review changes to that set with the golden path. A `follows` leaves the golden path file unchanged, including `instances`, version and History. Audit discovers other instances through project paths and conventions.
 
 A golden path moves from `verified_by: review` to `"automated: <command>"` (quoted, because the unquoted form is not valid YAML) only in a task that writes the check, never in the task of its first instance. Before the change, run the command twice and paste both outputs in the task report: on the branch, where it exits 0, and with one instance edited to break one decision, where it exits non-zero and prints what the template's `## Verification` asks. Undo that edit. The same commit raises the minor version, adds a row to `## History`, rewrites `## Verification` to name the command, and makes `verify.lint` run the command, directly or through a script, so CI runs it too. This change adds no decision, so it raises no review gate.
 
@@ -386,8 +410,8 @@ When every task is done and verification is green, print this block:
 ```
 READY FOR deliver — <id>
 
-Branch: <branch>   target: <base branch, or the previous PR's branch>
-Commits: <n>   Position in the stack: PR <k> of <n>
+Branch: <branch>   target: <resolved target branch>
+Commits: <n>   Slice: <stable key or legacy item>   Prerequisites: <state and evidence>
 
 Workspace <workspace>/<id>/, gitignored, for deliver to transpose:
 - design-doc.md: frozen copy, version <v>, <date>; only the link goes to the PR
@@ -405,7 +429,7 @@ Decisions to cite: <D-1, DT-03, ...>
 Risks to record: <...>
 ```
 
-The next stage is `deliver`, at `${CLAUDE_PLUGIN_ROOT}/skills/deliver/SKILL.md`. In a run that stops at every gate, it runs when the human asks for it: this skill does not move on by itself. In a continuous run, invoke it with the id.
+The next stage is `deliver`, at `${CLAUDE_PLUGIN_ROOT}/skills/deliver/SKILL.md`. In a run that stops at every gate, it runs when the human asks for it: this skill does not move on by itself. In a continuous run, invoke it with the id. In a batch worker run, continue through delivery preparation and return to the coordinator before publication.
 
 ## What this skill does NOT do
 

@@ -72,6 +72,15 @@ test_github_adapter_names_default_pr_template() {
   need_text adapters/code-host/github.md 'When `code_host.template` is set, it names the template instead.'
 }
 
+test_code_host_uses_declared_target() {
+  local rel
+  for rel in adapters/code-host/github.md adapters/code-host/gitlab.md; do
+    need_text "$rel" 'Use the exact `<target>` supplied and verified by `deliver`.'
+    need_text "$rel" 'Do not infer a target from'
+  done
+  need_text adapters/CONTRACT.md 'Never infer a target from opening order.'
+}
+
 offset_of() {
   grep -boF -e "$2" "$root/$1" | head -n 1 | cut -d: -f1
 }
@@ -102,11 +111,11 @@ test_callers_push_before_the_code_host_opens() {
 test_github_projects_adapter_text() {
   local rel=adapters/tracker/github-projects.md needle
   for needle in 'REQUIRED CLI: gh, git' '`tracker.project`' '`tracker.project_owner`' \
-    'gh issue create --parent' 'gh issue edit' '--add-sub-issue' '--json parent,subIssues' \
-    'gh project item-add' 'gh project item-edit' '--field Status' '--value "Todo"' '--value "In review"' \
+    'gh issue create --parent' 'gh issue edit' '--parent <parent>' '--json parent,subIssues' \
+    'gh project item-add' 'gh project item-edit' '--field-id <status field id>' '--single-select-option-id <Todo option id>' 'In review option' \
     'gh project field-list' 'gh auth refresh -s project' \
     'The Status field is a mirror and is never read as a source.' \
-    'built-in workflow' 'textual hierarchy' 'Refs #<n>' 'NOT VERIFIED' '`addSubIssue`'; do
+    'built-in workflow' 'textual hierarchy' 'Refs #<n>' 'NOT VERIFIED' 'GitHub sub-issues API'; do
     need_text "$rel" "$needle"
   done
 }
@@ -133,6 +142,24 @@ test_docs_claude_adapter_text() {
   done
 }
 
+test_tracker_publication_contract() {
+  local kind
+  for kind in github github-projects jira local none; do
+    need_text "adapters/tracker/$kind.md" '### publication'
+    need_text "adapters/tracker/$kind.md" 'Publication destination:'
+    need_text "adapters/tracker/$kind.md" 'Dependency representation:'
+  done
+  need_text adapters/CONTRACT.md 'Rastro-Publication: <publication_id>/<card_key>'
+  need_text adapters/CONTRACT.md '## Delivery dependencies'
+  need_text adapters/CONTRACT.md 'Record the result before starting another card.'
+  need_text adapters/tracker/jira.md 'A missing search result cannot resolve an unknown create outcome.'
+  need_text adapters/tracker/github-projects.md 'Reuse the existing project item'
+  need_text adapters/tracker/local.md 'one branch and one commit'
+  need_text adapters/tracker/none.md 'workspace-only'
+}
+
+test_tracker_publication_contract
+
 test_docs_adapters_render_collapsed_mark
 test_docs_claude_adapter_text
 test_optional_reading_phrase_is_one_phrase
@@ -145,4 +172,5 @@ test_jira_item_url
 test_unverified_command_names_are_flagged
 test_adapters_name_no_plan_terms
 test_github_adapter_names_default_pr_template
+test_code_host_uses_declared_target
 finish

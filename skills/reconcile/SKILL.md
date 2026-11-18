@@ -90,10 +90,12 @@ The walking skeleton intent that `init` writes, whose header says `origin: init`
 
 This subsection applies to every intent, whatever produced it: a design doc, the walking skeleton, an interview or a root cause. Classify each `new` and `changes` component against the golden path whose `type` is the component's type in the `architecture.golden_paths` folder, with one of four tags:
 
-- `follows`: the component fits the current golden path. No row.
+- `follows`: the component fits the current golden path. No row and no edit to the golden path.
 - `extends`: the component needs something the golden path neither covers nor forbids. A row in `Not sized`: the task of the component raises the golden path's minor version.
 - `contradicts`: the component breaks a decision or a checklist item of a `current` golden path. A row in `Divergences: intent vs code`, with the golden path's `file:line` as evidence, and a `D-n` with two options: the golden path evolves to a new major version, or the intent changes to follow it. Neither wins silently.
 - `no golden path`: no golden path has this type, and its evidence is the `architecture.golden_paths` folder, which has no golden path of that type. A row in `Not sized`: the task that delivers this first instance also writes the golden path, from `${CLAUDE_PLUGIN_ROOT}/templates/golden-path.md`.
+
+Classify catalog changes against the invariants for defining, validating and consuming the catalog. Source code or schema holds its enum, list or preset values. Adding a value that follows the existing rules is `follows`; changing the rules can be `extends` or `contradicts`.
 
 A golden path with status `retired` is not a contract: classify against its `superseded_by`.
 

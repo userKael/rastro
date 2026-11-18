@@ -18,7 +18,7 @@ Five stages, in order, none skipped:
 ## Requirements
 
 - `.rastro/config.yml`. Keys read: `tracker.kind`, `tracker.key`, `tracker.hierarchy`, `tracker.local_dir`, `docs.kind`, `docs.public_portal`, `code_host.kind`, `project.base_branch`, `project.languages.human`, `architecture.modules`, `workspace`.
-- The tracker adapter, chosen by `tracker.kind`. Read `.rastro/adapters/tracker/<kind>.md` when it exists, otherwise `${CLAUDE_PLUGIN_ROOT}/adapters/tracker/<kind>.md`, before `item_types` and `create_item`.
+- The tracker adapter, chosen by `tracker.kind`. Read `.rastro/adapters/tracker/<kind>.md` when it exists, otherwise `${CLAUDE_PLUGIN_ROOT}/adapters/tracker/<kind>.md`, before `item_types` and `publication`.
 - On the design doc branch only, the docs adapter, chosen by `docs.kind`. Read `.rastro/adapters/docs/<kind>.md` when it exists, otherwise `${CLAUDE_PLUGIN_ROOT}/adapters/docs/<kind>.md`, before `fetch`.
 - With `tracker: local`, the code-host adapter, chosen by `code_host.kind`. Read `.rastro/adapters/code-host/<kind>.md` when it exists, otherwise `${CLAUDE_PLUGIN_ROOT}/adapters/code-host/<kind>.md`, before `open_change_request`.
 - If the adapter file does not exist, stop and report.
@@ -218,7 +218,7 @@ Count the mergeable slices that the reconciliation supports:
 | 1 mergeable slice | task, with no subtasks |
 | 2 or more mergeable slices | story, with one subtask per slice |
 
-`tracker.hierarchy` names the levels, parent first. With the default `[story, subtask]`, a story holds subtasks. Each level maps to a port type: the parent level is `story` and the child level is `subtask`. The port types are `bug`, `task`, `story` and `subtask`. Any other name in `tracker.hierarchy` is a label for the gate and the summaries, and creation always passes the port type. With a single level, nothing nests: say so at the gate, and create one `task` per slice, each summary carrying its order.
+`tracker.hierarchy` names the levels, parent first. With the default `[story, subtask]`, a story holds subtasks. Each level maps to a port type: the parent level is `story` and the child level is `subtask`. The port types are `bug`, `task`, `story` and `subtask`. Any other name in `tracker.hierarchy` is a label for the gate and the summaries, and creation always passes the port type. With a single level, nothing nests: say so at the gate, and create one `task` per slice, each card carrying the same delivery graph and its stable slice key.
 
 Resolve the tool's name for each type through `item_types` of the tracker adapter before the gate. A substitution the adapter makes, such as a bug created as a task with a label, goes into a note below the gate's state table. It is never silent.
 
@@ -234,7 +234,7 @@ Apply only when the type is story. All five items are required.
 | H2 | Written assertion | no sentence exists that the observer can affirm at the end |
 | H3 | Declared source | Sources has no design doc reference and no intent record |
 | H4 | Closed scope | the modules, repositories and paths touched are not listed |
-| H5 | Slice 1 writable today | slice 1 cannot be written today from a `file:line` |
+| H5 | A root slice writable today | no root slice can be written today from a `file:line` |
 
 H1 replaces the product-or-platform classification. The two differ in the observer, not in the rule: for platform work, the observer is a developer, the CI or an event consumer. Do not ask "is this product or platform?". Part of the real stories fits neither; measure on your backlog how many.
 
@@ -252,10 +252,10 @@ All four items are required.
 
 | # | Item | Fails when |
 |---|---|---|
-| S1 | Revertible alone | reverting only this PR would leave the base branch not building or not passing |
+| S1 | Revertible in dependency order | after reverting any declared dependents, reverting this PR would leave the base branch failing |
 | S2 | Artifact and consequence | the artifact is missing, the consequence is missing, or both |
 | S3 | Anchor in the code | no `file:line`, symbol, table or migration coming from the reconciliation |
-| S4 | Declared order | the subtask states neither its number in the sequence nor what it unblocks |
+| S4 | Declared dependencies | the slice lacks its outcome, acceptance check, prerequisites or branch target |
 
 In the walking skeleton, no code exists yet: the S3 anchor is the `file:line` of the ADR or of `.rastro/config.yml` that decides the slice.
 
@@ -276,7 +276,7 @@ Summaries that fail:
 - `Smoother browsing`: no object
 - `Catch up with what the bookstore team agreed`: says neither what nor where
 
-Out of the rule, on purpose: independence, isolated value, demonstrability and estimate. Slice 1 is often a foundation, and a foundation almost never demonstrates anything. INVEST is a story ruler and stays one. A subtask is a decomposition of work.
+Prefer complete, independently reviewable slices. A foundation can deliver a testable contract of its own when the reconciliation shows that other slices require it. The display number in the title helps readers refer to a slice. It never establishes a dependency.
 
 A `no golden path` or `extends` row of the reconciliation never becomes its own subtask. The subtask that delivers the first instance writes the golden path, and the subtask that delivers the extension raises its version. A golden path with no instance has nothing to point at, and an instance with no golden path is the drift the reconciliation found.
 
@@ -299,7 +299,7 @@ PR <N> — <portal page>: <what the page will state>
 ```
 
 - **Anchor (S3):** the portal page and the `file:line` of the code it describes. Both ends, always.
-- **Order (S4):** after the slice that changes the behavior. A page that describes code that does not exist yet is born wrong.
+- **Dependency (S4):** record the slice that changes the behavior in `depends_on`. Use `base` when the dependency supplies evidence that must land before publication. A page that describes code that does not exist yet is born wrong.
 
 When the reconciliation found nothing for the portal, do not invent a doc subtask. Not every change publishes a rule: an index, an internal refactor or a log adjustment changes nothing the portal states.
 
@@ -309,17 +309,35 @@ When `.rastro/profiles/breakdown.md` has a `## Additional checks` section, run e
 
 ### 4.7 Merge test
 
-Before the gate, scan the adjacent pairs `(N, N+1)`, in order:
+Before the gate, scan candidate pairs that deliver the same artifact and outcome or whose changes cannot be reviewed and reverted in the declared dependency order:
 
-1. Merged, are they still revertible alone? (S1)
+1. Merged, are they still revertible in dependency order? (S1)
 2. Merged, do they still name one artifact and one consequence? (S2)
 3. Merged, is the resulting diff still reviewable in one sitting?
 
-Merge when 1 and 2 are yes. Question 3 is the only size criterion, and it can only refuse a merge, never justify a cut. Repeat the scan until no pair passes. The trace of the merges is mandatory at the gate.
+Merge when all three pass. Keep independently reviewable changes in separate slices. Repeat until no pair passes and show the trace of the merges at the gate. For a dependent slice, check rollback in dependency order, with dependents rolled back before the prerequisite they need. An unresolvable shared change goes back to slicing.
+
+### 4.8 Delivery graph
+
+Give each final slice a stable `S-01` style key. Persist the graph under the literal heading `## Delivery dependencies` with the table from `${CLAUDE_PLUGIN_ROOT}/templates/work-item.md`. Publish it on the story, on a standalone item, or on each flat card if the tracker cannot represent the hierarchy. Every slice card, including a standalone one, carries its own `**Slice:**` key and `## Acceptance criteria`. The same key follows the slice if the display order changes.
+
+For each edge in `depends_on`, cite the contract, state, human execution or other prerequisite that requires it, with reconciliation evidence. A shared module, adjacent ordinal or review order alone creates no edge. Recut overlapping changes when feasible. For independent slices, record overlapping write paths in the coordination notes if they cannot be recut. The coordinator serializes those writes without representing them as a code dependency.
+
+- A root has `depends_on: []` and target `base`, meaning `project.base_branch`.
+- A slice may target one declared code prerequisite by its slice key when its code is needed and can be isolated on that prerequisite's branch. Record `base` when all prerequisites must land or finish first. Multiple direct prerequisites target `base` and wait until all are satisfied.
+- A `[no PR]` slice targets `none`. Its completion requires the reviewed human execution evidence. A human slice cannot be a branch target.
+
+Validate the whole graph before creating anything. Keys are unique, all edges resolve within the graph, targets follow the rules above, and walking the dependencies reaches roots without revisiting a slice in the current chain. Reject missing, duplicate or cyclic edges and any unanchored dependency. A ready root must have an acceptance check and a writable scope. A graph error makes the gate recommend **Adjust the slicing**.
+
+### 4.9 Publication preview
+
+Render the final title, mapped type, destination, parent relation and entire body for every card using 5.1–5.3, including acceptance checks and the reconciliation. Show the complete bodies at the gate, using expandable sections or local review files the human can actually open. A parent relation may reference a card key because the tracker allocates its id only during publication. Keep that binding outside the rendered body.
+
+Freeze the packet at `<workspace>/breakdown-<slug>/publication/` with a fresh random ASCII `publication_id` of at least 128 bits, the destination, and the full request for each card. Do not derive the id from the slug, date, title or branch; persist it before preview and reuse it only for retries of this same packet. If the folder already holds a different approved packet, use a new folder and id. Use `top` for the story and the slice key for each slice card. Include the exact marker `Rastro-Publication: <publication_id>/<card_key>` in each body. Keep the approved packet for retries. If a draft changes before approval, show the revised packet at the gate.
 
 ## Gate — slicing
 
-Stop. Nothing has been created yet. Print the title, then the state and the proposal only:
+Stop. Nothing has been created yet. Print the title, state, graph proposal and complete publication preview:
 
 **Gate — slicing of <slug> proposed: create the items?** Class: fork. Mode: confirmation.
 
@@ -333,14 +351,14 @@ Stop. Nothing has been created yet. Print the title, then the state and the prop
 | Merged pairs | <3+4, 6+7 / none> |
 | Observer | <observer>: "<assertion in one sentence>" |
 
-| # | Slice | Anchor | Unblocks |
-|---|---|---|---|
-| 1 | PR 1 — <artifact>: <consequence> | `<file:line>` | <what> |
+| Slice | Outcome and acceptance check | Anchor | depends_on | Branch target |
+|---|---|---|---|---|
+| S-01 | <consequence and check> | `<file:line>` | [] | base |
 
 Nothing has been created yet.
 ```
 
-A failed rule item becomes one note below the state table, naming the item, such as `H4`, and what is missing. The recommended option then becomes adjust, not create. A type substitution and each gate check from `## Additional checks` also become notes. A failing gate check makes the recommended option adjust too.
+Show the frozen publication preview from 4.9 below the table. A failed rule item becomes one note below the state table, naming the item, such as `H4`, and what is missing. The recommended option then becomes adjust, not create. A type substitution and each gate check from `## Additional checks` also become notes. A failing gate check makes the recommended option adjust too.
 
 Then ask with the structured question tool, recommended option first, without repeating the options in the text above it:
 
@@ -352,7 +370,7 @@ Without a structured question tool, end the turn with the question. Create items
 
 ## Step 5 — CREATION
 
-Read `.rastro/adapters/tracker/<kind>.md` when it exists, otherwise `${CLAUDE_PLUGIN_ROOT}/adapters/tracker/<kind>.md`, before `create_item`. The adapter assigns the ids. `tracker.key` is the prefix the adapter uses.
+Read `.rastro/adapters/tracker/<kind>.md` when it exists, otherwise `${CLAUDE_PLUGIN_ROOT}/adapters/tracker/<kind>.md`, before `publication`. The adapter assigns the ids. `tracker.key` is the prefix the adapter uses. Publish the approved packet, with only the tracker-assigned parent id resolved after approval. Sections 5.1–5.3 define the preview rendered before the gate.
 
 ### 5.1 Top item description
 
@@ -361,6 +379,7 @@ Write it from `${CLAUDE_PLUGIN_ROOT}/templates/work-item.md`, in `project.langua
 - **Context:** 2 to 4 lines on why the item exists. It points to the source and never repeats the design doc.
 - **Observer and assertion:** H1 and H2.
 - **Scope:** H4, plus the declared scope of the reconciliation, with the paths of its `exists` and `changes` items. `implement` filters the delta revalidation by this list. For the walking skeleton, whose modules are "none yet", the list is the paths the skeleton creates, one per component, so the delta revalidation has a path and `implement` never stops to ask for one.
+- **Acceptance criteria:** the observer's checks. A standalone item includes its slice key and delivery graph. A story includes its delivery graph.
 - **Sources:** the design doc reference, version and capture date, marked as the source of truth; the violated contract for a bug; the separate intents found in 2.1; the reconciliation stamp `<base_branch>@<sha7>` and its date; for the walking skeleton, each ADR it builds on, by path, none of them marked as the source of truth.
 - **`## Reconciliation`:** the five sections of `reconciliation.md`, as tables.
 
@@ -381,42 +400,49 @@ Never cite a workspace path anywhere in an item. It is a dead link the next day.
 
 ### 5.2 Subtask description
 
-Short. Four fields, nothing else, as the template shows:
+Use the subtask shape in the template:
 
-- **Unblocks:** S4, what the next slice can do only after this one.
+- **Slice:** stable slice key from the graph.
+- **Unblocks:** the outcome and any dependent slices it enables.
+- **Acceptance criteria:** the concrete check in the graph.
+- **Scope:** repository-relative write paths, including shared artifacts the slice changes.
 - **Anchor:** S3, the `file:line`, symbol, table or migration.
 - **Applicable decisions:** the `D-n` and `DT-nn` that bind this subtask, by identifier.
-- **Revert:** S1, what returns to its previous state if this PR alone is reverted.
+- **Revert:** S1, what returns to its previous state and which dependents must be rolled back first.
 
 A `[no PR]` subtask writes `[no PR]` in Anchor and Revert. A subtask never repeats the reconciliation, which lives in the parent.
 
 ### 5.3 Links
 
-- Each subtask has the story as its parent, through the parent argument of `create_item`.
+- Each subtask has the story as its parent, through the parent binding in the publication packet.
 - The story has its epic as its parent, when an epic exists.
 - Link no PR here. The item-to-PR link belongs to `deliver`, once the PR exists.
 
-### 5.4 By tracker
+### 5.4 Publication and recovery
 
-- **`tracker: local`:** after the gate, follow `create_item` of the adapter. It creates the branch `chore/<id>-<slug>` for the top item, commits the item files with explicit paths, pushes the branch with `git push -u origin chore/<id>-<slug>`, and only then opens a PR through the code-host port, because the code-host adapter opens a PR from a pushed branch and leaves the push to its caller. The human's choice of **Create** authorizes this push, and only this one. The item exists once it is on the base branch, which means after a human merges that PR. With `code_host.kind` set to `none`, commit on the branch, do not push, and say that the merge is manual. This item PR is the only PR this skill opens.
-- **`tracker: none`:** the item lives in the conversation and in the workspace, and the reconciliation goes to the PR description later. After creation, copy `<workspace>/breakdown-<slug>/reconciliation.md` to `<workspace>/<item id>/reconciliation.md`, where `<item id>` is the id of the top item, and say so at the continuity gate. `implement` reads it there, which keeps one stamped reading. Say that the work cannot be resumed before a PR exists.
-- **Any other tracker:** follow `create_item` and `item_types` of the adapter as written.
+Use the tracker adapter's `publication` capability. Record the result per card immediately in the publication workspace: state (`complete`, `partial`, or `blocked`), exact marker, returned id and URL when known, confirmed parent, and pending steps. Complete the parent before its children. Use exact marker lookup in the approved destination and verify the recovered card's type, title, parent and immutable graph/source identity against the approved packet before reusing its id. Create a card only on verified absence. If a create times out, re-read its exact marker before any retry. On ambiguous lookup, mismatched identity, or uncertainty about absence, report the blocker and preserve the packet and receipts. Resume the same packet and finish pending steps against the recovered card. Prevent concurrent publication attempts for that packet.
+
+Report each card and its pending steps at handoff, including the item PR if applicable. A partial publication does not enter implementation. If the installed adapter predates `publication`, present the approved packet for manual publication or update the adapter before automated writes.
+
+- **`tracker: local`:** after the gate, follow `publication` of the adapter and finalize all approved files together. It creates the branch `chore/<id>-<slug>` for the top item, commits the item files with explicit paths, pushes the branch with `git push -u origin chore/<id>-<slug>`, and only then opens a PR through the code-host port, because the code-host adapter opens a PR from a pushed branch and leaves the push to its caller. The human's choice of **Create** authorizes this push, and only this one. The item exists once it is on the base branch, which means after a human merges that PR. With `code_host.kind` set to `none`, commit on the branch, do not push, and say that the merge is manual. This item PR is the only PR this skill opens.
+- **`tracker: none`:** the item lives in the conversation and in the workspace, and the reconciliation goes to the PR description later. After creation, copy `<workspace>/breakdown-<slug>/reconciliation.md` to `<workspace>/<item id>/reconciliation.md`, where `<item id>` is the id of the top item, or of each standalone flat card. Say so at the continuity gate. `implement` reads it there, which keeps one stamped reading. Say that this record can be resumed in the same workspace. Beyond that workspace the first durable record is the PR.
+- **Any other tracker:** follow `publication` and `item_types` of the adapter as written.
 
 ### 5.5 The run after creation
 
-Write the id of the top item on the `item:` line of `<workspace>/mode`, so that `implement` and `deliver` recognize the run. In a continuous run, append the lines of `<workspace>/breakdown-<slug>/rulings.md` to `<workspace>/<first id>/rulings.md`, where `<first id>` is subtask 1, or the top item when it has no subtasks. The line of the continuity gate below goes there too. `implement` and `deliver` work in that folder, so the lines reach the first PR.
+Write the top item id, or the flat graph's publication id, on the `item:` line of `<workspace>/mode`, so that `implement` and `deliver` recognize the run. In a continuous run, append the lines of `<workspace>/breakdown-<slug>/rulings.md` to `<workspace>/<first id>/rulings.md`, where `<first id>` is the selected ready root, or the top item when it has no subtasks. For a flat graph, use `publication_id` as the run identity and keep a receipt mapping slice keys to tracker ids. The line of the continuity gate below goes there too. `implement` and `deliver` work in that folder, so the lines reach the first PR.
 
 ## Gate — continuity
 
 Print the title, then the state, with the created ids linked:
 
-**Gate — <id> created: implement <subtask 1 / the item> now?** Class: fork. Mode: confirmation.
+**Gate — <id> created: implement <ready slice / the item> now?** Class: fork. Mode: confirmation.
 
 ```markdown
 | | |
 |---|---|
 | Created | [<id>](<url>), <type>, <k subtasks / no subtasks> |
-| First subtask | <[<id>](<url>): PR 1 — <artifact> / not applicable> |
+| Ready slices | <[<id>](<url>) and slice key for each root / not applicable> |
 | Item PR | <URL / not applicable> |
 | Code | nothing was coded |
 
@@ -432,21 +458,21 @@ With `tracker: local`, add a note below the table: the items exist for other clo
 Then ask with the structured question tool, recommended option first, without repeating the options in the text above it:
 
 - **Stop here** (recommended when the run stops at every gate): the items are ready; the PRs take days and involve other people. The run ends, and `<workspace>/mode` is deleted.
-- **Implement <id>, PR 1** (recommended in a continuous run): invokes `implement` on the subtask, never on the story. For a task or a bug with no subtasks, on the item itself.
+- **Implement <ready id>** (recommended in a continuous run): invokes `implement` on the subtask, never on the story. For a task or a bug with no subtasks, on the item itself.
 
 With `tracker: local` and an item PR not merged yet, the recommended option is **Stop here** in both modes: the person must merge the item PR first, because the items are on the base branch only after the merge, and `implement` could not read them before. The gate then stops even in a continuous run, and the run ends with `<workspace>/mode` deleted.
 
 Without a structured question tool, end the turn with the question.
 
-The default is to stop. Never go on to implementation without an explicit choice. A continuous run is that choice, made at the start. A flow of several PRs takes days and involves other people, and this skill does not pretend to run it in one go.
+When several roots are ready, offer each as a valid starting point. For the single-item continuous path, select the lowest stable key among ready agent-executed slices as a deterministic tie-break. Show any ready `[no PR]` slice to its human executor. When no agent-executed slice is ready, show the blockers and end the run. The default is to stop. Never go on to implementation without an explicit choice. A continuous run is that choice, made at the start. A flow of several PRs takes days and involves other people, and this skill does not pretend to run it in one go.
 
 ## Handoff
 
 When the human chooses to implement, invoke `implement` with the id of the subtask, never the story. For a task or a bug with no subtasks, pass the item id.
 
-With any tracker but `none`, the `## Reconciliation` section of the item is the copy `implement` inherits: it finds the section in the parent. With `tracker: none`, `implement` reads the copy at `<workspace>/<item id>/reconciliation.md` (5.4). Either way, it revalidates by delta over the declared scope instead of running the protocol again.
+With any tracker but `none`, the `## Reconciliation` section of the item is the copy `implement` inherits: it finds the section in the story or in the standalone item itself. With `tracker: none`, `implement` reads the copy at `<workspace>/<item id>/reconciliation.md` (5.4). Either way, it revalidates by delta over the declared scope instead of running the protocol again.
 
-After subtask 1, the loop goes on: `implement`, then `deliver`, then subtask 2. The human drives the loop at the continuity gate of `deliver`, or, in a continuous run, the choice made at the start.
+After each delivery, `deliver` refreshes the graph and presents the next ready slice at its continuity gate. When the human asks to coordinate several slices, use `${CLAUDE_PLUGIN_ROOT}/skills/implement-multiple/SKILL.md`.
 
 ## What this skill does NOT do
 

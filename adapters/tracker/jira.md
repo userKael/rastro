@@ -4,9 +4,9 @@
 
 REQUIRED MCP: atlassian
 
-The adapter uses these tools of that MCP server: `getJiraIssue`, `createJiraIssue`, `editJiraIssue`, `addCommentToJiraIssue`, `getJiraProjectIssueTypesMetadata`, `getJiraIssueRemoteIssueLinks`.
+The adapter uses these tools of that MCP server: `getJiraIssue`, `createJiraIssue`, `editJiraIssue`, `addCommentToJiraIssue`, `getJiraProjectIssueTypesMetadata`, `getJiraIssueRemoteIssueLinks`, `getAccessibleAtlasResources` and `searchJiraIssuesUsingJql`.
 
-`tracker.key` is the Jira project key. An item id is `<tracker.key>-<n>`, for example `SHELF-12`.
+`tracker.site` is an optional site URL or cloud id. Use `getAccessibleAtlasResources` to resolve it. Use the resolved cloud id for all capabilities. With an empty site, use the only accessible site or ask which site when several are available. Do not guess a site from an issue key. `tracker.key` is the Jira project key. An item id is `<tracker.key>-<n>`, for example `SHELF-12`.
 
 ## Detection
 
@@ -50,6 +50,13 @@ Never say the link was created. When it does not exist, the report says it does 
 Call `getJiraProjectIssueTypesMetadata` for the project key before creating anything, and map `bug`, `task`, `story` and `subtask` to the names it returns. The project may use localized names in its interface, so match by the names the tool returns and do not assume the English ones.
 
 If `bug` has no type in the project, create a Task with the label `bug` and say at the gate what was replaced and why. If another framework type has no match, stop and report it at the gate. Do not pick a substitute.
+
+### publication
+
+- Publication destination: the selected Jira site and `tracker.key`. Use the accessible site's cloud id for every connector call. Confirm that the site contains the project and required issue types before publication.
+- Parent relationship: use the approved native parent when that issue type supports it. When it cannot, disclose the limit during preparation and preview a flat card with an explicit parent reference in its description.
+- Dependency representation: delivery dependencies and slice ids are description text. Preserve the full approved description when converting to the connector's supported format.
+- Recovery: verify a recorded issue id using `getJiraIssue`. Otherwise use `searchJiraIssuesUsingJql` with a project-scoped search, following every page, and perform an exact standalone marker match in the description. If the search cannot return descriptions, read each candidate directly. For rich text, compare the rendered paragraph text. Verify the expected parent and project before reusing the key. A missing search result cannot resolve an unknown create outcome. [Jira issue search is eventually consistent](https://developer.atlassian.com/cloud/jira/platform/search-and-reconcile/). Keep it blocked and ask for destination-side confirmation. If the create request was explicitly rejected, retry the same packet after resolving the rejection. Return the known key even when verification is pending.
 
 ## Known limits
 

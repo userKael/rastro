@@ -6,11 +6,23 @@
 |---|---|---|---|
 | <step from the human-executed decision> | <environment> | <before or after the merge> | <yes or no> |
 
+## Reviewer summary
+
+- <outcome and scope>
+- <review focus or operational risk>
+- <verification result and any merge blocker>
+
+## Dependency state
+
+- Target: `<effective branch>`
+- Prerequisites: <none, or each slice and linked PR or human task with its state>
+- Merge order: <any requirement reviewers need before merging>
+
 ## Context
 
 - Item: <id and link>
 - Design doc: <link>, version <version>, captured on <YYYY-MM-DD>
-- Position in the stack: PR <N> of <M>, target `<branch of the previous PR>`; omit when the PR is not stacked
+- Slice: <stable key, or legacy ordinal when it was recorded>
 
 <Why this PR exists, in two to four lines.>
 
@@ -39,13 +51,13 @@
 
 ## Next PRs
 
-| PR | What it delivers | Depends on |
-|---|---|---|
-| <next PR> | <artifact and consequence> | <this PR, or another> |
+| Slice | What it delivers | Depends on | State |
+|---|---|---|---|
+| <related slice and item link> | <artifact and consequence> | <keys> | <ready or waiting with reason> |
 
 ## Reconciliation
 
-Include only with `tracker: none`, where the PR description holds the reconciliation. Use the five tables of `reconciliation.md`, in the form the work item template gives them.
+Link the reconciliation holder for a tracked item. With `tracker: none`, use the five tables and reviewed human-execution blocks in the work item template. Collapse the full content when supported.
 
 ## Divergences from the design doc
 
@@ -81,6 +93,6 @@ Include only when a rule is flagged ⚠.
 <details>
 <summary>Executed plan</summary>
 
-<Tasks of this PR. When the plan is large, cut the tasks of earlier PRs in the stack and say that they were cut.>
+<Tasks of this PR. When the plan is large, cut the tasks already delivered by prerequisite PRs and say that they were cut.>
 
 </details>

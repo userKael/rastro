@@ -22,6 +22,8 @@ tracker:
   hierarchy: [story, subtask]
   # Folder holding item files when kind is local.
   local_dir: work/
+  # Jira: site URL or cloud ID. Empty lets the adapter resolve a single accessible site.
+  site:
   # GitHub Projects: the number of the Project that mirrors item status (kind github-projects).
   project:
   # GitHub Projects: login that owns the Project; empty means the owner of the repository.
@@ -88,6 +90,8 @@ domain:
   stateful_entities: []
 
 conventions:
+  # Optional repository-relative path to the versioned layout guide.
+  layout:
   # Branch name format; placeholders {type}, {id}, {slug}.
   branch: "{type}/{id}-{slug}"
   # Commit and PR title format; placeholders {type}, {scope}, {id}, {subject}.

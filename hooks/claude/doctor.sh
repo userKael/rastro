@@ -354,7 +354,7 @@ fi
 
 gp_check() {
   local file=$1 rel=$2 base key value s dump id type version status vb origin sup inst path seen_t seen_rel cmd bin
-  local has_instances=0 instances="" state
+  local has_instances=0 instances="" state has_discovery=0 discovery=""
   base=${file##*/}
   base=${base%.md}
   checks=$((checks + 1))
@@ -374,6 +374,7 @@ gp_check() {
       origin) origin=$value ;;
       superseded_by) sup=$value ;;
       instances) has_instances=1; instances=$value ;;
+      discovery) has_discovery=1; discovery=$value ;;
     esac
   done <<<"$dump"
   [ -n "$id" ] || problem "golden path $rel: missing id"
@@ -460,6 +461,9 @@ gp_check() {
     seen_rel=$(rastro_gp_seen_find "$gp_seen" "$type") &&
       problem "golden path $rel: type $type already has golden path $seen_rel"
     gp_seen=$gp_seen$type$'\t'$rel$'\n'
+  fi
+  if [ "$has_discovery" -eq 1 ] && ! rastro_gp_discovery "$discovery"; then
+    problem "golden path $rel: discovery must be an inline list of project-relative Git globs"
   fi
   [ "$has_instances" -eq 1 ] || return 0
   rastro_frontmatter_split "$instances" && s=0 || s=$?

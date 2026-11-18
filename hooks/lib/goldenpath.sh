@@ -1,5 +1,5 @@
 # Golden path helpers shared by the doctor and the drift audit.
-# Bash 3.2 compatible. Needs hooks/lib/config.sh sourced and RASTRO_CONFIG set.
+# Bash 3.2 compatible. Needs config.sh for the folder and frontmatter.sh for discovery.
 
 # rastro_gp_folder: prints the golden path folder with a trailing slash
 # (docs/golden-paths/ when the key is empty). Status 2, nothing printed, when
@@ -81,4 +81,36 @@ rastro_gp_list_has() {
     *$'\n'"$2"$'\n'*) return 0 ;;
   esac
   return 1
+}
+
+# rastro_gp_discovery VALUE: populate RASTRO_GP_PATHSPECS from a discovery list.
+# An empty list opts out. Only project-relative globs are accepted.
+rastro_gp_discovery() {
+  local pattern quote="" char i
+  RASTRO_GP_PATHSPECS=()
+  # The shared inline-list splitter separates on every comma, including one
+  # inside quotes. Reject that form rather than silently auditing wrong paths.
+  for ((i = 0; i < ${#1}; i++)); do
+    char=${1:i:1}
+    case $char in
+      '"' | "'")
+        if [ -z "$quote" ]; then quote=$char
+        elif [ "$quote" = "$char" ]; then quote=""
+        fi
+        ;;
+      ,) [ -z "$quote" ] || return 1 ;;
+    esac
+  done
+  [ -z "$quote" ] || return 1
+  rastro_frontmatter_split "$1" || return 1
+  for pattern in ${RASTRO_FM_ITEMS[@]+"${RASTRO_FM_ITEMS[@]}"}; do
+    case $pattern in
+      /* | :* | *[[:cntrl:]]*) return 1 ;;
+    esac
+    case /$pattern/ in
+      */../* | */./*) return 1 ;;
+    esac
+    RASTRO_GP_PATHSPECS+=(":(glob)$pattern")
+  done
+  return 0
 }

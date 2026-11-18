@@ -13,14 +13,14 @@ audit.under_review_days
 Never mark a judgment check as passed when the code was not read: write NOT VERIFIED and the reason.
 bash "${CLAUDE_PLUGIN_ROOT}/hooks/git/audit-drift" --previous "<previous report>"
 `ok`, `review`, `drift` or `NOT VERIFIED`
-`instances-changed` is a signal for review, never drift
+`instances-changed` flags a canonical example
 the file with the greatest `<YYYY-MM-DD>.md` name in `<workspace>/audit/`
 named from the script's `Date:` line
 with no golden paths, still run Step 1 and skip Step 2
 Headings, check names and verdicts stay literal in English
 | <check> | <subject> | <verdict> | <detail> |
 ### Changes since the previous audit
-if it still follows the golden path, nothing changes
+Record verified conformance in the judgment checks.
 cumulative since the log began
 `instance-missing` is drift
-Exclude the instances listed under `## Known debt` of the golden path
+Use `## Known debt` to recognize documented exceptions.

@@ -8,6 +8,8 @@ Identifiers are not translated either: `D-n`, `DT-nn`, rule IDs, domain names.
 |---|---|
 | `## Reconciliation` | `breakdown` or `implement` → state table, `implement` |
 | `## Acceptance criteria` | `breakdown` → `implement`, through `read_item` of the tracker adapter |
+| `## Delivery dependencies` | `breakdown` → `implement`, `implement-multiple`, `deliver` |
+| `Rastro-Publication:` | `breakdown` → tracker adapters for exact-card recovery |
 | `reconciliation.md` | `reconcile` → `breakdown`, `implement`, `deliver` |
 | `NOT VERIFIED` | `domain-context`, `audit` (the skill and its script) → every skill |
 | `[HUMAN]` | `implement` (task) → `deliver` |

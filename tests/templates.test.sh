@@ -98,7 +98,9 @@ test_work_item() {
   require_all work-item.md \
     'id:' 'type:' 'parent:' 'created_on:' 'sources:' \
     '## Context' '## Observer and assertion' '## Scope' '## Acceptance criteria' '## Sources' '## Reconciliation' \
-    'type: <story | task | bug | subtask>' 'id: W-007' 'id: W-008'
+    'type: <story | task | bug | subtask>' 'id: W-007' 'id: W-008' \
+    '## Delivery dependencies' '| Slice | Outcome | Acceptance check | depends_on | Branch target |' \
+    '**Slice:** S-01' 'Rastro-Publication: <publication_id>/<card_key>'
   forbid_all work-item.md 'status:'
 }
 
@@ -161,7 +163,7 @@ test_config_names_the_env_example_trap() {
 
 test_pr_description() {
   require_all pr-description.md \
-    '## Context' '## What this PR delivers' '## Closed decisions' '## Risks and rollback' \
+    '## Reviewer summary' '## Dependency state' '## Context' '## What this PR delivers' '## Closed decisions' '## Risks and rollback' \
     '## Verification' '## Next PRs' '## Divergences from the design doc' '## Recorded debt' \
     '## Agent rulings' '## Pending human execution' '<details>' '## Golden paths created or evolved'
 }
@@ -264,6 +266,16 @@ test_config_has_no_mode_key() {
   hits=$(grep -nE '^[[:space:]]*([a-z_]*_)?mode:' "$tpl/config.yml")
   [ -z "$hits" ] || _assert_fail "templates/config.yml has a mode key; the execution mode is chosen per run" "$hits"
 }
+
+test_layout_guide() {
+  require_all config.yml '  layout:' '  site:'
+  require_all layout-guide.md '## Naming' '## Source and test layout' '## Documentation and pages' \
+    '## Discovery' 'file:line'
+  grep -qF 'templates/layout-guide.md' "$root/skills/setup/SKILL.md" ||
+    _assert_fail "setup does not reference the layout guide template"
+}
+
+test_layout_guide
 
 test_golden_path
 test_markers_file

@@ -22,7 +22,7 @@ Write the body to a file first, so line breaks and quotes survive. `gh` prints t
 
 The default description template is `.github/pull_request_template.md`, or the `.github/PULL_REQUEST_TEMPLATE/` directory when a repository has several. When `code_host.template` is set, it names the template instead.
 
-For a stacked change request, set `--base` to the branch of the previous pull request, not to `project.base_branch`.
+Use the exact `<target>` supplied and verified by `deliver`. For a stacked change request, that is the declared code prerequisite's PR head branch, even if another sibling PR opened more recently. Do not infer a target from PR order.
 
 The head branch must already exist on the remote. Pushing is the caller's step, after its own gate. If the branch is not on the remote, report that and do not push.
 

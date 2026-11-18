@@ -34,6 +34,13 @@ Writes nothing. There is no item outside the workspace to link.
 
 The framework names are used as they are: `bug`, `task`, `story`, `subtask`. They are recorded in `item.md`. There is nothing to look up.
 
+### publication
+
+- Publication destination: workspace-only files in the adopter clone.
+- Parent relationship: a textual `Parent: <parent slug>` line.
+- Dependency representation: delivery dependencies and slice ids are item body text.
+- Recovery: use the exact marker to find an existing draft in the workspace. Use the approved slug when the path is free. On a collision with another packet, use a distinct slug approved in the preview. Never overwrite a different draft. Reuse the path only when its marker and parent match. Create a new file without replacing an existing file and verify the written content before reporting a complete local draft.
+
 ## Known limits
 
 - The work cannot be resumed before the change request exists. The workspace is gitignored and local to one clone, and the conversation does not outlive the session. The `setup` skill tells the human this when `none` is chosen.

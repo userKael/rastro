@@ -14,14 +14,14 @@ description: Installs or updates rastro in a repository. It detects the git remo
 - `CLAUDE.md`, holding the line `@AGENTS.md`
 - `.gitignore`, ignoring the workspace
 - `.rastro/git-hooks/` and `.rastro/lib/`, with the git hooks wired through `core.hooksPath` or through the hook manager already in place
-- optionally, the CI file and `.rastro/CALIBRATION.md`, only when absent
+- optionally, the CI file, `.rastro/CALIBRATION.md`, and a versioned layout guide
 
 With `--doctor`, the output is the doctor's report, verbatim.
 
 ## Requirements
 
 - `git` and `bash`. Setup calls no port capability. It reads the `## Detection` section of the adapters to propose values.
-- Framework files: `${CLAUDE_PLUGIN_ROOT}/templates/config.yml`, `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`, `${CLAUDE_PLUGIN_ROOT}/templates/stack-detection.md`, `${CLAUDE_PLUGIN_ROOT}/templates/ci/`, `${CLAUDE_PLUGIN_ROOT}/templates/CALIBRATION.md`, the hooks under `${CLAUDE_PLUGIN_ROOT}/hooks/git/` and `${CLAUDE_PLUGIN_ROOT}/hooks/lib/`, the doctor at `${CLAUDE_PLUGIN_ROOT}/hooks/claude/doctor.sh`, and the adapters under `${CLAUDE_PLUGIN_ROOT}/adapters/`.
+- Framework files: `${CLAUDE_PLUGIN_ROOT}/templates/config.yml`, `${CLAUDE_PLUGIN_ROOT}/templates/agents-md-block.md`, `${CLAUDE_PLUGIN_ROOT}/templates/stack-detection.md`, `${CLAUDE_PLUGIN_ROOT}/templates/layout-guide.md`, `${CLAUDE_PLUGIN_ROOT}/templates/ci/`, `${CLAUDE_PLUGIN_ROOT}/templates/CALIBRATION.md`, the hooks under `${CLAUDE_PLUGIN_ROOT}/hooks/git/` and `${CLAUDE_PLUGIN_ROOT}/hooks/lib/`, the doctor at `${CLAUDE_PLUGIN_ROOT}/hooks/claude/doctor.sh`, and the adapters under `${CLAUDE_PLUGIN_ROOT}/adapters/`.
 - Adapter contract: `${CLAUDE_PLUGIN_ROOT}/adapters/CONTRACT.md`, for a tool that has no shipped adapter.
 - Writing rules, optional: when `.rastro/profiles/writing.md` exists, apply it to the questions, the gate and the closing report.
 
@@ -77,19 +77,21 @@ Detect before asking. Run every detection below, then print one report: a two-co
 - **PR template.** The default template path the code-host adapter names, and any tracked file whose name matches `pull_request_template` in any case, as `git ls-files` lists them. A file found proposes `code_host.template`.
 - **superpowers.** Whether the superpowers skills are installed, as the doctor checks. Without them, every skill uses its built-in fallback, and the report says so.
 - **Project name and modules.** The manifest or the directory name proposes `project.name`. The top-level source directories propose `architecture.modules`.
+- **Design document destination.** Read any existing config or tracked project instruction that names it. A directory of design documents or a documented parent page proposes `docs.location`.
+- **Layout.** Read the configured guide (`conventions.layout`) when set. Otherwise inspect tracked files and repository instructions for naming, feature and module folders, routes or screens, test placement, and documentation pages or indexes. Record representative examples by `file:line` and flag competing conventions. Propose an existing tracked guide when one already covers these decisions. When there is none, offer a versioned guide based on the observed examples. Use the repository's terms and paths.
 
 ## Step 2 — Ask
 
 One question at a time. Each question names the detected value, when there is one, as the recommended answer. Ask with the structured question tool, recommended option first. Without that tool, end the turn with the question.
 
-A detected value the human has no reason to doubt is not asked: it shows in the diff, where the human can still correct it. Ask, in this order, only what is still open:
+A detected value the human has no reason to doubt is not asked: it shows in the diff, where the human can still correct it. Collect card, document and change-request destinations first. Then open only the applicable verification, architecture and optional topics. Existing config and answers from `init` remain valid. Ask, in this order, only what is still open:
 
-1. `tracker.kind`: `local`, `none`, a shipped adapter, or the name of the team's own adapter.
+1. Start with where cards should live. Show each detected or tool-free option's destination, hierarchy, recovery support and visibility from the adapter's `publication` capability. An older custom adapter without that capability can still be selected for manual publication. Offer versioned repo cards (`tracker.kind` set to `local`) for a workflow backed by Git alone, workspace cards (`none`) for session-local work, and any available shared issue tracker or board for collaborators. Repo cards also support teams through review and merge. Prefer an existing configured tracker, an evidenced shared tracker, or the versioned repo cards in that order. Each capability is chosen independently.
 2. `tracker.key`, unless the kind is `none`. Propose `W` for `local`. When the tracker adapter fixes the key, propose that key: `GH` for the shipped adapter whose item ids are `GH-<n>`. Read the key from the adapter file, never from memory.
-3. The other keys that the tracker adapter's required keys name, as the `## Requirements` section of its file lists them. Read them from the adapter file, never from memory. When the adapter names a project number and a project owner (`tracker.project` and `tracker.project_owner`), ask `tracker.project` with no value proposed, because the person types the number, then `tracker.project_owner` with an empty value proposed, which means the owner of the repository. The shipped adapter that mirrors item status in a project board is the one that names them.
+3. The destination keys the tracker adapter names in `## Requirements`. Read them from the adapter file, never from memory. When the adapter names a project number and a project owner (`tracker.project` and `tracker.project_owner`), ask `tracker.project` with no value proposed, because the person types the number, then `tracker.project_owner` with an empty value proposed, which means the owner of the repository. The shipped adapter that mirrors item status in a project board is the one that names them. When a site selector is available, offer to set `tracker.site` or let breakdown resolve it from the account before publication.
 4. `tracker.local_dir`, only for `local`, with `work/` proposed.
-5. `docs.kind`, with `repo` proposed, then `docs.location` when the kind is not `repo`.
-6. `code_host.kind`, then `code_host.merge`, with `squash` proposed, then `code_host.template` when Step 1 found a PR template.
+5. Choose the design document destination. Propose `docs.kind` set to `repo` with the existing design folder or `docs/design/` when there is no configured destination. Ask `docs.location` when the chosen adapter still needs a folder, parent page or database.
+6. Choose how to open change requests. Offer the detected `code_host.kind` or `none` for local delivery. For a code host, ask `code_host.merge`, with `squash` proposed, then `code_host.template` when Step 1 found a PR template. With repo cards and no code host, explain that publication leaves an item branch for a manual merge.
 7. `domain_state.kind`: `none`, `schema-files` with `domain_state.schema_files`, or `db-mcp` with `domain_state.server` among the detected MCP servers.
 8. `project.languages.human`.
 9. The verify commands the stack did not propose, then `verify.integration` and `verify.integration_when`, which have no portable proposal.
@@ -97,16 +99,18 @@ A detected value the human has no reason to doubt is not asked: it shows in the 
 11. `architecture.layers`, one question, with nothing proposed: the component types, in the order a request crosses them. Golden-path types are layers, so this answer names the types the golden paths are written for. Empty is an answer. No anticipated architecture is proposed: proposing nothing is the point.
 12. `architecture.boundary_types`, one question, with nothing proposed: the layers that cross a trust boundary. A name outside the layers is refused, and the question comes back. The security section of a golden path depends on this key. Empty is an answer.
 13. `architecture.sensitive_data`: the classes of data never logged and never committed, such as customer addresses.
-14. `docs.public_portal`, when the repository publishes documentation for other teams.
+14. Offer to reference the existing layout guide, create `.rastro/layout.md` using `${CLAUDE_PLUGIN_ROOT}/templates/layout-guide.md`, or defer. Record the selected repository-relative path in `conventions.layout`. When the human asks to change a configured path, offer the same choices again. Ask `docs.public_portal` only when the repository publishes documentation for other teams.
 15. Whether to write the CI file from `${CLAUDE_PLUGIN_ROOT}/templates/ci/`. Offer it only when a template exists whose file name starts with `code_host.kind`, and only when its destination does not exist. The first line of the template says where the file goes. Under `init`, never offer it and never write it: the skeleton has no manifest yet, so a CI run would fail on the first change request. The walking skeleton writes the CI file with its own toolchain step.
 16. Whether to write `.rastro/CALIBRATION.md` from `${CLAUDE_PLUGIN_ROOT}/templates/CALIBRATION.md`, where the team records its own measurements. Offer it only when that file does not exist.
 
-An optional file whose destination exists is never offered and never written. Leave it as it is, and say so at the gate: the team may have filled its toolchain step or recorded its measurements there. When the first line of the CI template says to merge its job into a file that already exists, show the job to merge in the closing report, and never overwrite that file.
+An optional file whose destination exists can be referenced and is never overwritten. Leave it as it is, and say so at the gate: the team may have filled its toolchain step or recorded its measurements there. When the first line of the CI template says to merge its job into a file that already exists, show the job to merge in the closing report, and never overwrite that file.
 
 Answers that need a check before they are accepted:
 
 - **`tracker.local_dir`.** Refuse a directory equal to the workspace or inside it, and a directory that `git check-ignore -q` reports as ignored. Say why, then ask again: the state table reads items from git, and an unversioned item makes the table lose its source.
 - **`tracker: none`.** Before accepting it, say what it loses. The item lives only in the conversation and the workspace. The work cannot be resumed before the PR exists. The reconciliation goes to the PR description. The state table has no item rows. Name `local` as the option that keeps items versioned without a tracker tool.
+- **Publication destination.** Resolve the destination from the adapter's requirements, current config and detected repository defaults. Ask only for identifiers still needed. Confirm the site if local evidence gives a choice. Leave an unresolved site selector for the read-only publication preparation. Show each boundary explicitly: repository and Project owner/number for a board, site and project key for a hosted project tracker, relative folder and base branch for repo cards, or workspace folder for session-local cards. Setup reports what it can detect locally. Leave live destination checks to breakdown's publication preparation.
+- **`conventions.layout`.** Verify that the chosen path is inside the repository, outside the workspace and unignored. Reference an existing versioned file, or create the chosen path in the setup diff. Preserve the existing guide's wording.
 - **A tool with no adapter.** When the answer names a tool that has no adapter file in either location, point to `${CLAUDE_PLUGIN_ROOT}/adapters/CONTRACT.md`. The team writes `.rastro/adapters/<dir>/<kind>.md` from it. Until that file exists, every skill that uses the port stops, and the doctor reports `missing adapter <dir>/<kind>`. Offer the tool-free kind of that port for the meantime: `local` or `none` for the tracker, `repo` for docs, `none` for the code host.
 
 ## Step 3 — Compose
@@ -115,7 +119,7 @@ Build every file in a temporary directory outside the repository, from `mktemp -
 
 ### `.rastro/config.yml`
 
-Start from `${CLAUDE_PLUGIN_ROOT}/templates/config.yml`, keeping its comments, and fill in the answers. Lists stay inline, as `[a, b]`: the hooks read nothing else. On a re-run, start from the existing file instead. Change only the keys answered in this run, and add the keys that are new in the template with their defaults. Also on a re-run, when `architecture.golden_paths` is empty, write the template's default and its new comment: the key changed from a list of files to a folder.
+Start from `${CLAUDE_PLUGIN_ROOT}/templates/config.yml`, keeping its comments, and fill in the answers. Lists stay inline, as `[a, b]`: the hooks read nothing else. On a re-run, start from the existing file instead. Change only the keys answered in this run, and add the keys that are new in the template with their defaults. The optional `tracker.site` and `conventions.layout` are empty by default. The existing tracker kind is preserved. When site selection is required, resolve it before publishing. An empty layout path uses existing repository guidance. An existing config on a normal re-run can leave a new guide deferred by default. Also on a re-run, when `architecture.golden_paths` is empty, write the template's default and its new comment: the key changed from a list of files to a folder.
 
 ### The AGENTS.md block
 
@@ -171,6 +175,7 @@ Then wire them by the value of `git config --local --get core.hooksPath`:
 
 - The CI file, when the human said yes and its destination is absent: the template from `${CLAUDE_PLUGIN_ROOT}/templates/ci/` for `code_host.kind`, at the path its first line names. Its toolchain step stays for the team to fill: rastro cannot guess the runtime the verify commands need.
 - `.rastro/CALIBRATION.md`, when the human said yes and the file is absent: a copy of `${CLAUDE_PLUGIN_ROOT}/templates/CALIBRATION.md`.
+- The layout guide, when selected and its destination is absent: start with the template, fill observed conventions and their anchors, and leave unconfirmed fields open. It is a source for planning and discovery. Keep stack-specific details in the guide and any machine-readable discovery metadata in the artifact that consumes them.
 - Nothing else. No empty `.rastro/profiles/` and no empty `.rastro/adapters/`.
 - Setup does not create `tracker.local_dir`. The `breakdown` skill creates it with the first item.
 
@@ -184,7 +189,8 @@ When nothing differs, say that the installation is current and stop: there is no
 
 | | |
 |---|---|
-| Tracker | `<tracker.kind>`, key `<tracker.key>` |
+| Cards | <tracker kind, destination, hierarchy and recovery support> |
+| Layout guide | <repository-relative path or deferred> |
 | Docs and code host | `<docs.kind>`; `<code_host.kind>` with `<code_host.merge>` merge |
 | Verify | <n> of 4 commands set; per-file lint <set or empty> |
 | Git hooks | `core.hooksPath` set, or calls appended to <manager directory> |

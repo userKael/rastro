@@ -46,7 +46,7 @@ each confirmation gate appended a line that starts with `- Continuous run,`
 The gate of Step 9 gets no row: the open PR is its record.
 its option menu would stop the run at a confirmation
 (recommended in a continuous run)
-When no item is left under the parent, or the item has no parent, there is nothing to choose
+When no agent-executed slice is ready, there is nothing to choose
 The run ends, and `<workspace>/mode` is deleted
 In a run that stops at every gate, when it is installed, it opens a new PR
 In a run that stops at every gate, with `superpowers:finishing-a-development-branch`, run this skill until every gate is green
@@ -64,3 +64,6 @@ is a candidate for an automated check
 and each candidate for an automated check from Step 6
 it neither blocks the merge nor stops a continuous run
 list there each real-system scenario of its golden path
+A ready sibling can start even when another sibling is blocked.
+current golden path with `verified_by: review` is a candidate for an automated check when at least two compatible components have been verified
+A batch worker returns this delivery block

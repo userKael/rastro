@@ -1,0 +1,12 @@
+## Read the graph
+## Schedule ready work
+## Own gates and publication
+## Report
+one worker and one isolated worktree per ready slice
+Unknown or overlapping write paths are processed serially
+If delegation is unavailable, run the same ready set serially
+Never let a worker take a new content decision.
+Only the coordinator continues publication
+A verified branch without an open PR is reported as prepared.
+No worker merges a PR or executes a `[HUMAN]` task.
+Exclude completed and in-progress slices from fresh dispatch

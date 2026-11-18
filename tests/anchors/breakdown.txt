@@ -72,3 +72,8 @@ Any other request in a repository with no source code goes to `init` first.
 the S3 anchor is the `file:line` of the ADR or of `.rastro/config.yml` that decides the slice
 for the walking skeleton, each ADR it builds on, by path
 the list is the paths the skeleton creates, one per component
+## Delivery dependencies
+Multiple direct prerequisites target `base` and wait until all are satisfied.
+Reject missing, duplicate or cyclic edges
+complete publication preview
+Create a card only on verified absence.
